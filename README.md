@@ -1,7 +1,7 @@
 # TheWorldInSafety
-### The Surveilance System Against Violence For Children & the Elderly
-
-# Usage Guide
+#### The Surveilance System Against Violence For Children & the Elderly
+----
+## Usage Guide
 
 ### Prerequisites
 There are a few installations.
@@ -21,8 +21,8 @@ bash build_all.sh
 ```
 
 
----
-# Reference Papers
+----
+## Reference Papers
 * "Temporal Segment Networks: Towards Good Practices for Deep Action Recognition", Limin Wang et al, ECCV 2016
 (https://arxiv.org/abs/1608.00859)
 
@@ -35,8 +35,8 @@ bash build_all.sh
 <img src="https://user-images.githubusercontent.com/28569107/30427378-8e49bf7e-998a-11e7-9c13-6629586edb11.png" width="800">
 
 
-
-# Contact
+----
+## Contact
 For any question, please contact
 ```python
 Damien : damien911224@gmail.com
