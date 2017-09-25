@@ -741,6 +741,258 @@ def clippingVideos(video_path, savedAsFiles=True):
     global_clipping_avg_duration = time_counter.value / float(num_counter.value) / 3600.0
     global_clipping_remaining_hours = float(len_video_list - num_counter.value) * global_clipping_avg_duration
 
+def makeActionProposals(video_path, savedAsFiles=True):
+    start_time = time.time()
+
+    global global_clip_dst_path
+    global global_frame_src_path
+    global global_frame_dst_path
+    global global_whole_scores
+    global global_num_worker
+    global len_scan_list
+    global global_num_using_gpu
+    global scan_counter
+    global whole_scores
+    global global_clipping_remaining_hours
+    global global_clipping_avg_duration
+    global global_clipping_one_duration
+
+    manager = Manager()
+    whole_scores = manager.list()
+
+    check_clip_path = os.path.join(global_clip_dst_path, video_path.split('/')[-1].split('.')[-2])
+    if os.path.exists(check_clip_path):
+        num_counter.value += 1
+        current_time = time.time()
+        global_clipping_one_duration = current_time - start_time
+        whole_elapsed_time = current_time - global_start_time
+        time_counter.value += whole_elapsed_time / float(num_counter.value)
+        global_clipping_avg_duration = time_counter.value / float(num_counter.value) / 3600.0
+        global_clipping_remaining_hours = float(len_video_list - num_counter.value) * global_clipping_avg_duration
+        return
+
+    scan_input_path = os.path.join(global_frame_src_path, video_path.split('/')[-1].split('.')[-2])
+    scan_counter.value = 0
+
+    video_cap = cv2.VideoCapture(video_path)
+    if video_cap.isOpened():
+        video_frame_count = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1
+        video_fps = int(video_cap.get(cv2.CAP_PROP_FPS))
+
+        check_counter = glob.glob(scan_input_path + '/images/*')
+        if len(check_counter) < video_frame_count:
+            num_counter.value += 1
+            current_time = time.time()
+            global_clipping_one_duration = current_time - start_time
+            whole_elapsed_time = current_time - global_start_time
+            time_counter.value += whole_elapsed_time / float(num_counter.value)
+            global_clipping_avg_duration = time_counter.value / float(num_counter.value) / 3600.0
+            global_clipping_remaining_hours = float(len_video_list - num_counter.value) * global_clipping_avg_duration
+            return
+
+        for i in xrange(video_frame_count + 1):
+            whole_scores.append([0.0, 0.0])
+
+        scan_input_paths = []
+        for i in xrange(video_frame_count + 1):
+            input_path = scan_input_path
+            scan_input_paths.append(input_path)
+
+        len_scan_list = len(scan_input_paths)
+        scan_pool = Pool(global_num_worker)
+        scan_pool.map(scanVideo, zip(scan_input_paths, [video_frame_count] * video_frame_count,
+                                     range(1, video_frame_count + 1, 1)))
+        scan_pool.close()
+
+        whole_score_sum = [0.0] * len(whole_scores[0])
+        for score in whole_scores:
+            for i in xrange(len(whole_scores[0])):
+                whole_score_sum[i] += score[i]
+        whole_average_score = [whole_score_sum[i] / float(len(whole_scores)) for i in xrange(len(whole_scores[0]))]
+        whole_dominant_score = max(whole_average_score)
+        whole_dominant_index = np.argmax(whole_average_score)
+        good_frame_indices = []
+
+        for ii in xrange(len(whole_scores)):
+            if whole_scores[ii][whole_dominant_index] >= whole_dominant_score:
+                good_frame_indices.append(ii + 1)
+
+        selected_scores = []
+        for index in good_frame_indices:
+            selected_scores.append(whole_scores[index - 1][whole_dominant_index])
+
+        selected_scores.sort(reverse=True)
+        selected_top_k_num = max(1, int(len(selected_scores) * 0.5))
+        selected_sum = 0
+        for i in xrange(selected_top_k_num):
+            selected_sum += selected_scores[i]
+
+        selected_avg = selected_sum / float(selected_top_k_num)
+        indices_to_remove = []
+        for index in good_frame_indices:
+            if whole_scores[index - 1][whole_dominant_index] < selected_avg:
+                indices_to_remove.append(index)
+
+        for index_to_remove in indices_to_remove:
+            good_frame_indices.remove(index_to_remove)
+
+        selected_slices = []
+        temp_group = []
+        for ii in xrange(len(good_frame_indices)):
+            if ii == 0 or len(temp_group) == 0:
+                temp_group.append(good_frame_indices[ii])
+                isContinuous = True
+            elif temp_group[-1] + 9 >= good_frame_indices[ii]:
+                temp_group.append(good_frame_indices[ii])
+                isContinuous = True
+            else:
+                isContinuous = False
+
+            if (not isContinuous or ii == len(good_frame_indices) - 1) and not len(temp_group) == 0:
+                temp_start = temp_group[0]
+                temp_end = temp_group[-1]
+                temp_duration = temp_end - temp_start + 1
+                if temp_duration >= 10:
+                    temp_sum = 0.0
+                    for tt in temp_group:
+                        temp_sum += whole_scores[tt - 1][whole_dominant_index]
+                    temp_avg = temp_sum / float(len(temp_group))
+
+                    selected_slices.append([temp_avg, temp_start, temp_end])
+                temp_group = []
+
+        biggest_scale_factor = 3.0
+        smallest_scale_factor = 0.5
+        temporal_scale_factor = math.sqrt(2)
+        temporal_scales = []
+        scale_index = 0
+        while True:
+            current_scale = video_fps * biggest_scale_factor
+            for ii in range(0, scale_index, 1):
+                current_scale /= temporal_scale_factor
+            scale_index += 1
+            if current_scale < video_fps * smallest_scale_factor:
+                break
+            else:
+                temporal_scales.append(current_scale)
+
+        selected_sets = []
+
+        for scale in temporal_scales:
+            scaled_slices = []
+            for slice in selected_slices:
+                centers = range(slice[1], slice[2] + 1, 1)
+                max_slice_score = -1000000
+                for center in centers:
+                    start = center - int(scale / 2.0)
+                    end = center + int(scale / 2.0)
+                    if start <= 0:
+                        start = center
+                        end = center + int(scale)
+                    center_sum = 0.0
+                    valid_count = 0
+                    for index in range(start, end + 1, 1):
+                        if index >= video_frame_count:
+                            end = video_frame_count
+                            break
+                        center_sum += whole_scores[index - 1][whole_dominant_index]
+                        valid_count += 1
+                    if valid_count >= 1:
+                        center_avg = center_sum / float(valid_count)
+                        if center_avg >= max_slice_score:
+                            max_slice_score = center_avg
+                            max_slice_start = start
+                            max_slice_end = end
+
+                scaled_slices.append((max_slice_score, max_slice_start, max_slice_end))
+
+            selected_sets.append(scaled_slices)
+
+        scale_index = 1
+        for set in selected_sets:
+            for slice in set:
+                if savedAsFiles == True:
+                    if global_clip_dst_path == '':
+                        clip_default_folder = ''
+                        for path in video_path.split('/')[:-1]:
+                            clip_default_folder += path + '/'
+                        clip_default_folder = clip_default_folder[:-1]
+                    else:
+                        clip_default_folder = os.path.join(global_clip_dst_path,
+                                                           video_path.split('/')[-1].split('.')[-2])
+                    try:
+                        os.mkdir(clip_default_folder)
+                    except OSError:
+                        pass
+                    clip_save_path = os.path.join(clip_default_folder,
+                                                  's{:02d}_c{:03d}.avi'.format(scale_index, set.index(slice) + 1))
+                    clipping(video_path, clip_save_path, slice[1], slice[2])
+
+                frame_src_folder = os.path.join(global_frame_src_path, video_path.split('/')[-1].split('.')[-2])
+                frame_dst_folder = os.path.join(global_frame_dst_path, video_path.split('/')[-1].split('.')[-2])
+                copy_folder_path = os.path.join(frame_dst_folder,
+                                                video_path.split('/')[-1].split('.')[-2] + '_s{:02d}_c{:03d}'.format(
+                                                    selected_sets.index(set) + 1, set.index(slice) + 1))
+
+                flow_src_path = os.path.join(frame_src_folder, 'optical_flow')
+                image_src_path = os.path.join(frame_src_folder, 'images')
+                flow_dst_path = os.path.join(copy_folder_path, 'optical_flow')
+                image_dst_path = os.path.join(copy_folder_path, 'images')
+
+                if not os.path.exists(copy_folder_path):
+                    try:
+                        os.makedirs(copy_folder_path)
+                    except OSError:
+                        pass
+                if not os.path.exists(flow_dst_path):
+                    try:
+                        os.mkdir(flow_dst_path)
+                    except OSError:
+                        pass
+                if not os.path.exists(image_dst_path):
+                    try:
+                        os.mkdir(image_dst_path)
+                    except OSError:
+                        pass
+
+                flow_x_prefix = "flow_x_"
+                flow_y_prefix = "flow_y_"
+                image_prefix = "img_"
+                src_frame_counter = slice[1]
+                dst_frame_counter = 1
+                while True:
+                    copy_flow_x_src = os.path.join(flow_src_path,
+                                                   '{}{:05d}.jpg'.format(flow_x_prefix, src_frame_counter))
+                    copy_flow_x_dst = flow_dst_path + '/{}{:05d}.jpg'.format(flow_x_prefix, dst_frame_counter)
+                    shutil.copy(copy_flow_x_src, copy_flow_x_dst)
+
+                    copy_flow_y_src = os.path.join(flow_src_path,
+                                                   '{}{:05d}.jpg'.format(flow_y_prefix, src_frame_counter))
+                    copy_flow_y_dst = flow_dst_path + '/{}{:05d}.jpg'.format(flow_y_prefix, dst_frame_counter)
+                    shutil.copy(copy_flow_y_src, copy_flow_y_dst)
+
+                    copy_image_src = os.path.join(image_src_path,
+                                                  '{}{:05d}.jpg'.format(image_prefix, src_frame_counter))
+                    copy_image_dst = image_dst_path + '/{}{:05d}.jpg'.format(image_prefix, dst_frame_counter)
+                    shutil.copy(copy_image_src, copy_image_dst)
+
+                    src_frame_counter += 1
+                    dst_frame_counter += 1
+                    if src_frame_counter > slice[2]:
+                        break
+
+            scale_index += 1
+
+    video_cap.release()
+
+    num_counter.value += 1
+    current_time = time.time()
+    global_clipping_one_duration = current_time - start_time
+    whole_elapsed_time = current_time - global_start_time
+    time_counter.value += whole_elapsed_time / float(num_counter.value)
+    global_clipping_avg_duration = time_counter.value / float(num_counter.value) / 3600.0
+    global_clipping_remaining_hours = float(len_video_list - num_counter.value) * global_clipping_avg_duration
+
 def scanVideo(scan_items):
     start_time = time.time()
 
