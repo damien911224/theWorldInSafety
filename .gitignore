@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+# Test_files
+*.mp4
+*.avi
+*.mkv
+
 # Distribution / packaging
 .Python
 env/
