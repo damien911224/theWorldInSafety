@@ -1,2 +1,0 @@
-“*.so.2.4.13” filter=lfs diff=lfs merge=lfs -text
-temporal-segment-networks/3rd-party/opencv-2.4.13/build/lib/libopencv_gpu.so.2.4.13 filter=lfs diff=lfs merge=lfs -text
