@@ -1,0 +1,50 @@
+<!DOCTYPE>
+<html lang="ko">
+<head>
+	<title>{% block title %}Base{% endblock %}</title>
+	{% load staticfiles %}
+	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
+	<link rel="stylesheet" type="text/css" href="{% block extrastyle %}{% endblock %}">
+</head>
+<body>
+	<div id="header">
+		<h2 class="maintitle">Easy&amp;Fast Django Web Programming</h2>
+		<h4 class="welcome">Welcome, <a href="#">jsGon</a> /<a href="#">Change Password</a> /<a href="#">Logout</a></h4>
+	</div>
+
+	<div id="menu">
+		<li><a href="{% url 'home' %}">Home</a></li>
+		<li><a href="{% url 'bookmark:index' %}">Bookmark</a></li>
+		<li><a href="{% url 'blog:index' %}">Blog</a></li>
+		<li><a href="#">Photo</a></li>
+
+		<li><a href="#">Add&bigtriangledown;</a>
+			<ul>
+				<li><a href="#">Bookmark</a></li>
+				<li><a href="#">Blog</a></li>
+				<li><a href="#">Photo</a></li>
+			</ul>
+		</li>
+	
+		<li><a href="#">Change&bigtriangledown;</a>
+			<ul>
+				<li><a href="#">Bookmark</a></li>
+				<li><a href="#">Blog</a></li>
+				<li><a href="#">Photo</a></li>
+			</ul>
+		</li>
+
+		<li><a href="{% url 'blog:post_archive' %}">Archive</a></li>
+		<li><a href="{% url 'blog:search' %}">Search</a></li>
+		<li><a href="{% url 'admin:index' %}">Admin</a></li>
+
+	</div>
+
+	{% block content %}
+	{% endblock %}
+
+	{% block footer %}
+	{% endblock %}
+</body>
+
+</html>

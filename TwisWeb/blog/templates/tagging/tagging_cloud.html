@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}tagging_cloud{% endblock %}
+
+{% load staticfiles %}
+{% block extrastyle %}{% static 'tagging/tag.css' %}{% endblock %}
+
+{% block content %}
+<div id="content">
+	<h1>Blog Tag Cloud</h1>
+
+	<div class="tag-cloud">
+		{% load tagging_tags %}
+		{% tag_cloud_for_model blog.Post as tags with steps=6 min_count=1 distribution=log %}
+		{% for tag in tags %}
+		<span class="tag-{{ tag.font_size }}">
+			<a href="{% url 'blog:tagged_object_list' tag.name %}">{{ tag.name }} ({{tag.font_size}})</a>
+		</span>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}
