@@ -20,7 +20,6 @@ import gc
 from shutil import copyfile
 from shutil import rmtree
 import datetime
-import pathos
 
 
 
@@ -162,7 +161,7 @@ class ServerFromVideo():
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
         else:
-            self.test_video_name = 'test_1.mp4'
+            self.test_video_name = 'test_5.avi'
         self.model_version = 3
         self.build_temporal_net(self.model_version)
 
@@ -1295,7 +1294,6 @@ class Closer():
         self.secretary.clip_viewer.view_clips.append(admin_clip_path)
 
         sending_clips = [ admin_clip_path, user_clip_path ]
-        
 
         rmtree(clip['keep_folder'])
 
