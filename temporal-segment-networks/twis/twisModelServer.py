@@ -20,6 +20,7 @@ import gc
 from shutil import copyfile
 from shutil import rmtree
 import datetime
+import pathos
 
 
 
@@ -157,11 +158,11 @@ class ServerFromVideo():
         except OSError:
             pass
 
-        self.web_cam = True
+        self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
         else:
-            self.test_video_name = 'test_3.mp4'
+            self.test_video_name = 'test_1.mp4'
         self.model_version = 3
         self.build_temporal_net(self.model_version)
 
@@ -300,8 +301,9 @@ class Extractor():
             dev_id,
             out_format, new_size[0], new_size[1], dump, frame_count)
 
-        os.system(cmd)
-        sys.stdout.flush()
+        with self.cmd_lock:
+            os.system(cmd)
+            sys.stdout.flush()
 
 
 class Evaluator():
@@ -309,8 +311,15 @@ class Evaluator():
         self.server = server
         self.extractor = extractor
 
-        self.num_workers = 13
-        self.num_using_gpu = 9
+        self.num_workers = 12
+        self.num_using_gpu = 8
+
+        global scanning_pool
+        scanning_pool = Pool(processes=self.num_workers)
+
+        copy_reg.pickle(types.MethodType, self._pickle_method)
+
+        self.scanner = Scanner(self.server.flow_folder, self.num_workers, self.num_using_gpu)
 
         self.analyzer = Analyzer(self.server, self.extractor, self)
         self.analyzer_thread = threading.Thread(target=self.analyzer.run, name='Analyzer')
@@ -336,8 +345,6 @@ class Evaluator():
         self.closer_thread.start()
 
         while True:
-            self.scanner = Scanner(self.server.flow_folder, self.num_workers, self.num_using_gpu)
-
             while self.extractor.extracted_index - self.temporal_gap <= self.scanned_index:
                 time.sleep(self.wait_time)
 
@@ -348,20 +355,28 @@ class Evaluator():
                 print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', self.start_index, self.end_index)
 
             scan_start_time = time.time()
-            temp_scores = self.scanner.scan(self.start_index, self.end_index, self.actual_extracted_index)
-            del self.scanner.temp_scores
-            del self.scanner
 
-            self.scan_time = (time.time() - scan_start_time) / len(temp_scores)
+            return_scores = []
+            return_scores += self.scanner.scan(self.start_index, self.end_index, self.actual_extracted_index)
 
-            self.scores += temp_scores
-            self.analyzer.keeping_scores += temp_scores
-            self.secretary.showing_scores += temp_scores
-            del temp_scores
-            gc.collect()
+            self.scan_time = (time.time() - scan_start_time) / len(return_scores)
+
+            self.scores += return_scores
+            self.analyzer.keeping_scores += return_scores
+            self.secretary.showing_scores += return_scores
+            del return_scores
 
             self.scanned_index = self.end_index
             self.start_index = self.end_index + 1
+
+            gc.collect()
+
+
+    def _pickle_method(self,m):
+        if m.im_self is None:
+            return getattr, (m.im_class, m.im_func.func_name)
+        else:
+            return getattr, (m.im_self, m.im_func.func_name)
 
 
 class Scanner():
@@ -370,42 +385,43 @@ class Scanner():
         self.num_workers = num_workers
         self.num_using_gpu = num_using_gpu
 
-        copy_reg.pickle(types.MethodType, self._pickle_method)
-
 
     def scan(self, start_index, end_index, actual_extracted_index):
         manager = Manager()
-        self.temp_scores = manager.list()
+        scan_scores = manager.list()
 
         indices = range(start_index, end_index + 1, 1)
 
         for i in xrange(len(indices)):
-            self.temp_scores.append([0.0, 0.0])
+            scan_scores.append([0.0, 0.0])
 
-        scanning_pool = Pool(processes=self.num_workers)
         scanning_pool.map(self.temporalScanVideo,
-                          zip([self] * len(indices),
+                          zip([self.flow_folder] * len(indices),
+                              [self.num_workers] * len(indices),
+                              [self.num_using_gpu] * len(indices),
                               [start_index] * len(indices),
                               [actual_extracted_index] * len(indices),
+                              [scan_scores] * len(indices),
                               indices))
-        scanning_pool.close()
-        scanning_pool.join()
-        gc.collect()
+        return_scores = []
+        return_scores += scan_scores
 
-        return self.temp_scores
+        return return_scores
 
 
     def temporalScanVideo(self, scan_items):
-        scanner = scan_items[0]
-        input_path = scanner.flow_folder
-        start_index = scan_items[1]
-        frame_count = scan_items[2]
-        index = scan_items[3]
+        input_path = scan_items[0]
+        num_workers = scan_items[1]
+        num_using_gpu = scan_items[2]
+        start_index = scan_items[3]
+        frame_count = scan_items[4]
+        scan_scores = scan_items[5]
+        index = scan_items[6]
 
         current = current_process()
         current_id = current._identity[0] - 1
 
-        if current_id % scanner.num_workers < scanner.num_using_gpu:
+        if current_id % num_workers < num_using_gpu:
             temporal_net = temporal_net_gpu
         else:
             temporal_net = temporal_net_cpu
@@ -446,14 +462,7 @@ class Scanner():
             temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
                                                    frame_size=None)[0].tolist()
 
-        scanner.temp_scores[index - start_index] = [ flow_score[i] * 5.0 for i in xrange(len(flow_score)) ]
-
-
-    def _pickle_method(self, m):
-        if m.im_self is None:
-            return getattr, (m.im_class, m.im_func.func_name)
-        else:
-            return getattr, (m.im_self, m.im_func.func_name)
+        scan_scores[index - start_index] = [flow_score[i] * 5.0 for i in xrange(len(flow_score))]
 
 
 class Analyzer():
@@ -1107,11 +1116,15 @@ class Closer():
             print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Closer', 'Clipping',
                                                                 clip['time_intervals'][0], clip['time_intervals'][1])
 
-        clip_path = os.path.join(self.server.clip_folder,
-                                 'Admin_{}.avi'.format(datetime.datetime.now().strftime('%Y%m%d_%H%M%S')))
+        admin_clip_path = os.path.join(self.server.clip_folder,
+                                       'Admin_{}.avi'.format(datetime.datetime.now().strftime('%Y%m%d_%H%M%S')))
+        user_clip_path = os.path.join(self.server.clip_folder,
+                                      'User_{}.avi'.format(datetime.datetime.now().strftime('%Y%m%d_%H%M%S')))
 
-        writer_initialized = False
-        video_writer = None
+        admin_writer_initialized = False
+        user_writer_initialized = False
+        admin_video_writer = None
+        user_video_writer = None
         for round in range(self.clip_round, 0, -1):
             for frame in clip['frames']:
                 index = frame['index']
@@ -1121,6 +1134,16 @@ class Closer():
                                     self.server.show_size, cv2.INTER_AREA)
                 flow_y = cv2.resize(cv2.imread(frame['flows'][1], cv2.IMREAD_GRAYSCALE),
                                     self.server.show_size, cv2.INTER_AREA)
+
+                if not user_writer_initialized:
+                    video_fps = self.server.video_fps
+                    video_fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+                    video_size = (int(image.shape[1]), int(image.shape[0]))
+                    user_video_writer = cv2.VideoWriter(user_clip_path, video_fourcc, video_fps, video_size)
+                    user_writer_initialized = True
+
+                for iter in xrange(round):
+                    user_video_writer.write(image)
 
                 flow_bound = 20.0
                 angle_bound = 180.0
@@ -1246,28 +1269,35 @@ class Closer():
                 del image_frame
                 del flow_frame
 
-                if not writer_initialized:
+                if not admin_writer_initialized:
                     video_fps = self.server.video_fps
                     video_fourcc = cv2.VideoWriter_fourcc(*'DIVX')
                     video_size = (int(frame.shape[1]), int(frame.shape[0]))
-                    video_writer = cv2.VideoWriter(clip_path, video_fourcc, video_fps, video_size)
-                    writer_initialized = True
+                    admin_video_writer = cv2.VideoWriter(admin_clip_path, video_fourcc, video_fps, video_size)
+                    admin_writer_initialized = True
 
                 for iter in xrange(round):
-                    video_writer.write(frame)
+                    admin_video_writer.write(frame)
 
                 del frame
 
-        if video_writer is not None:
-            video_writer.release()
+        if admin_video_writer is not None:
+            admin_video_writer.release()
 
-        rmtree(clip['keep_folder'])
+        if user_video_writer is not None:
+            user_video_writer.release()
+
 
         gc.collect()
 
         if len(self.secretary.clip_viewer.view_clips) > 0:
             self.secretary.clip_viewer.view_has_next = True
-        self.secretary.clip_viewer.view_clips.append(clip_path)
+        self.secretary.clip_viewer.view_clips.append(admin_clip_path)
+
+        sending_clips = [ admin_clip_path, user_clip_path ]
+        
+
+        rmtree(clip['keep_folder'])
 
 
 
@@ -1280,8 +1310,9 @@ if __name__ == '__main__':
         with server.print_lock:
             print '------------------------------ Memory Checking ---------------------------------'
             cmd = 'free -h'
-            os.system(cmd)
-            sys.stdout.flush()
+            with server.extractor.cmd_lock:
+                os.system(cmd)
+                sys.stdout.flush()
             print '--------------------------------------------------------------------------------'
 
 
