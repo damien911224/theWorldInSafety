@@ -3,8 +3,8 @@
 TSN_ROOT=/home/damien/theWorldInSafety/temporal-segment-networks
 TOOLS=$TSN_ROOT/lib/caffe-action/build/tools
 
-OLD_VERSION=2
-NEW_VERSION=3
+OLD_VERSION=3
+NEW_VERSION=4
 NUM_OF_SPLITS=3
 SPATIAL_ITER=3500
 TEMPORAL_ITER=18000

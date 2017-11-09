@@ -9,7 +9,7 @@ test_initialization: true
 display: 20
 average_loss: 20
 # snapshot: 1000
-snapshot_prefix: "/home/damien/theWorldInSafety/temporal-segment-networks/models/twis_caffemodels/v3/split2/twis_spatial_net_v3"
+snapshot_prefix: "/home/damien/theWorldInSafety/temporal-segment-networks/models/twis_caffemodels/v4/split2/twis_spatial_net_v4"
 debug_info: false
 
 # learning rate

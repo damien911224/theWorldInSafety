@@ -12,7 +12,10 @@ def error_increment():
     with error_counter_lock:
         error_counter.value += 1
 
+
 def showProgress(progress_type='', file_name='', message=' DONE', process_start_time=0.0, process_id=0):
+    global num_workers
+
     if progress_type == 'Downloading':
         with counter_lock:
             num_counter.value += 1
@@ -26,7 +29,7 @@ def showProgress(progress_type='', file_name='', message=' DONE', process_start_
             print \
             "ActivityNet_v{0}|{7:}|{5:05d}th|{1:06.3f}%|Remaining: {2:.2f}Hours|Current: {3}th Worker|AvgDuration: {6:.2f}Secs|OneDuration: {4:.2f}Secs\n".format(version,
             float(num_counter.value)/float(len_video_list)*100.0, remaining_hours,
-            process_id%8+1, elapsed_time_per_process, num_counter.value, average_duration * 3600.0, progress_type) + \
+            process_id%num_workers+1, elapsed_time_per_process, num_counter.value, average_duration * 3600.0, progress_type) + \
             "                                            |FileName: " + file_name + message
 
     elif progress_type == 'Clipping':
@@ -65,6 +68,7 @@ def showProgress(progress_type='', file_name='', message=' DONE', process_start_
                     progress_type) + \
                 "                                            |FileName: " + file_name + message
 
+
 def appendList(type, video_items):
     identity = video_items[0]
     path = video_items[1]
@@ -77,6 +81,7 @@ def appendList(type, video_items):
         with video_path_lock:
             clip_video_paths[identity] = path
 
+
 def parseActivityJsonFile(version='1.2'):
     default_path = "/home/damien/temporal-segment-networks/data/activitynet_splits"
     json_fp = open(os.path.join(default_path, "activity_net.v{version}.min.json".format(version=version)), "r")
@@ -86,6 +91,7 @@ def parseActivityJsonFile(version='1.2'):
     json_fp.close()
 
     video_list = []
+    identity_list = []
     for db in js['database']:
         subset = js['database'][db]['subset']
         if subset != 'testing':
@@ -102,75 +108,68 @@ def parseActivityJsonFile(version='1.2'):
             duration = js['database'][db]['duration']
 
             video_list.append({'identity': identity, 'category': category, 'parent_category': parent_category,
-                               'url': url, 'segment': segment, 'duration': duration})
+                               'url': url, 'segment': segment, 'duration': duration, 'subset': subset})
+        else:
+            url = js['database'][db]['url']
+            identity = str(url).split('=')[-1]
 
-    return video_list
+            video_list.append({'identity': identity, 'url': url, 'subset': subset})
+
+        identity_list.append(identity)
+
+    return video_list, identity_list
+
 
 def downloadFullVideos(video_items):
     start_time = time.time()
     current = current_process()
 
-    version = video_items[0]
+    save_folder = video_items[0]
     video_file_dic = video_items[1]
-    save_path = '/media/damien/DATA/cvData/ActivityNet/v{version}/FullVideos'.format(version=version)
 
-    regex = re.compile('[^a-zA-Z0-9() .,-_&]')
-    parent_full_path = save_path + "/" + regex.sub('', video_file_dic['parent_category'].strip().replace('/', '').replace('  ',' '))
-
-    if not os.path.exists(parent_full_path):
-        try:
-            os.mkdir(parent_full_path)
-        except OSError:
-            pass
-
-    category_full_path = parent_full_path + "/" + regex.sub('', video_file_dic['category'].strip().replace('/', '').replace('  ',' '))
-
-    if not os.path.exists(category_full_path):
-        try:
-            os.mkdir(category_full_path)
-        except OSError:
-            pass
-
+    subset = video_file_dic['subset']
     video_url = video_file_dic['url']
+    video_identity = video_file_dic['identity']
 
     try:
         youtube = YouTube(video_url)
     except:
         message = ' !! YOUTUBE ERROR !!'
-        showProgress(progress_type='Downloading',file_name=category_full_path, message=message, process_start_time=start_time, process_id=int(current._identity[0]-1))
+        showProgress(progress_type='Downloading',file_name=video_url, message=message, process_start_time=start_time, process_id=int(current._identity[0]-1))
         return
 
-    filename = video_file_dic['identity']
+    filename = video_identity
     youtube.set_filename(filename)
 
     video = youtube.get_videos()[-2]
-    video_full_path = os.path.join(category_full_path, filename +'.' + video.extension)
+    video_full_path = os.path.join(save_folder, subset, filename + '.' + video.extension)
+    video_save_folder = os.path.join(save_folder, subset)
+    if not os.path.exists(video_save_folder):
+        try:
+            os.mkdir(video_save_folder)
+        except OSError:
+            pass
+
 
     if os.path.exists(video_full_path):
         message = ' !! PASS !!'
-        if not video_file_dic['identity'] in full_video_paths:
-            video_append_items = [video_file_dic['identity'], video_full_path]
-            appendList(type='full', video_items=video_append_items)
         showProgress(progress_type='Downloading', file_name=video_full_path, message=message, process_start_time=start_time,
                      process_id=int(current._identity[0] - 1))
         return
 
     try:
-        video.download(category_full_path)
+        video.download(video_save_folder)
     except:
         message = ' !! YOUTUBE DOWNLOAD ERROR !!'
         showProgress(progress_type='Downloading', file_name=video_full_path, message=message, process_start_time=start_time,
                      process_id=int(current._identity[0] - 1))
         return
 
-    if video_file_dic['identity'] in full_video_paths:
-        del full_video_paths[video_file_dic['identity']]
-    video_append_items = [video_file_dic['identity'], video_full_path]
-    appendList(type='full', video_items=video_append_items)
-    message = ' DONE'
+    message = ' !! DOWNLOADING DONE !! '
     showProgress(progress_type='Downloading', file_name=video_full_path, message=message,
                  process_start_time=start_time,
                  process_id=int(current._identity[0] - 1))
+
 
 def downloadFullVideosWithClipping(video_items):
     start_time = time.time()
@@ -229,6 +228,7 @@ def downloadFullVideosWithClipping(video_items):
     showProgress(progress_type='Downloading', file_name=video_full_path, message=message,
                  process_start_time=start_time,
                  process_id=int(current._identity[0] - 1))
+
 
 def clipDownloadedVideo(video_file_dic, video_full_path, version):
     save_path = '/media/damien/DATA/cvData/ActivityNet/v{version}/ClipVideos'.format(version=version)
@@ -337,6 +337,7 @@ def clipDownloadedVideo(video_file_dic, video_full_path, version):
     appendList(type='clip', video_items=video_append_items)
     message = ' DONE'
     return message
+
 
 def clipDownloadedVideos_Pool(video_items):
     start_time = time.time()
@@ -465,6 +466,7 @@ def clipDownloadedVideos_Pool(video_items):
                  process_start_time=start_time,
                  process_id=int(current._identity[0] - 1))
 
+
 def checkErrors(video_items):
     version = video_items[0]
     video_item = video_items[1]
@@ -504,54 +506,53 @@ def checkErrors(video_items):
                      process_id=int(current._identity[0] - 1))
         return
 
-def downloadActivityNetDataSet(version='1.3', num_workers=8):
+
+def downloadActivityNetDataSet(version='1.2'):
     global len_video_list
+    global num_workers
     global num_counter
     global time_counter
-    global error_counter
-    global error_counter_lock
     global counter_lock
-    global video_path_lock
     global global_start_time
-    global full_video_paths
-    global clip_video_paths
+
+    num_workers = 16
 
     global_start_time = time.time()
-    video_list = parseActivityJsonFile(version=version)
-    full_video_paths = {}
-    clip_video_paths = {}
-    parameters = []
-
-    for ii in xrange(len(video_list)):
-        video_item = [version, video_list[ii]]
-        parameters.append(video_item)
+    video_list, identity_list = parseActivityJsonFile(version=version)
 
     len_video_list = len(video_list)
     num_counter  = Value(c_int)  # defaults to 0
     time_counter = Value(c_float)
-    error_counter = Value(c_int)
-    error_counter_lock = Lock()
     counter_lock = Lock()
-    video_path_lock = Lock()
-    pool = Pool(num_workers)
 
-    pool.map(downloadFullVideosWithClipping, parameters)
+    save_folder = '/media/damien/DATA/cvData/ActivityNet/v{version}'.format(version=version)
 
-    num_counter.value = 0
-    time_counter.value = 0
+    # pool = Pool(num_workers)
+    # pool.map(downloadFullVideos, zip([save_folder] * len(video_list), video_list))
+    # pool.close()
+    # pool.join()
 
-    pool.map(checkErrors, parameters)
+    downloaded_files = glob.glob(os.path.join(save_folder, '*/*'))
+    downloaded_identities = []
+    for downloaded_file in downloaded_files:
+        downloaded_identities.append(downloaded_file.split('/')[-1].split('.')[-2])
 
-    print ""
+
+    non_downloaded_identities = []
+    for identity in identity_list:
+        if identity not in downloaded_identities:
+            non_downloaded_identities.append(identity)
+
+
+    print "----------------------------------------------"
     print "ActivityNet {} Download Videos Done".format(version)
-    print "Number of Errors is {}".format(error_counter.value)
-    print ""
-    
-if __name__ == '__main__':
-    num_workers = 8
+    print "Non Downloaded File Count: {:05d}".format(len(non_downloaded_identities))
+    print "----------------------------------------------"
 
+
+if __name__ == '__main__':
     version = '1.2'
-    downloadActivityNetDataSet(version=version, num_workers=num_workers)
+    downloadActivityNetDataSet(version=version)
 
     version = '1.3'
-    downloadActivityNetDataSet(version=version, num_workers=num_workers)
+    downloadActivityNetDataSet(version=version)

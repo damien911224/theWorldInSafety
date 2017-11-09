@@ -292,6 +292,10 @@ def extractOpticalFlowSimple(extractItems):
     extract_dst_path = extractItems[1]
     processor_type = extractItems[2]
 
+    global num_extract
+    global num_counter_lock
+    global len_extract
+
     video_name = video_file_path.split('/')[-1]
 
     new_size = (340, 256)
@@ -386,7 +390,9 @@ def extractOpticalFlowSimple(extractItems):
     os.system(cmd)
     sys.stdout.flush()
 
-    print '{} EXTRACT DONE'.format(video_file_path)
+    with num_counter_lock:
+        num_extract.value += 1
+        print 'EXTRACT DONE|{:05.02f}%|{:05d}th|{}'.format(float(num_extract.value)/float(len_extract)*100.0, num_extract.value, video_file_path)
 
 
 def extractOpticalFlow(video_file_path):
@@ -1188,7 +1194,9 @@ def preProcessInputDataForTSN(vid_list, extract_dst_path, frame_src_path, frame_
 
 
 def makeInputData(version='3'):
-    violence_src_folder = '/media/damien/DATA2/cvData/Youtube/clips2'
+    violence_src_folders = ['/media/damien/DATA2/cvData/Youtube/clips*',
+                           '/media/damien/DATA2/cvData/TWIS/v2/Violence',
+                           '/media/damien/DATA2/cvData/TWIS/v3/Violence']
     normal_src_folder = '/media/damien/DATA2/cvData/TWIS/v2/Normal'
     video_dst_folder = '/media/damien/DATA2/cvData/TWIS/v{}'.format(version)
     extract_dst_folder = '/media/damien/DATA2/cvData/TSN_data/TWIS/v{}'.format(version)
@@ -1197,52 +1205,65 @@ def makeInputData(version='3'):
     identity_length = 13
     identity_list = []
 
-    violence_src_paths = glob.glob(os.path.join(violence_src_folder, '*'))
-    for v_src_path in violence_src_paths:
-        video_cap = cv2.VideoCapture(v_src_path)
-        frame_count = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)) -1
-        video_cap.release()
-        while True:
-            identity = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(identity_length))
-            if not identity in identity_list:
-                break
+    violence_src_paths = []
+    for violence_src_folder in violence_src_folders:
+        violence_src_paths += glob.glob(os.path.join(violence_src_folder, '*'))
 
-        new_file_name = '{}_{:05d}.avi'.format(identity, frame_count)
-        dst_path = os.path.join(video_dst_folder, 'Violence', new_file_name)
+    print len(violence_src_paths)
 
-        identity_list.append(identity)
-        shutil.copy(v_src_path, dst_path)
+    # for v_src_path in violence_src_paths:
+    #     video_cap = cv2.VideoCapture(v_src_path)
+    #     frame_count = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)) -1
+    #     video_cap.release()
+    #     while True:
+    #         identity = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(identity_length))
+    #         if not identity in identity_list:
+    #             break
+    #
+    #     new_file_name = '{}_{:05d}.avi'.format(identity, frame_count)
+    #     dst_path = os.path.join(video_dst_folder, 'Violence', new_file_name)
+    #
+    #     identity_list.append(identity)
+    #     shutil.copy(v_src_path, dst_path)
 
 
     violence_counter = len(glob.glob(os.path.join(video_dst_folder, 'Violence/*')))
     normal_paths = glob.glob(os.path.join(normal_src_folder, '*'))
 
-    normal_indices = random.sample(range(0, len(normal_paths), 1), violence_counter)
+    normal_indices = random.sample(range(0, len(normal_paths), 1), violence_counter * 3)
     normal_sampled_paths = []
     for index in normal_indices:
         normal_sampled_paths.append(normal_paths[index])
 
 
-    for src_path in normal_sampled_paths:
-        video_cap = cv2.VideoCapture(src_path)
-        frame_count = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)) -1
-        video_cap.release()
+    # for src_path in normal_sampled_paths:
+    #     video_cap = cv2.VideoCapture(src_path)
+    #     frame_count = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)) -1
+    #     video_cap.release()
+    #
+    #     while True:
+    #         identity = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(identity_length))
+    #         if not identity in identity_list:
+    #             break
+    #
+    #     new_file_name = '{}_{:05d}.avi'.format(identity, frame_count)
+    #     dst_path = os.path.join(video_dst_folder, 'Normal', new_file_name)
+    #
+    #     identity_list.append(identity)
+    #     shutil.copy(src_path, dst_path)
 
-        while True:
-            identity = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(identity_length))
-            if not identity in identity_list:
-                break
 
-        new_file_name = '{}_{:05d}.avi'.format(identity, frame_count)
-        dst_path = os.path.join(video_dst_folder, 'Normal', new_file_name)
+    num_worker = 12
 
-        identity_list.append(identity)
-        shutil.copy(src_path, dst_path)
-
-
-    num_worker = 8
+    global num_extract
+    global num_counter_lock
+    global len_extract
+    num_counter_lock = Lock()
+    num_extract = Value(c_int)
 
     whole_video_paths = glob.glob(os.path.join(video_dst_folder, '*/*'))
+
+    len_extract = len(whole_video_paths)
 
     extract_pool = Pool(processes=num_worker)
     extract_pool.map(extractOpticalFlowSimple, zip(whole_video_paths, [extract_dst_folder]*len(whole_video_paths), ['gpu']*len(whole_video_paths)))
@@ -1258,7 +1279,7 @@ def makeInputData(version='3'):
         train_list_f = open("../data/twis_splits/trainlist0%d.txt" % (i + 1), "w")
         test_list_f = open("../data/twis_splits/testlist0%d.txt" % (i + 1), "w")
 
-        v_train_indices = random.sample(range(0, (len(v_file_list) - 1)), int(len(v_file_list) * 0.80))
+        v_train_indices = random.sample(range(0, (len(v_file_list) - 1)), int(len(v_file_list) * 0.90))
         v_test_indices = []
 
         for i in xrange(len(v_file_list)):
@@ -1281,7 +1302,7 @@ def makeInputData(version='3'):
         ratio_of_normal_to_violence = float(len(v_file_list)) / float(len(n_file_list))
 
         n_train_indices = random.sample(range(0, (len(n_file_list) - 1)),
-                                        int(len(n_file_list) * 0.80 * ratio_of_normal_to_violence))
+                                        int(len(n_file_list) * 0.90 * ratio_of_normal_to_violence))
         n_test_indices = []
 
         n_test_count = 0
@@ -1290,7 +1311,7 @@ def makeInputData(version='3'):
             if i[0] not in n_train_indices:
                 n_test_indices.append(i[0])
                 n_test_count += 1
-                if n_test_count >= len(n_file_list) * 0.20 * ratio_of_normal_to_violence:
+                if n_test_count >= len(n_file_list) * 0.10 * ratio_of_normal_to_violence:
                     break
 
         print len(n_train_indices)

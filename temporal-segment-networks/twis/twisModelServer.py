@@ -7,7 +7,6 @@ import numpy as np
 import time
 import glob
 import math
-import matplotlib.pyplot as plt
 import threading
 from sklearn import mixture
 from pipes import quote
@@ -113,20 +112,15 @@ class CaffeNet(object):
         return out[score_name].copy()
 
 
-class ServerFromVideo():
+class Session():
     def __init__(self):
         self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
         self.in_progress = True
+        self.please_quit = False
         self.extractor_closed = False
 
         self.root_folder = os.path.abspath('../progress')
-        if not os.path.exists(self.root_folder):
-            try:
-                os.makedirs(self.root_folder)
-            except OSError:
-                pass
-
         self.session_folder = os.path.join(self.root_folder, '{}'.format(self.session_name))
         self.image_folder = os.path.join(self.session_folder, 'images')
         self.flow_folder = os.path.join(self.session_folder, 'flows')
@@ -135,45 +129,33 @@ class ServerFromVideo():
         self.clip_send_folder = os.path.join(self.clip_folder, 'send_clips')
         self.keep_folder = os.path.join(self.session_folder, 'keep')
 
+        folders = [ self.root_folder, self.session_folder, self.image_folder,
+                    self.flow_folder, self.clip_folder, self.clip_view_folder,
+                    self.clip_send_folder, self.keep_folder ]
+
         previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
         for folder in previous_session_folders:
             rmtree(folder, ignore_errors=True)
 
-        try:
-            os.mkdir(self.session_folder)
-        except OSError:
-            pass
+        for folder in folders:
+            try:
+                os.mkdir(folder)
+            except OSError:
+                pass
 
-        try:
-            os.mkdir(self.image_folder)
-        except OSError:
-            pass
 
-        try:
-            os.mkdir(self.flow_folder)
-        except OSError:
-            pass
+        self.show_size = (600, 450)
+        self.new_size = (224, 224)
+        self.temporal_width = 1
+        self.print_term = 50
+        self.fps = 25.0
+        self.wait_time = 1.0 / self.fps
 
-        try:
-            os.mkdir(self.clip_folder)
-        except OSError:
-            pass
+        self.start_index = 1
+        self.dumped_index = 0
 
-        try:
-            os.mkdir(self.clip_view_folder)
-        except OSError:
-            pass
 
-        try:
-            os.mkdir(self.clip_send_folder)
-        except OSError:
-            pass
-
-        try:
-            os.mkdir(self.keep_folder)
-        except OSError:
-            pass
-
+        self.src_from_out = False
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
@@ -182,57 +164,61 @@ class ServerFromVideo():
         self.model_version = 3
         self.build_temporal_net(self.model_version)
 
-        self.show_size = ( 600, 450 )
-        self.new_size = ( 224, 224 )
-        self.temporal_width = 1
-        self.print_term = 50
-        self.fps = 25.0
-        self.start_index = 1
-        self.wait_time = 1.0 / self.fps
-        self.dumped_index = 0
-
         self.print_lock = Lock()
 
         self.extractor = Extractor(self)
         self.extractor_thread = threading.Thread(target=self.extractor.run, name='Extractor')
 
-        self.server_thread = threading.Thread(target=self.run, name='Server')
-        self.server_thread.start()
+        self.session_thread = threading.Thread(target=self.run, name='Session')
+        self.session_thread.start()
 
 
     def run(self):
-        if self.web_cam:
-            video_cap = cv2.VideoCapture(0)
-        else:
-            video_cap = cv2.VideoCapture(os.path.join(self.root_folder, 'test_videos', self.test_video_name))
-        self.video_width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.video_height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.video_fps = video_cap.get(cv2.CAP_PROP_FPS)
+        self.child_thread_started = False
 
-        self.extractor_thread.start()
+        while not self.please_quit:
+            while not self.in_progress:
+                time.sleep(0.5)
 
-        while self.in_progress:
-            frames = []
-            while True:
-                ok, frame = video_cap.read()
-                if ok:
-                    frames.append(frame)
-                    time.sleep(self.wait_time)
-
-                    if len(frames) >= self.temporal_width:
-                        break
-
-            self.dumpFrames(frames)
-            del frames
-            gc.collect()
-
-            self.start_index += self.temporal_width
-            self.dumped_index = self.start_index - 1
+            if self.src_from_out:
 
 
-        video_cap.release()
 
-        self.finalize()
+                print 'Hi'
+                print 'src_from_out'
+            else:
+                if self.web_cam:
+                    video_cap = cv2.VideoCapture(0)
+                else:
+                    video_cap = cv2.VideoCapture(os.path.join(self.root_folder, 'test_videos', self.test_video_name))
+                self.video_width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                self.video_height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.video_fps = video_cap.get(cv2.CAP_PROP_FPS)
+
+                if not self.child_thread_started:
+                    self.extractor_thread.start()
+                    self.child_thread_started = True
+
+                while self.in_progress:
+                    frames = []
+                    while True:
+                        ok, frame = video_cap.read()
+                        if ok:
+                            frames.append(frame)
+                            time.sleep(self.wait_time)
+
+                            if len(frames) >= self.temporal_width:
+                                break
+
+                    self.dumpFrames(frames)
+                    del frames
+                    gc.collect()
+
+                    self.start_index += self.temporal_width
+                    self.dumped_index = self.start_index - 1
+
+                video_cap.release()
+                self.finalize()
 
 
     def build_temporal_net(self, version=3):
@@ -254,7 +240,7 @@ class ServerFromVideo():
         end_index = self.start_index + len(frames) - 1
         if end_index % self.print_term == 0:
             with self.print_lock:
-                print '{:10s}|{:12s}| Until {:07d}'.format('Server', 'Dumping', end_index)
+                print '{:10s}|{:12s}| Until {:07d}'.format('Session', 'Dumping', end_index)
 
         index = self.start_index
         for frame in frames:
@@ -269,7 +255,7 @@ class ServerFromVideo():
 
 
     def finalize(self):
-        global server_closed
+        global session_closed
 
         self.extractor.in_progress = False
 
@@ -278,54 +264,98 @@ class ServerFromVideo():
 
         time.sleep(0.3)
 
-        del self.extractor
-        del self.extractor_thread
-
         with self.print_lock:
-            print '{:10s}|{} Finished'.format('Server', 'Extractor')
+            print '{:10s}|{} Finalized'.format('Session', 'Extractor')
 
         gc.collect()
 
-        server_closed = True
+        session_closed = True
+
+
+    def resume(self):
+        self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        self.in_progress = True
+        self.please_quit = False
+        self.extractor_closed = False
+
+        self.root_folder = os.path.abspath('../progress')
+        self.session_folder = os.path.join(self.root_folder, '{}'.format(self.session_name))
+        self.image_folder = os.path.join(self.session_folder, 'images')
+        self.flow_folder = os.path.join(self.session_folder, 'flows')
+        self.clip_folder = os.path.join(self.session_folder, 'clips')
+        self.clip_view_folder = os.path.join(self.clip_folder, 'view_clips')
+        self.clip_send_folder = os.path.join(self.clip_folder, 'send_clips')
+        self.keep_folder = os.path.join(self.session_folder, 'keep')
+
+        folders = [self.root_folder, self.session_folder, self.image_folder,
+                   self.flow_folder, self.clip_folder, self.clip_view_folder,
+                   self.clip_send_folder, self.keep_folder]
+
+        previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
+        for folder in previous_session_folders:
+            rmtree(folder, ignore_errors=True)
+
+        for folder in folders:
+            try:
+                os.mkdir(folder)
+            except OSError:
+                pass
+
+        self.in_progress = True
+
+        self.start_index = 1
+        self.dumped_index = 0
+
+        self.extractor.resume()
+        self.extractor_closed = False
 
 
 class Extractor():
-    def __init__(self, server):
+    def __init__(self, session):
         self.in_progress = True
         self.evaluator_closed = False
 
-        self.server = server
+        self.session = session
 
-        self.evaluator = Evaluator(self.server, self)
+        self.evaluator = Evaluator(self.session, self)
         self.evaluator_thread = threading.Thread(target=self.evaluator.run, name='Evaluator')
 
         self.cmd_lock = Lock()
 
-
-    def run(self):
         self.start_index = 2
         self.extracted_index = 0
         self.wait_time = 0.3
 
-        self.evaluator_thread.start()
 
-        while self.in_progress:
-            while self.server.dumped_index <= self.extracted_index and self.in_progress:
-                time.sleep(self.wait_time)
+    def run(self):
+        self.child_thread_started = False
 
-            if self.in_progress:
-                self.end_index = self.server.dumped_index
+        while True:
+            while not self.in_progress:
+                time.sleep(0.5)
 
-                with self.server.print_lock:
-                    print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Extractor', 'Extracting', self.start_index, self.end_index)
-
-                self.extractOpticalFlows(self.server.image_folder, self.start_index, self.end_index, self.server.flow_folder)
-
-                self.start_index = self.end_index + 1
-                self.extracted_index = self.end_index
+            if not self.child_thread_started:
+                self.evaluator_thread.start()
+                self.child_thread_started = True
 
 
-        self.finalize()
+            while self.in_progress:
+                while self.session.dumped_index <= self.extracted_index and self.in_progress:
+                    time.sleep(self.wait_time)
+
+                if self.in_progress:
+                    self.end_index = self.session.dumped_index
+
+                    with self.session.print_lock:
+                        print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Extractor', 'Extracting', self.start_index, self.end_index)
+
+                    self.extractOpticalFlows(self.session.image_folder, self.start_index, self.end_index, self.session.flow_folder)
+
+                    self.start_index = self.end_index + 1
+                    self.extracted_index = self.end_index
+
+            self.finalize()
 
 
     def extractOpticalFlows(self, frame_path, start_index, end_index, flow_dst_folder):
@@ -363,90 +393,105 @@ class Extractor():
 
         time.sleep(0.3)
 
-        del self.evaluator
-        del self.evaluator_thread
-
-        with self.server.print_lock:
-            print '{:10s}|{} Finished'.format('Extractor', 'Evaluator')
+        with self.session.print_lock:
+            print '{:10s}|{} Finalized'.format('Extractor', 'Evaluator')
 
         gc.collect()
 
-        self.server.extractor_closed = True
+        self.session.extractor_closed = True
+
+
+    def resume(self):
+        self.start_index = 2
+        self.extracted_index = 0
+
+        self.in_progress = True
+
+        self.evaluator.resume()
+        self.evaluator_closed = False
 
 
 class Evaluator():
-    def __init__(self, server, extractor):
+    def __init__(self, session, extractor):
         self.in_progress =True
         self.analyzer_closed = False
         self.secretary_closed = False
         self.closer_closed = False
 
-        self.server = server
+        self.session = session
         self.extractor = extractor
 
         self.num_workers = 12
         self.num_using_gpu = 8
 
-        global scanning_pool
-        scanning_pool = Pool(processes=self.num_workers)
-
-        copy_reg.pickle(types.MethodType, self._pickle_method)
-
-        self.scanner = Scanner(self.server.flow_folder, self.num_workers, self.num_using_gpu)
-
-        self.analyzer = Analyzer(self.server, self.extractor, self)
-        self.analyzer_thread = threading.Thread(target=self.analyzer.run, name='Analyzer')
-
-        self.secretary = Secretary(self.server, self.extractor, self, self.analyzer)
-        self.secretary_thread = threading.Thread(target=self.secretary.run, name='Secretary')
-
-        self.closer = Closer(self.server, self.extractor, self, self.analyzer, self.secretary)
-        self.closer_thread = threading.Thread(target=self.closer.run, name='Closer')
-
-
-    def run(self):
         self.start_index = 2
-        self.scanned_index= 1
+        self.scanned_index = 1
         self.temporal_gap = 2
         self.actual_start_index = 2
         self.wait_time = 0.3
 
         self.scores = []
 
-        self.analyzer_thread.start()
-        self.secretary_thread.start()
-        self.closer_thread.start()
+        global scanning_pool
+        scanning_pool = Pool(processes=self.num_workers)
 
-        while self.in_progress:
-            while self.extractor.extracted_index - self.temporal_gap <= self.scanned_index and self.in_progress:
-                time.sleep(self.wait_time)
+        copy_reg.pickle(types.MethodType, self._pickle_method)
 
-            if self.in_progress:
-                self.actual_extracted_index = self.extractor.extracted_index
-                self.end_index = self.actual_extracted_index - self.temporal_gap
+        self.scanner = Scanner(self.session.flow_folder, self.num_workers, self.num_using_gpu)
 
-                with self.server.print_lock:
-                    print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', self.start_index, self.end_index)
+        self.analyzer = Analyzer(self.session, self.extractor, self)
+        self.analyzer_thread = threading.Thread(target=self.analyzer.run, name='Analyzer')
 
-                scan_start_time = time.time()
+        self.secretary = Secretary(self.session, self.extractor, self, self.analyzer)
+        self.secretary_thread = threading.Thread(target=self.secretary.run, name='Secretary')
 
-                return_scores = []
-                return_scores += self.scanner.scan(self.start_index, self.end_index, self.actual_extracted_index)
-
-                self.scan_time = (time.time() - scan_start_time) / len(return_scores)
-
-                self.scores += return_scores
-                self.analyzer.keeping_scores += return_scores
-                self.secretary.showing_scores += return_scores
-                del return_scores
-
-                self.scanned_index = self.end_index
-                self.start_index = self.end_index + 1
-
-                gc.collect()
+        self.closer = Closer(self.session, self.extractor, self, self.analyzer, self.secretary)
+        self.closer_thread = threading.Thread(target=self.closer.run, name='Closer')
 
 
-        self.finalize()
+    def run(self):
+        self.child_thread_started = False
+
+        while True:
+            while not self.in_progress:
+                time.sleep(0.5)
+
+            if not self.child_thread_started:
+                self.analyzer_thread.start()
+                self.secretary_thread.start()
+                self.closer_thread.start()
+                self.child_thread_started = True
+
+            while self.in_progress:
+                while self.extractor.extracted_index - self.temporal_gap <= self.scanned_index and self.in_progress:
+                    time.sleep(self.wait_time)
+
+                if self.in_progress:
+                    self.actual_extracted_index = self.extractor.extracted_index
+                    self.end_index = self.actual_extracted_index - self.temporal_gap
+
+                    with self.session.print_lock:
+                        print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', self.start_index, self.end_index)
+
+                    scan_start_time = time.time()
+
+                    return_scores = []
+                    return_scores += self.scanner.scan(self.start_index, self.end_index, self.actual_extracted_index)
+
+                    self.scan_time = (time.time() - scan_start_time) / len(return_scores)
+
+                    self.scores += return_scores
+                    self.analyzer.keeping_scores += return_scores
+                    self.secretary.showing_scores += return_scores
+                    del return_scores
+
+                    self.scanned_index = self.end_index
+                    self.start_index = self.end_index + 1
+
+                    gc.collect()
+
+
+            self.finalize()
 
 
     def _pickle_method(self,m):
@@ -466,46 +511,59 @@ class Evaluator():
         scanning_pool.close()
         scanning_pool.join()
         del scanning_pool
-
         del self.scanner
-
 
         while not self.analyzer_closed:
             time.sleep(0.3)
 
         time.sleep(0.3)
 
-        del self.analyzer
-        del self.analyzer_thread
-
-        with self.server.print_lock:
-            print '{:10s}|{} Finished'.format('Evaluator', 'Analyzer')
+        with self.session.print_lock:
+            print '{:10s}|{} Finalized'.format('Evaluator', 'Analyzer')
 
         while not self.secretary_closed:
             time.sleep(0.3)
 
         time.sleep(0.3)
 
-        del self.secretary
-        del self.secretary_thread
-
-        with self.server.print_lock:
-            print '{:10s}|{} Finished'.format('Evaluator', 'Secretary')
+        with self.session.print_lock:
+            print '{:10s}|{} Finalized'.format('Evaluator', 'Secretary')
 
         while not self.closer_closed:
             time.sleep(0.3)
 
         time.sleep(0.3)
 
-        del self.closer
-        del self.closer_thread
-
-        with self.server.print_lock:
-            print '{:10s}|{} Finished'.format('Evaluator', 'Closer')
+        with self.session.print_lock:
+            print '{:10s}|{} Finalized'.format('Evaluator', 'Closer')
 
         gc.collect()
 
         self.extractor.evaluator_closed = True
+
+
+    def resume(self):
+        self.start_index = 2
+        self.scanned_index = 1
+        self.actual_start_index = 2
+
+        self.scores = []
+
+        global scanning_pool
+        scanning_pool = Pool(processes=self.num_workers)
+
+        self.scanner = Scanner(self.session.flow_folder, self.num_workers, self.num_using_gpu)
+
+        self.in_progress = True
+
+        self.analyzer.resume()
+        self.analyzer_closed = False
+
+        self.secretary.resume()
+        self.secretary_closed = False
+
+        self.closer.resume()
+        self.closer_closed = False
 
 
 class Scanner():
@@ -595,15 +653,13 @@ class Scanner():
 
 
 class Analyzer():
-    def __init__(self, server, extractor, evaluator):
+    def __init__(self, session, extractor, evaluator):
         self.in_progress = True
 
-        self.server = server
+        self.session = session
         self.extractor = extractor
         self.evaluator = evaluator
 
-
-    def run(self):
         self.analyzing_start_index = 0
         self.analyzed_index = 1
         self.wait_time = 0.2
@@ -626,231 +682,237 @@ class Analyzer():
         self.keep_number = 1
 
 
-        while self.in_progress:
-            while self.analyzed_index >= self.evaluator.scanned_index and self.in_progress:
-                time.sleep(self.wait_time)
-
-            if self.in_progress:
-                self.analyzed_index = self.evaluator.scanned_index
-                self.analyzing_end_index = max(len(self.evaluator.scores) - 1, 0)
-                self.not_yet = False
-
-                with self.server.print_lock:
-                    print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Analyzer', 'Analyzing',
-                                                                 self.analyzing_start_index + self.real_base,
-                                                                 self.analyzing_end_index + self.real_base)
+    def run(self):
+        while True:
+            while not self.in_progress:
+                time.sleep(0.5)
 
 
-                while True:
-                    clip_start_index = self.analyzing_start_index
+            while self.in_progress:
+                while self.analyzed_index >= self.evaluator.scanned_index and self.in_progress:
+                    time.sleep(self.wait_time)
 
-                    if clip_start_index >= self.analyzing_end_index:
-                        break
+                if self.in_progress:
+                    self.analyzed_index = self.evaluator.scanned_index
+                    self.analyzing_end_index = max(len(self.evaluator.scores) - 1, 0)
+                    self.not_yet = False
 
-                    for index in range(self.analyzing_start_index, self.analyzing_end_index + 1, 1):
-                        clip_start_index = index
-                        if self.evaluator.scores[index][self.violence_index] >= self.lower_bound:
+                    with self.session.print_lock:
+                        print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Analyzer', 'Analyzing',
+                                                                     self.analyzing_start_index + self.real_base,
+                                                                     self.analyzing_end_index + self.real_base)
+
+
+                    while True:
+                        clip_start_index = self.analyzing_start_index
+
+                        if clip_start_index >= self.analyzing_end_index:
                             break
 
-                    maxima = []
-                    clip_end_index = min(clip_start_index + 1, self.analyzing_end_index)
+                        for index in range(self.analyzing_start_index, self.analyzing_end_index + 1, 1):
+                            clip_start_index = index
+                            if self.evaluator.scores[index][self.violence_index] >= self.lower_bound:
+                                break
 
-                    for index in range(clip_start_index + 1, self.analyzing_end_index + 1, 1):
-                        clip_end_index = index
-                        if self.evaluator.scores[index][self.violence_index] < self.lower_bound:
-                            self.falling_counter += 1
-                        else:
-                            self.falling_counter = 0
+                        maxima = []
+                        clip_end_index = min(clip_start_index + 1, self.analyzing_end_index)
 
-                        if self.falling_counter >= self.max_falling_count:
-                            clip_end_index -= min(self.falling_counter/2 - 1, self.analyzing_end_index)
-                            self.falling_counter = 0
-                            break
+                        for index in range(clip_start_index + 1, self.analyzing_end_index + 1, 1):
+                            clip_end_index = index
+                            if self.evaluator.scores[index][self.violence_index] < self.lower_bound:
+                                self.falling_counter += 1
+                            else:
+                                self.falling_counter = 0
 
-                        if index >= 1 and index < self.analyzing_end_index:
-                            previous_score = self.evaluator.scores[index - 1][self.violence_index]
-                            next_score = self.evaluator.scores[index + 1][self.violence_index]
-                            current_score = self.evaluator.scores[index][self.violence_index]
-                            if previous_score < current_score and next_score < current_score:
-                                if current_score >= self.max_lower_bound:
-                                    maxima.append([index + self.real_base, current_score])
+                            if self.falling_counter >= self.max_falling_count:
+                                clip_end_index -= min(self.falling_counter/2 - 1, self.analyzing_end_index)
+                                self.falling_counter = 0
+                                break
 
-                    if clip_end_index >= self.analyzing_end_index:
-                        self.not_yet = True
+                            if index >= 1 and index < self.analyzing_end_index:
+                                previous_score = self.evaluator.scores[index - 1][self.violence_index]
+                                next_score = self.evaluator.scores[index + 1][self.violence_index]
+                                current_score = self.evaluator.scores[index][self.violence_index]
+                                if previous_score < current_score and next_score < current_score:
+                                    if current_score >= self.max_lower_bound:
+                                        maxima.append([index + self.real_base, current_score])
 
-                    selected_slices = []
-                    if not self.not_yet:
-                        big_slices = []
+                        if clip_end_index >= self.analyzing_end_index:
+                            self.not_yet = True
+
                         selected_slices = []
-                        number_of_components = max(1, len(maxima))
+                        if not self.not_yet:
+                            big_slices = []
+                            selected_slices = []
+                            number_of_components = max(1, len(maxima))
 
-                        if len(maxima) == 0:
-                            maxima = None
+                            if len(maxima) == 0:
+                                maxima = None
 
-                        if maxima is not None and clip_end_index - clip_start_index+ 1 >= len(maxima):
-                            gmm_elements = []
-                            scores = np.asarray(self.evaluator.scores[clip_start_index:clip_end_index+1])
+                            if maxima is not None and clip_end_index - clip_start_index+ 1 >= len(maxima):
+                                gmm_elements = []
+                                scores = np.asarray(self.evaluator.scores[clip_start_index:clip_end_index+1])
 
-                            for index in range(self.median_kernal_size/2, len(scores), 1):
-                                if index + self.median_kernal_size/2 > len(scores):
-                                    break
-                                scores[index][self.violence_index] \
-                                    = np.median(scores[index:index + self.median_kernal_size / 2 + 1, self.violence_index])
-                                scores[index][self.normal_index] \
-                                    = np.median(scores[index:index + self.median_kernal_size / 2 + 1, self.normal_index])
+                                for index in range(self.median_kernal_size/2, len(scores), 1):
+                                    if index + self.median_kernal_size/2 > len(scores):
+                                        break
+                                    scores[index][self.violence_index] \
+                                        = np.median(scores[index:index + self.median_kernal_size / 2 + 1, self.violence_index])
+                                    scores[index][self.normal_index] \
+                                        = np.median(scores[index:index + self.median_kernal_size / 2 + 1, self.normal_index])
 
 
-                            for index in range(0, len(scores), 1):
-                                current_score = scores[index][self.violence_index]
-                                gmm_elements.append([index + clip_start_index + self.real_base, current_score])
+                                for index in range(0, len(scores), 1):
+                                    current_score = scores[index][self.violence_index]
+                                    gmm_elements.append([index + clip_start_index + self.real_base, current_score])
 
-                            del scores
+                                del scores
 
-                            if not len(gmm_elements) == 0:
-                                gmm = mixture.GaussianMixture(n_components=number_of_components, covariance_type='spherical',
-                                                              max_iter=self.max_iter, means_init=maxima)
-                                gmm.fit(gmm_elements)
+                                if not len(gmm_elements) == 0:
+                                    gmm = mixture.GaussianMixture(n_components=number_of_components, covariance_type='spherical',
+                                                                  max_iter=self.max_iter, means_init=maxima)
+                                    gmm.fit(gmm_elements)
 
-                                means = gmm.means_
-                                covariances = gmm.covariances_
+                                    means = gmm.means_
+                                    covariances = gmm.covariances_
 
-                                components = []
-                                for ii in xrange(len(means)):
-                                    if means[ii][1] >= self.max_lower_bound:
-                                        components.append([means[ii][0], means[ii][1],
-                                                               covariances[ii] * self.variance_factor])
+                                    components = []
+                                    for ii in xrange(len(means)):
+                                        if means[ii][1] >= self.max_lower_bound:
+                                            components.append([means[ii][0], means[ii][1],
+                                                                   covariances[ii] * self.variance_factor])
 
-                                del maxima
-                                del means
-                                del covariances
-                                del gmm_elements
+                                    del maxima
+                                    del means
+                                    del covariances
+                                    del gmm_elements
 
-                                components.sort()
+                                    components.sort()
 
-                                for component in components:
-                                    lower_bound = max(self.keeping_base, int(component[0] - component[2]))
-                                    upper_bound = min(self.analyzing_end_index + self.real_base,
-                                                      int(math.ceil(component[0] + component[2])))
-                                    big_slices.append([lower_bound, upper_bound])
+                                    for component in components:
+                                        lower_bound = max(self.keeping_base, int(component[0] - component[2]))
+                                        upper_bound = min(self.analyzing_end_index + self.real_base,
+                                                          int(math.ceil(component[0] + component[2])))
+                                        big_slices.append([lower_bound, upper_bound])
 
-                                del components
+                                    del components
 
-                                selected_slices = []
-                                isLeft = False
-                                if len(big_slices) >= 1:
-                                    current_ss = big_slices[0]
-                                    bs_index = 1
-                                    while True:
-                                        if bs_index >= len(big_slices):
-                                            if isLeft:
-                                                selected_slices.append(current_ss)
-                                            break
+                                    selected_slices = []
+                                    isLeft = False
+                                    if len(big_slices) >= 1:
+                                        current_ss = big_slices[0]
+                                        bs_index = 1
+                                        while True:
+                                            if bs_index >= len(big_slices):
+                                                if isLeft:
+                                                    selected_slices.append(current_ss)
+                                                break
 
-                                        current_start = current_ss[0]
-                                        current_end = current_ss[1]
+                                            current_start = current_ss[0]
+                                            current_end = current_ss[1]
 
-                                        compare_start = big_slices[bs_index][0]
-                                        compare_end = big_slices[bs_index][1]
+                                            compare_start = big_slices[bs_index][0]
+                                            compare_end = big_slices[bs_index][1]
 
-                                        if current_end < compare_start:
-                                            if compare_start - current_end < self.server.video_fps:
+                                            if current_end < compare_start:
+                                                if compare_start - current_end < self.session.video_fps:
+                                                    start_index = current_start
+                                                    end_index = compare_end
+                                                    current_ss = [start_index, end_index]
+                                                    bs_index += 1
+                                                    isLeft = True
+                                                else:
+                                                    selected_slices.append(current_ss)
+                                                    bs_index += 1
+                                                    if bs_index >= len(big_slices):
+                                                        break
+                                                    current_ss = big_slices[bs_index]
+                                            else:
                                                 start_index = current_start
                                                 end_index = compare_end
                                                 current_ss = [start_index, end_index]
                                                 bs_index += 1
                                                 isLeft = True
-                                            else:
-                                                selected_slices.append(current_ss)
-                                                bs_index += 1
-                                                if bs_index >= len(big_slices):
-                                                    break
-                                                current_ss = big_slices[bs_index]
-                                        else:
-                                            start_index = current_start
-                                            end_index = compare_end
-                                            current_ss = [start_index, end_index]
-                                            bs_index += 1
-                                            isLeft = True
 
-                                removed_slices = []
-                                for slice in selected_slices:
-                                    duration = slice[1] - slice[0] + 1
-                                    if duration < 10:
-                                        removed_slices.append(slice)
+                                    removed_slices = []
+                                    for slice in selected_slices:
+                                        duration = slice[1] - slice[0] + 1
+                                        if duration < 10:
+                                            removed_slices.append(slice)
 
-                                for slice in removed_slices:
-                                    selected_slices.remove(slice)
+                                    for slice in removed_slices:
+                                        selected_slices.remove(slice)
 
-                    clips = []
-                    for slice in selected_slices:
-                        keep_folder = os.path.join(self.server.keep_folder, 'keep_{:07d}'.format(self.keep_number))
-                        self.keep_number += 1
-                        try:
-                            os.mkdir(keep_folder)
-                        except OSError:
-                            pass
+                        clips = []
+                        for slice in selected_slices:
+                            keep_folder = os.path.join(self.session.keep_folder, 'keep_{:07d}'.format(self.keep_number))
+                            self.keep_number += 1
+                            try:
+                                os.mkdir(keep_folder)
+                            except OSError:
+                                pass
 
-                        clip = dict()
-                        clip['keep_folder'] = keep_folder
-                        clip['time_intervals'] = [slice[0], slice[1]]
-                        clip['frames'] = []
+                            clip = dict()
+                            clip['keep_folder'] = keep_folder
+                            clip['time_intervals'] = [slice[0], slice[1]]
+                            clip['frames'] = []
 
-                        for index in range(slice[0], slice[1]+1, 1):
-                            image_src_path = os.path.join(self.server.image_folder, 'show_{:07d}.jpg'.format(index))
-                            flow_x_src_path = os.path.join(self.server.flow_folder, 'flow_x_{:07d}.jpg'.format(index))
-                            flow_y_src_path = os.path.join(self.server.flow_folder, 'flow_y_{:07d}.jpg'.format(index))
+                            for index in range(slice[0], slice[1]+1, 1):
+                                image_src_path = os.path.join(self.session.image_folder, 'show_{:07d}.jpg'.format(index))
+                                flow_x_src_path = os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(index))
+                                flow_y_src_path = os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(index))
 
-                            image_dst_path = os.path.join(keep_folder, 'show_{:07d}.jpg'.format(index))
-                            flow_x_dst_path = os.path.join(keep_folder, 'flow_x_{:07d}.jpg'.format(index))
-                            flow_y_dst_path = os.path.join(keep_folder, 'flow_y_{:07d}.jpg'.format(index))
+                                image_dst_path = os.path.join(keep_folder, 'show_{:07d}.jpg'.format(index))
+                                flow_x_dst_path = os.path.join(keep_folder, 'flow_x_{:07d}.jpg'.format(index))
+                                flow_y_dst_path = os.path.join(keep_folder, 'flow_y_{:07d}.jpg'.format(index))
 
-                            copyfile(image_src_path, image_dst_path)
-                            copyfile(flow_x_src_path, flow_x_dst_path)
-                            copyfile(flow_y_src_path, flow_y_dst_path)
+                                copyfile(image_src_path, image_dst_path)
+                                copyfile(flow_x_src_path, flow_x_dst_path)
+                                copyfile(flow_y_src_path, flow_y_dst_path)
 
-                            score = self.keeping_scores[index -self.keeping_base]
+                                score = self.keeping_scores[index -self.keeping_base]
 
-                            frame = dict()
-                            frame['index'] = index
-                            frame['score'] = score
-                            frame['image'] = image_dst_path
-                            frame['flows'] = [flow_x_dst_path, flow_y_dst_path]
-                            clip['frames'].append(frame)
-                            del frame
+                                frame = dict()
+                                frame['index'] = index
+                                frame['score'] = score
+                                frame['image'] = image_dst_path
+                                frame['flows'] = [flow_x_dst_path, flow_y_dst_path]
+                                clip['frames'].append(frame)
+                                del frame
 
-                        clips.append(clip)
-                        del clip
+                            clips.append(clip)
+                            del clip
 
-                    del selected_slices
+                        del selected_slices
 
-                    if len(clips) >= 1:
-                        self.evaluator.closer.clips += clips
-                    del clips
+                        if len(clips) >= 1:
+                            self.evaluator.closer.clips += clips
+                        del clips
 
 
-                    if self.not_yet:
-                        self.remove_amount = clip_start_index
-                    else:
-                        self.remove_amount = clip_end_index + 1
+                        if self.not_yet:
+                            self.remove_amount = clip_start_index
+                        else:
+                            self.remove_amount = clip_end_index + 1
 
-                    if self.remove_amount >= 1:
-                        del self.evaluator.scores[0:self.remove_amount]
-                        self.analyzing_end_index -= self.remove_amount
-                        self.real_base += self.remove_amount
-                        self.remove_amount = 0
+                        if self.remove_amount >= 1:
+                            del self.evaluator.scores[0:self.remove_amount]
+                            self.analyzing_end_index -= self.remove_amount
+                            self.real_base += self.remove_amount
+                            self.remove_amount = 0
 
-                    gap_of_keeping_and_current =  (self.analyzing_start_index + self.real_base) - (self.keeping_base)
-                    if gap_of_keeping_and_current >= int(100.0 * server.video_fps):
-                        del self.keeping_scores[0:gap_of_keeping_and_current]
-                        self.keeping_base += gap_of_keeping_and_current
+                        gap_of_keeping_and_current =  (self.analyzing_start_index + self.real_base) - (self.keeping_base)
+                        if gap_of_keeping_and_current >= int(100.0 * self.session.video_fps):
+                            del self.keeping_scores[0:gap_of_keeping_and_current]
+                            self.keeping_base += gap_of_keeping_and_current
 
-                    if self.not_yet:
-                        break
+                        if self.not_yet:
+                            break
 
-                    gc.collect()
+                        gc.collect()
 
 
-        self.finalize()
+            self.finalize()
 
 
     def finalize(self):
@@ -859,19 +921,34 @@ class Analyzer():
         self.evaluator.analyzer_closed = True
 
 
+    def resume(self):
+        self.analyzing_start_index = 0
+        self.analyzed_index = 1
+        self.falling_counter = 0
+
+        self.real_base = 2
+        self.not_yet = False
+
+        self.keeping_scores = []
+        self.keeping_base = 2
+
+        self.keep_number = 1
+
+        self.in_progress = True
+
+
 class Secretary():
-    def __init__(self, server, extractor, evaluator, analyzer):
+    def __init__(self, session, extractor, evaluator, analyzer):
         self.in_progress = True
         self.progress_viewer_closed = False
         self.clip_viewer_closed = False
 
-        self.server = server
+        self.session = session
         self.extractor = extractor
         self.evaluator = evaluator
         self.analyzer = analyzer
 
         self.progress_viewer = self.Viewer(self)
-        self.progress_viewer.window_name = 'Progress Viewer | Session {}'.format(self.server.session_name)
         self.progress_viewer.window_position = (0, 0)
         self.progress_viewer.every_time_close = False
         self.progress_viewer.view_type = 'frames'
@@ -879,14 +956,11 @@ class Secretary():
         self.progress_viewer_thread = threading.Thread(target=self.progress_viewer.run, name='Progress Viewer')
 
         self.clip_viewer = self.Viewer(self)
-        self.clip_viewer.window_name = 'Clip Viewer'
-        self.clip_viewer.view_time = self.server.wait_time
+        self.clip_viewer.view_time = self.session.wait_time
         self.clip_viewer.every_time_close = True
         self.clip_viewer.view_type = 'clips'
         self.clip_viewer_thread = threading.Thread(target=self.clip_viewer.run, name='Clip Viewer')
 
-
-    def run(self):
         self.start_index = 2
         self.end_index = 2
         self.wait_time = 0.5
@@ -897,64 +971,78 @@ class Secretary():
         self.violence_index = 0
         self.showing_scores = []
         self.view_has_next = False
-        self.removing_late_term = int(100 * self.server.video_fps)
+        self.removing_late_term = int(100 * self.session.fps)
 
-        self.progress_viewer_thread.start()
-        self.clip_viewer_thread.start()
-
-        while self.in_progress:
-            while self.make_views_index >= self.evaluator.scanned_index and self.in_progress:
-                time.sleep(self.wait_time)
-
-            if self.in_progress:
-                number_of_showing_scores = len(self.showing_scores)
-                self.end_index = self.start_index + number_of_showing_scores - 1
-
-                with self.server.print_lock:
-                    print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Secretary', 'Viewing', self.start_index, self.end_index)
+        self.progress_viewer.window_name = 'Progress Viewer | Session {}'.format(self.session.session_name)
+        self.clip_viewer.window_name = 'Clip Viewer'
 
 
-                view_frames = []
-                for index in range(self.start_index, self.end_index + 1, 1):
-                    frame = dict()
+    def run(self):
+        self.child_thread_started = False
 
-                    score = self.showing_scores[index - self.start_index]
-                    image = os.path.join(self.server.image_folder, 'show_{:07d}.jpg'.format(index))
-                    flow_x = os.path.join(self.server.flow_folder, 'flow_x_{:07d}.jpg'.format(index))
-                    flow_y = os.path.join(self.server.flow_folder, 'flow_y_{:07d}.jpg'.format(index))
-
-                    frame['index'] = index
-                    frame['score'] = score
-                    frame['image'] = image
-                    frame['flows'] = [flow_x, flow_y]
-
-                    view_frames.append(frame)
-                    del frame
-
-                self.progress_viewer.view_time = self.evaluator.scan_time
-                if len(self.progress_viewer.view_frames) > 0:
-                    self.progress_viewer.view_has_next = True
-
-                self.progress_viewer.view_frames += view_frames
-                del view_frames
-
-                del self.showing_scores[0:number_of_showing_scores]
-                gc.collect()
-                self.make_views_index = self.end_index
-                self.start_index = self.end_index + 1
-
-                self.removing_end_index = self.analyzer.real_base + self.temporal_gap - self.removing_late_term - 1
-                removing_amount = self.removing_end_index - self.removing_start_index + 1
-                if removing_amount >= 1 and self.removing_end_index <= self.progress_viewer.viewed_index:
-                    self.remove(self.removing_start_index, self.removing_end_index)
-                    self.removing_start_index = self.removing_end_index + 1
+        while True:
+            while not self.in_progress:
+                time.sleep(0.5)
 
 
-        self.finalize()
+            if not self.child_thread_started:
+                self.progress_viewer_thread.start()
+                self.clip_viewer_thread.start()
+                self.child_thread_started = True
+
+            while self.in_progress:
+                while self.make_views_index >= self.evaluator.scanned_index and self.in_progress:
+                    time.sleep(self.wait_time)
+
+                if self.in_progress:
+                    number_of_showing_scores = len(self.showing_scores)
+                    self.end_index = self.start_index + number_of_showing_scores - 1
+
+                    with self.session.print_lock:
+                        print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Secretary', 'Viewing', self.start_index, self.end_index)
+
+
+                    view_frames = []
+                    for index in range(self.start_index, self.end_index + 1, 1):
+                        frame = dict()
+
+                        score = self.showing_scores[index - self.start_index]
+                        image = os.path.join(self.session.image_folder, 'show_{:07d}.jpg'.format(index))
+                        flow_x = os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(index))
+                        flow_y = os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(index))
+
+                        frame['index'] = index
+                        frame['score'] = score
+                        frame['image'] = image
+                        frame['flows'] = [flow_x, flow_y]
+
+                        view_frames.append(frame)
+                        del frame
+
+                    self.progress_viewer.view_time = self.evaluator.scan_time
+                    if len(self.progress_viewer.view_frames) > 0:
+                        self.progress_viewer.view_has_next = True
+
+                    self.progress_viewer.view_frames += view_frames
+                    del view_frames
+
+                    del self.showing_scores[0:number_of_showing_scores]
+                    gc.collect()
+                    self.make_views_index = self.end_index
+                    self.start_index = self.end_index + 1
+
+                    self.removing_end_index = self.analyzer.real_base + self.temporal_gap - self.removing_late_term - 1
+                    removing_amount = self.removing_end_index - self.removing_start_index + 1
+                    if removing_amount >= 1 and self.removing_end_index <= self.progress_viewer.viewed_index:
+                        self.remove(self.removing_start_index, self.removing_end_index)
+                        self.removing_start_index = self.removing_end_index + 1
+
+
+            self.finalize()
 
 
     def remove(self, start_index, end_index):
-        with self.server.print_lock:
+        with self.session.print_lock:
             print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Secretary', 'Removing', start_index, end_index)
 
         remove_path_prefixes = ['img', 'show', 'flow_x', 'flow_y']
@@ -962,9 +1050,9 @@ class Secretary():
         for index in range(start_index, end_index + 1, 1):
             for path_prefix in remove_path_prefixes:
                 if path_prefix in ['img', 'show']:
-                    remove_path = os.path.join(self.server.image_folder, '{}_{:07d}.jpg'.format(path_prefix, index))
+                    remove_path = os.path.join(self.session.image_folder, '{}_{:07d}.jpg'.format(path_prefix, index))
                 else:
-                    remove_path = os.path.join(self.server.flow_folder, '{}_{:07d}.jpg'.format(path_prefix, index))
+                    remove_path = os.path.join(self.session.flow_folder, '{}_{:07d}.jpg'.format(path_prefix, index))
                 try:
                     os.remove(remove_path)
                 except:
@@ -980,10 +1068,7 @@ class Secretary():
 
         time.sleep(0.3)
 
-        del self.progress_viewer
-        del self.progress_viewer_thread
-
-        with self.server.print_lock:
+        with self.session.print_lock:
             print '{:10s}|{} Finished'.format('Secretary', 'Progress Viewer')
 
         while not self.clip_viewer_closed:
@@ -992,10 +1077,7 @@ class Secretary():
 
         time.sleep(0.3)
 
-        del self.clip_viewer
-        del self.clip_viewer_thread
-
-        with self.server.print_lock:
+        with self.session.print_lock:
             print '{:10s}|{} Finished'.format('Secretary', 'Clip Viewer')
 
         gc.collect()
@@ -1003,11 +1085,39 @@ class Secretary():
         self.evaluator.secretary_closed = True
 
 
+    def resume(self):
+        self.start_index = 2
+        self.end_index = 2
+        self.make_views_index = 1
+        self.removing_start_index = 1
+        self.removing_end_index = 1
+        self.showing_scores = []
+        self.view_has_next = False
+        self.removing_late_term = int(100 * self.session.video_fps)
+
+        self.progress_viewer.window_name = 'Progress Viewer | Session {}'.format(self.session.session_name)
+        self.clip_viewer.window_name = 'Clip Viewer'
+
+        self.in_progress = True
+
+        self.progress_viewer.resume()
+        self.progress_viewer_closed = False
+
+        self.clip_viewer.resume()
+        self.clip_viewer_closed = False
+
+
     class Viewer():
         def __init__(self, secretary):
             self.in_progress = True
-
             self.secretary = secretary
+
+            self.window_name = ''
+            self.window_position = (0, 0)
+            self.every_time_close = False
+            self.view_has_next = False
+
+            self.view_type = 'frames'
 
             self.viewed_index = -1
             self.wait_time = 0.5
@@ -1018,226 +1128,224 @@ class Secretary():
             self.view_clips = []
             self.violence_index = 0
 
-            self.window_name = ''
-            self.window_position = (0, 0)
-            self.every_time_close = False
-            self.view_has_next = False
-
-            self.view_type = 'frames'
-
 
         def run(self):
-            if self.view_type == 'frames':
-                flow_bound = 20.0
-                angle_bound = 180.0
-                magnitude_bound = flow_bound * flow_bound * 2.0
+            while True:
+                while not self.in_progress:
+                    time.sleep(0.5)
 
-                while self.in_progress:
-                    while len(self.view_frames) <= 0 and self.in_progress:
-                        time.sleep(self.wait_time)
 
-                    if self.in_progress:
-                        cv2.namedWindow(self.window_name, cv2.WINDOW_AUTOSIZE)
-                        cv2.moveWindow(self.window_name, self.window_position[0], self.window_position[1])
+                if self.view_type == 'frames':
+                    flow_bound = 20.0
+                    angle_bound = 180.0
+                    magnitude_bound = flow_bound * flow_bound * 2.0
 
-                        view_frames = []
-                        view_frames += self.view_frames
-                        view_time = max(min(int(self.view_time * 1000.0 * self.step / self.time_factor),
-                                            int(1000.0 / self.secretary.server.video_fps * 3.0)),
-                                        1)
+                    while self.in_progress:
+                        while len(self.view_frames) <= 0 and self.in_progress:
+                            time.sleep(self.wait_time)
 
-                        for frame_index in range(0, len(view_frames), int(self.step)):
-                            index = view_frames[frame_index]['index']
-                            score = view_frames[frame_index]['score']
-                            image = cv2.imread(view_frames[frame_index]['image'])
-                            flow_x = cv2.resize(cv2.imread(view_frames[frame_index]['flows'][0],cv2.IMREAD_GRAYSCALE),
-                                                self.secretary.server.show_size, interpolation=cv2.INTER_AREA)
-                            flow_y = cv2.resize(cv2.imread(view_frames[frame_index]['flows'][1],cv2.IMREAD_GRAYSCALE),
-                                                self.secretary.server.show_size, interpolation=cv2.INTER_AREA)
+                        if self.in_progress:
+                            cv2.namedWindow(self.window_name, cv2.WINDOW_AUTOSIZE)
+                            cv2.moveWindow(self.window_name, self.window_position[0], self.window_position[1])
 
-                            font = cv2.FONT_HERSHEY_SIMPLEX
-                            top_left = (0, 0)
-                            text_margin = (15, 10)
+                            view_frames = []
+                            view_frames += self.view_frames
+                            view_time = max(min(int(self.view_time * 1000.0 * self.step / self.time_factor),
+                                                int(1000.0 / self.secretary.session.video_fps * 3.0)),
+                                            1)
 
-                            scale = 0.60
-                            thickness = 2
-                            line_type = cv2.LINE_8
+                            for frame_index in range(0, len(view_frames), int(self.step)):
+                                index = view_frames[frame_index]['index']
+                                score = view_frames[frame_index]['score']
+                                image = cv2.imread(view_frames[frame_index]['image'])
+                                flow_x = cv2.resize(cv2.imread(view_frames[frame_index]['flows'][0],cv2.IMREAD_GRAYSCALE),
+                                                    self.secretary.session.show_size, interpolation=cv2.INTER_AREA)
+                                flow_y = cv2.resize(cv2.imread(view_frames[frame_index]['flows'][1],cv2.IMREAD_GRAYSCALE),
+                                                    self.secretary.session.show_size, interpolation=cv2.INTER_AREA)
 
-                            text_color = (255, 255, 255)
-                            head_background_color = (0, 0, 0)
+                                font = cv2.FONT_HERSHEY_SIMPLEX
+                                top_left = (0, 0)
+                                text_margin = (15, 10)
 
-                            if np.argmax(score) == self.violence_index:
-                                frame_label = 'Violence'
-                                label_background_color = (0, 0, 255)
-                            else:
-                                frame_label = 'Normal'
-                                label_background_color = (255, 0, 0)
+                                scale = 0.60
+                                thickness = 2
+                                line_type = cv2.LINE_8
 
-                            label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:05.02f}'.format(index, frame_label,
-                                                                                                   max(score))
-                            flow_head_text = '{}'.format('Optical Flow | Between {:07d} And {:07d}'.format(index-1, index))
+                                text_color = (255, 255, 255)
+                                head_background_color = (0, 0, 0)
 
-                            box_size, dummy = cv2.getTextSize(label_text, font, scale, thickness)
+                                if np.argmax(score) == self.violence_index:
+                                    frame_label = 'Violence'
+                                    label_background_color = (0, 0, 255)
+                                else:
+                                    frame_label = 'Normal'
+                                    label_background_color = (255, 0, 0)
 
-                            box_top_left = top_left
-                            box_bottom_right = (image.shape[1],
-                                                top_left[1] + box_size[1] + text_margin[1] * 2)
-                            box_width = box_bottom_right[0]
-                            box_height = box_bottom_right[1]
+                                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:05.02f}'.format(index, frame_label,
+                                                                                                       max(score))
+                                flow_head_text = '{}'.format('Optical Flow | Between {:07d} And {:07d}'.format(index-1, index))
 
-                            image_label_text_bottom_left = (top_left[0] + text_margin[0],
-                                                            top_left[1] + text_margin[1] + box_size[1])
-                            flow_head_text_bottom_left = (top_left[0] + text_margin[0],
-                                                          top_left[1] + text_margin[1] + box_size[1])
+                                box_size, dummy = cv2.getTextSize(label_text, font, scale, thickness)
 
-                            image_box_top_left = box_top_left
-                            image_box_bottom_right = box_bottom_right
+                                box_top_left = top_left
+                                box_bottom_right = (image.shape[1],
+                                                    top_left[1] + box_size[1] + text_margin[1] * 2)
+                                box_width = box_bottom_right[0]
+                                box_height = box_bottom_right[1]
 
-                            image_headline = np.zeros((box_height, box_width, 3), dtype='uint8')
-                            cv2.rectangle(image_headline, image_box_top_left, image_box_bottom_right,
-                                          label_background_color, cv2.FILLED)
+                                image_label_text_bottom_left = (top_left[0] + text_margin[0],
+                                                                top_left[1] + text_margin[1] + box_size[1])
+                                flow_head_text_bottom_left = (top_left[0] + text_margin[0],
+                                                              top_left[1] + text_margin[1] + box_size[1])
 
-                            cv2.putText(image_headline, label_text, image_label_text_bottom_left,
-                                        font, scale, text_color, thickness, line_type)
+                                image_box_top_left = box_top_left
+                                image_box_bottom_right = box_bottom_right
 
-                            flow_box_top_left = box_top_left
-                            flow_box_bottom_right = box_bottom_right
+                                image_headline = np.zeros((box_height, box_width, 3), dtype='uint8')
+                                cv2.rectangle(image_headline, image_box_top_left, image_box_bottom_right,
+                                              label_background_color, cv2.FILLED)
 
-                            flow_headline = np.zeros((box_height, box_width, 3), dtype='uint8')
-                            cv2.rectangle(flow_headline, flow_box_top_left, flow_box_bottom_right,
-                                          head_background_color, cv2.FILLED)
+                                cv2.putText(image_headline, label_text, image_label_text_bottom_left,
+                                            font, scale, text_color, thickness, line_type)
 
-                            cv2.putText(flow_headline, flow_head_text, flow_head_text_bottom_left,
-                                        font, scale, text_color, thickness, line_type)
+                                flow_box_top_left = box_top_left
+                                flow_box_bottom_right = box_bottom_right
 
-                            flow = np.zeros_like(image)
+                                flow_headline = np.zeros((box_height, box_width, 3), dtype='uint8')
+                                cv2.rectangle(flow_headline, flow_box_top_left, flow_box_bottom_right,
+                                              head_background_color, cv2.FILLED)
 
-                            flow_x = np.divide(flow_x, 255.0)
-                            flow_x = np.multiply(flow_x, float(flow_bound * 2))
-                            flow_x -= float(flow_bound)
-                            flow_x = np.clip(flow_x, -flow_bound, flow_bound)
+                                cv2.putText(flow_headline, flow_head_text, flow_head_text_bottom_left,
+                                            font, scale, text_color, thickness, line_type)
 
-                            flow_y = np.divide(flow_y, 255.0)
-                            flow_y = np.multiply(flow_y, float(flow_bound * 2))
-                            flow_y -= float(flow_bound)
-                            flow_y = np.clip(flow_y, -flow_bound, flow_bound)
+                                flow = np.zeros_like(image)
 
-                            magnitude = flow_x * flow_x + flow_y * flow_y
-                            magnitude += 40.0
-                            magnitude = np.clip(magnitude, 0.0, magnitude_bound)
-                            magnitude = np.divide(magnitude, magnitude_bound)
-                            magnitude = np.multiply(magnitude, 255.0 * 1.5)
+                                flow_x = np.divide(flow_x, 255.0)
+                                flow_x = np.multiply(flow_x, float(flow_bound * 2))
+                                flow_x -= float(flow_bound)
+                                flow_x = np.clip(flow_x, -flow_bound, flow_bound)
 
-                            angle = np.divide(flow_y, flow_x)
-                            angle = np.arctan(angle)
-                            angle = np.multiply(angle, 180.0)
-                            angle = np.divide(angle, np.pi)
+                                flow_y = np.divide(flow_y, 255.0)
+                                flow_y = np.multiply(flow_y, float(flow_bound * 2))
+                                flow_y -= float(flow_bound)
+                                flow_y = np.clip(flow_y, -flow_bound, flow_bound)
 
-                            angle = np.clip(angle, -angle_bound, angle_bound)
-                            angle += float(angle_bound)
-                            angle = np.divide(angle, angle_bound)
-                            angle = np.multiply(angle, 255.0)
+                                magnitude = flow_x * flow_x + flow_y * flow_y
+                                magnitude += 40.0
+                                magnitude = np.clip(magnitude, 0.0, magnitude_bound)
+                                magnitude = np.divide(magnitude, magnitude_bound)
+                                magnitude = np.multiply(magnitude, 255.0 * 1.5)
 
-                            del flow_x
-                            del flow_y
+                                angle = np.divide(flow_y, flow_x)
+                                angle = np.arctan(angle)
+                                angle = np.multiply(angle, 180.0)
+                                angle = np.divide(angle, np.pi)
 
-                            hue = np.array(angle, dtype='uint8')
-                            saturation = np.array(magnitude, dtype='uint8')
-                            value = np.array(np.multiply(np.ones_like(hue), 255.0), dtype='uint8')
+                                angle = np.clip(angle, -angle_bound, angle_bound)
+                                angle += float(angle_bound)
+                                angle = np.divide(angle, angle_bound)
+                                angle = np.multiply(angle, 255.0)
 
-                            del angle
-                            del magnitude
+                                del flow_x
+                                del flow_y
 
-                            flow[..., 0] = hue
-                            flow[..., 1] = saturation
-                            flow[..., 2] = value
+                                hue = np.array(angle, dtype='uint8')
+                                saturation = np.array(magnitude, dtype='uint8')
+                                value = np.array(np.multiply(np.ones_like(hue), 255.0), dtype='uint8')
 
-                            flow = cv2.cvtColor(flow, cv2.COLOR_HSV2BGR)
-                            del hue
-                            del saturation
-                            del value
+                                del angle
+                                del magnitude
 
-                            image_frame = np.concatenate((image_headline, image), axis=0)
-                            flow_frame = np.concatenate((flow_headline, flow), axis=0)
+                                flow[..., 0] = hue
+                                flow[..., 1] = saturation
+                                flow[..., 2] = value
 
-                            del image
-                            del flow
-                            del image_headline
-                            del flow_headline
+                                flow = cv2.cvtColor(flow, cv2.COLOR_HSV2BGR)
+                                del hue
+                                del saturation
+                                del value
 
-                            boundary_top_left = (0, 0)
-                            image_boundary_bottom_right = (image_frame.shape[1], image_frame.shape[0])
-                            flow_boundary_bottom_right = (flow_frame.shape[1], flow_frame.shape[0])
-                            boundary_color = (255, 255, 255)
+                                image_frame = np.concatenate((image_headline, image), axis=0)
+                                flow_frame = np.concatenate((flow_headline, flow), axis=0)
 
-                            cv2.rectangle(image_frame, boundary_top_left, image_boundary_bottom_right,
-                                          boundary_color, thickness=3)
-                            cv2.rectangle(flow_frame, boundary_top_left, flow_boundary_bottom_right,
-                                          boundary_color, thickness=3)
+                                del image
+                                del flow
+                                del image_headline
+                                del flow_headline
 
-                            frame = np.concatenate((image_frame, flow_frame), axis=0)
-                            del image_frame
-                            del flow_frame
+                                boundary_top_left = (0, 0)
+                                image_boundary_bottom_right = (image_frame.shape[1], image_frame.shape[0])
+                                flow_boundary_bottom_right = (flow_frame.shape[1], flow_frame.shape[0])
+                                boundary_color = (255, 255, 255)
 
-                            cv2.imshow(self.window_name, frame)
-                            cv2.waitKey(view_time)
-                            del frame
+                                cv2.rectangle(image_frame, boundary_top_left, image_boundary_bottom_right,
+                                              boundary_color, thickness=3)
+                                cv2.rectangle(flow_frame, boundary_top_left, flow_boundary_bottom_right,
+                                              boundary_color, thickness=3)
 
-                            if self.view_has_next:
-                                view_time = max(int(view_time / 5.0), 1)
-                                self.view_has_next = False
+                                frame = np.concatenate((image_frame, flow_frame), axis=0)
+                                del image_frame
+                                del flow_frame
 
-                        if len(view_frames) >= 1:
-                            self.viewed_index = view_frames[-1]['index']
-                        del self.view_frames[0:len(view_frames)]
-                        del view_frames
-                        gc.collect()
-            elif self.view_type == 'clips':
-                while self.in_progress:
-                    while len(self.view_clips) <= 0 and self.in_progress:
-                        time.sleep(self.wait_time)
+                                cv2.imshow(self.window_name, frame)
+                                cv2.waitKey(view_time)
+                                del frame
 
-                    if self.in_progress:
-                        view_clips = []
-                        view_clips += self.view_clips
-
-                        for clip in view_clips:
-                            with self.secretary.server.print_lock:
-                                print '{:10s}|{:12s}| {}'.format('Viewer', 'Clip Viewing',
-                                                                 clip.split('/')[-1])
-
-                            video_cap = cv2.VideoCapture(clip)
-                            if video_cap.isOpened():
-                                frame_count = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1
-                                video_fps = int(video_cap.get(cv2.CAP_PROP_FPS)) + 1
-                                view_time = 1.0 / video_fps
-                                video_cap.release()
-                            else:
-                                continue
-
-                            cmd = 'xdg-open {}'.format(quote(clip))
-
-                            with self.secretary.extractor.cmd_lock:
-                                os.system(cmd)
-                                sys.stdout.flush()
-
-                            for ii in xrange(frame_count):
-                                time.sleep(view_time)
                                 if self.view_has_next:
-                                    view_time = int(view_time / 2.0)
+                                    view_time = max(int(view_time / 5.0), 1)
                                     self.view_has_next = False
 
-                            try:
-                                os.remove(clip)
-                            except:
-                                pass
+                            if len(view_frames) >= 1:
+                                self.viewed_index = view_frames[-1]['index']
+                            del self.view_frames[0:len(view_frames)]
+                            del view_frames
+                            gc.collect()
+                elif self.view_type == 'clips':
+                    while self.in_progress:
+                        while len(self.view_clips) <= 0 and self.in_progress:
+                            time.sleep(self.wait_time)
 
-                        del self.view_clips[0:len(view_clips)]
-                        del view_clips
-                        gc.collect()
+                        if self.in_progress:
+                            view_clips = []
+                            view_clips += self.view_clips
+
+                            for clip in view_clips:
+                                with self.secretary.session.print_lock:
+                                    print '{:10s}|{:12s}| {}'.format('Viewer', 'Clip Viewing',
+                                                                     clip.split('/')[-1])
+
+                                video_cap = cv2.VideoCapture(clip)
+                                if video_cap.isOpened():
+                                    frame_count = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1
+                                    video_fps = int(video_cap.get(cv2.CAP_PROP_FPS)) + 1
+                                    view_time = 1.0 / video_fps
+                                    video_cap.release()
+                                else:
+                                    continue
+
+                                cmd = 'xdg-open {}'.format(quote(clip))
+
+                                with self.secretary.extractor.cmd_lock:
+                                    os.system(cmd)
+                                    sys.stdout.flush()
+
+                                for ii in xrange(frame_count):
+                                    time.sleep(view_time)
+                                    if self.view_has_next:
+                                        view_time = int(view_time / 2.0)
+                                        self.view_has_next = False
+
+                                try:
+                                    os.remove(clip)
+                                except:
+                                    pass
+
+                            del self.view_clips[0:len(view_clips)]
+                            del view_clips
+                            gc.collect()
 
 
-            self.finalize()
+                self.finalize()
 
 
         def finalize(self):
@@ -1250,18 +1358,25 @@ class Secretary():
                 self.secretary.clip_viewer_closed = True
 
 
+        def resume(self):
+            self.viewed_index = -1
+            self.view_time = 0.0
+            self.view_frames = []
+            self.view_clips = []
+
+            self.in_progress = True
+
+
 class Closer():
-    def __init__(self, server, extractor, evaluator, analyzer, secretary):
+    def __init__(self, session, extractor, evaluator, analyzer, secretary):
         self.in_progress = True
 
-        self.server = server
+        self.session = session
         self.extractor = extractor
         self.evaluator = evaluator
         self.analyzer = analyzer
         self.secretary = secretary
 
-
-    def run(self):
         self.clips = []
         self.wait_time = 0.5
         self.threshold = 0.0
@@ -1271,34 +1386,40 @@ class Closer():
         self.normal_index = 1
 
 
-        while self.in_progress:
-            while len(self.clips) <= 0 and self.in_progress:
-                time.sleep(self.wait_time)
-
-            if self.in_progress:
-                clips = []
-                clips += self.clips
-
-                for clip in clips:
-                    isPassed, filtered_scores = self.check(clip)
-
-                    if isPassed:
-                        for frame in clip['frames']:
-                            frame['score'] = filtered_scores[clip['frames'].index(frame)]
-
-                        self.visualize(clip)
-                    else:
-                        rmtree(clip['keep_folder'], ignore_errors=True)
-
-                del self.clips[0:len(clips)]
-                gc.collect()
+    def run(self):
+        while True:
+            while not self.in_progress:
+                time.sleep(0.5)
 
 
-        self.finalize()
+            while self.in_progress:
+                while len(self.clips) <= 0 and self.in_progress:
+                    time.sleep(self.wait_time)
+
+                if self.in_progress:
+                    clips = []
+                    clips += self.clips
+
+                    for clip in clips:
+                        isPassed, filtered_scores = self.check(clip)
+
+                        if isPassed:
+                            for frame in clip['frames']:
+                                frame['score'] = filtered_scores[clip['frames'].index(frame)]
+
+                            self.visualize(clip)
+                        else:
+                            rmtree(clip['keep_folder'], ignore_errors=True)
+
+                    del self.clips[0:len(clips)]
+                    gc.collect()
+
+
+            self.finalize()
 
 
     def check(self, clip):
-        with self.server.print_lock:
+        with self.session.print_lock:
             print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Closer', 'Checking',
                                                                 clip['time_intervals'][0], clip['time_intervals'][1])
 
@@ -1324,17 +1445,17 @@ class Closer():
 
 
     def visualize(self, clip):
-        with self.server.print_lock:
+        with self.session.print_lock:
             print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Closer', 'Clipping',
                                                                 clip['time_intervals'][0], clip['time_intervals'][1])
 
         current_datetime = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
-        admin_clip_send_path = os.path.join(self.server.clip_send_folder,
+        admin_clip_send_path = os.path.join(self.session.clip_send_folder,
                                        'Admin_{}.avi'.format(current_datetime))
-        user_clip_send_path = os.path.join(self.server.clip_send_folder,
+        user_clip_send_path = os.path.join(self.session.clip_send_folder,
                                       'User_{}.avi'.format(current_datetime))
-        clip_view_path = os.path.join(self.server.clip_view_folder,
+        clip_view_path = os.path.join(self.session.clip_view_folder,
                                             'View_{}.avi'.format(current_datetime))
 
         admin_writer_initialized = False
@@ -1347,12 +1468,12 @@ class Closer():
                 score = frame['score']
                 image = cv2.imread(frame['image'])
                 flow_x = cv2.resize(cv2.imread(frame['flows'][0], cv2.IMREAD_GRAYSCALE),
-                                    self.server.show_size, cv2.INTER_AREA)
+                                    self.session.show_size, cv2.INTER_AREA)
                 flow_y = cv2.resize(cv2.imread(frame['flows'][1], cv2.IMREAD_GRAYSCALE),
-                                    self.server.show_size, cv2.INTER_AREA)
+                                    self.session.show_size, cv2.INTER_AREA)
 
                 if not user_writer_initialized:
-                    video_fps = self.server.video_fps
+                    video_fps = self.session.video_fps
                     video_fourcc = cv2.VideoWriter_fourcc(*'DIVX')
                     video_size = (int(image.shape[1]), int(image.shape[0]))
                     user_video_writer = cv2.VideoWriter(user_clip_send_path, video_fourcc, video_fps, video_size)
@@ -1486,7 +1607,7 @@ class Closer():
                 del flow_frame
 
                 if not admin_writer_initialized:
-                    video_fps = self.server.video_fps
+                    video_fps = self.session.video_fps
                     video_fourcc = cv2.VideoWriter_fourcc(*'DIVX')
                     video_size = (int(frame.shape[1]), int(frame.shape[0]))
                     admin_video_writer = cv2.VideoWriter(admin_clip_send_path, video_fourcc, video_fps, video_size)
@@ -1526,7 +1647,7 @@ class Closer():
         admin_clip_send_path = clip_send_paths[0]
         user_clip_send_path = clip_send_paths[1]
 
-        with self.server.print_lock:
+        with self.session.print_lock:
             print '{:10s}|{:12s}| {} & {}'.format('Closer', 'Sending',
                                                   user_clip_send_path.split('/')[-1],
                                                   admin_clip_send_path.split('/')[-1])
@@ -1544,13 +1665,19 @@ class Closer():
         self.evaluator.closer_closed = True
 
 
+    def resume(self):
+        self.clips = []
+        self.clip_number = 1
+
+        self.in_progress = True
+
+
 
 if __name__ == '__main__':
-    global server_closed
+    global session_closed
 
-    cv2.setNumThreads(0)
     one_round = 3
-    whole_round = 3
+    whole_round = 2
     for iter in xrange(whole_round):
         print '------------------------------ Memory Checking ---------------------------------'
         cmd = 'free -h'
@@ -1558,29 +1685,30 @@ if __name__ == '__main__':
         sys.stdout.flush()
         print '--------------------------------------------------------------------------------'
 
-        server = ServerFromVideo()
-        server_closed = False
+        if iter == 0:
+            session = Session()
+        else:
+            session.resume()
+        session_closed = False
 
         for iter_iter in xrange(one_round):
             time.sleep(3.1451)
 
-            with server.print_lock:
+            with session.print_lock:
                 print '------------------------------ Memory Checking ---------------------------------'
                 cmd = 'free -h'
-                with server.extractor.cmd_lock:
+                with session.extractor.cmd_lock:
                     os.system(cmd)
                     sys.stdout.flush()
                 print '--------------------------------------------------------------------------------'
 
-        server.in_progress = False
+        session.in_progress = False
 
-        while not server_closed:
+        while not session_closed:
             time.sleep(3.0)
 
-        del server
         gc.collect()
-        print '{:10s}|{} Finished'.format('Main', 'Server')
-
+        print '{:10s}|{} Finished'.format('Main', 'Session')
 
         print '------------------------------ Memory Checking ---------------------------------'
         cmd = 'free -h'
