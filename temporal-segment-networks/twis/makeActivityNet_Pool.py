@@ -543,6 +543,80 @@ def downloadActivityNetDataSet(version='1.2'):
         if identity not in downloaded_identities:
             non_downloaded_identities.append(identity)
 
+    with open('activity_v{}'.format(version), 'w') as f:
+        for identity in non_downloaded_identities:
+            f.write('{}\n'.format(identity))
+
+    print "----------------------------------------------"
+    print "ActivityNet {} Download Videos Done".format(version)
+    print "Non Downloaded File Count: {:05d}".format(len(non_downloaded_identities))
+    print "----------------------------------------------"
+
+
+def downloadErrors(version='1.2'):
+    global len_video_list
+    global num_workers
+    global num_counter
+    global time_counter
+    global counter_lock
+    global global_start_time
+
+    num_workers = 16
+
+    global_start_time = time.time()
+    video_list, identity_list = parseActivityJsonFile(version=version)
+
+    read_error_identities = []
+    with open('activity_v{}'.format(version), 'r') as f:
+        while True:
+            identity = f.readline()[:-1]
+
+            if not identity:
+                break
+            read_error_identities.append(identity)
+
+    print len(read_error_identities)
+
+    error_videos = []
+    error_identities = []
+    for video in video_list:
+        video_identity = video['identity']
+        if video_identity in read_error_identities:
+            error_videos.append(video)
+            error_identities.append(video_identity)
+
+    len_video_list = len(error_videos)
+    num_counter  = Value(c_int)  # defaults to 0
+    time_counter = Value(c_float)
+    counter_lock = Lock()
+
+    home_folder = os.path.abspath('../../..')
+    save_folder = os.path.join(home_folder, 'temp', 'v{}'.format(version))
+
+    if not os.path.exists(save_folder):
+        try:
+            os.makedirs(save_folder)
+        except OSError:
+            pass
+
+    pool = Pool(num_workers)
+    pool.map(downloadFullVideos, zip([save_folder] * len(error_videos), error_videos))
+    pool.close()
+    pool.join()
+
+    downloaded_files = glob.glob(os.path.join(save_folder, '*/*'))
+    downloaded_identities = []
+    for downloaded_file in downloaded_files:
+        downloaded_identities.append(downloaded_file.split('/')[-1].split('.')[-2])
+
+    non_downloaded_identities = []
+    for identity in error_identities:
+        if identity not in downloaded_identities:
+            non_downloaded_identities.append(identity)
+
+    with open(os.path.join(save_folder, 'activity_v{}'.format(version)), 'w') as f:
+        for identity in non_downloaded_identities:
+            f.write('{}\n'.format(identity))
 
     print "----------------------------------------------"
     print "ActivityNet {} Download Videos Done".format(version)
@@ -552,7 +626,7 @@ def downloadActivityNetDataSet(version='1.2'):
 
 if __name__ == '__main__':
     version = '1.2'
-    downloadActivityNetDataSet(version=version)
+    downloadErrors(version=version)
 
     version = '1.3'
-    downloadActivityNetDataSet(version=version)
+    downloadErrors(version=version)

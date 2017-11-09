@@ -6,7 +6,8 @@ import socket
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-server_address = ( 'localhost', 10000 )
+server_address = ( socket.gethostname(), 10000 )
+print server_address[0]
 server_ip = '115.145.178.237'
 sock.bind(server_address)
 
