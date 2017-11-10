@@ -16,6 +16,7 @@ from multiprocessing import Pool, Value, Lock, current_process, Manager
 from ctypes import c_int
 import copy_reg, types
 import gc
+import socket
 from shutil import copyfile
 from shutil import rmtree
 import datetime
@@ -115,6 +116,7 @@ class CaffeNet(object):
 class Session():
     def __init__(self):
         self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        self.seesion_closed = False
 
         self.in_progress = True
         self.please_quit = False
@@ -155,16 +157,29 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = False
+        self.src_from_out =True
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
         else:
             self.test_video_name = 'test_3.mp4'
-        self.model_version = 3
+        self.model_version = 2
         self.build_temporal_net(self.model_version)
 
         self.print_lock = Lock()
+
+
+        self.server_ip_address = 'localhost'
+        self.server_port = 10008
+
+        self.client_host_name = 'localhost'
+        self.client_port = 10009
+
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.client_socket.bind((self.client_host_name, self.client_port))
+        self.client_socket.listen(5)
+
 
         self.extractor = Extractor(self)
         self.extractor_thread = threading.Thread(target=self.extractor.run, name='Extractor')
@@ -181,11 +196,79 @@ class Session():
                 time.sleep(0.5)
 
             if self.src_from_out:
+                self.video_width = self.show_size[0]
+                self.video_height = self.show_size[1]
+                self.video_fps = self.fps
+
+                if not self.child_thread_started:
+                    self.extractor_thread.start()
+                    self.child_thread_started = True
+
+                while self.in_progress:
+                    self.sock_closed = False
+
+                    try:
+                        self.server_socket, address = self.client_socket.accept()
+
+                        with self.print_lock:
+                            print '==============================================================================='
+                            print '                         Session {} Start                                      '.format(
+                                self.session_name)
+                            print '==============================================================================='
+
+                        while not self.sock_closed:
+                            data = b''
+                            while True:
+                                try:
+                                    r = self.server_socket.recv(90456)
+
+                                    if len(r) == 0:
+                                        self.server_socket.close()
+                                        self.sock_closed = True
+                                        break
+
+                                    a = r.find(b'!TWIS_END!')
+                                    if a != -1:
+                                        data += r[:a]
+                                        break
+
+                                    data += r
+
+                                except Exception as e:
+                                    print(e)
+                                    continue
+
+                            if not self.sock_closed:
+                                np_arr = np.fromstring(data, np.uint8)
+                                if np_arr is not None:
+                                    try:
+                                        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+                                        if frame is not None:
+                                            self.dumpFrames([frame])
+                                            self.start_index += 1
+                                            self.dumped_index = self.start_index - 1
+                                    except:
+                                        pass
+
+                    except socket.timeout:
+                        continue
+
+                    except KeyboardInterrupt:
+                        if self.server_socket is not None:
+                            self.server_socket.close()
+
+                        self.finalize()
+
+                    self.finalize()
+
+                    while not self.session_closed:
+                        time.sleep(0.5)
+
+                    self.resume()
 
 
-
-                print 'Hi'
-                print 'src_from_out'
+                self.finalize()
             else:
                 if self.web_cam:
                     video_cap = cv2.VideoCapture(0)
@@ -269,7 +352,13 @@ class Session():
 
         gc.collect()
 
-        session_closed = True
+        self.session_closed = True
+
+        with self.print_lock:
+            print '==============================================================================='
+            print '                         Session {} Closed                                     '.format(
+                self.session_name)
+            print '==============================================================================='
 
 
     def resume(self):
@@ -309,6 +398,69 @@ class Session():
 
         self.extractor.resume()
         self.extractor_closed = False
+
+
+    class StreamingClient():
+        def __init__(self):
+            self.server_ip_address = '10.211.55.10'
+            self.server_port = 10000
+
+            self.client_host_name = '192.168.1.101'
+            self.client_port = 10001
+
+            self.save_folder = os.path.join('/home/damien/temp/streaming')
+            if not os.path.exists(self.save_folder):
+                try:
+                    os.makedirs(self.save_folder)
+                except OSError:
+                    pass
+
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.client_socket.bind((self.client_host_name, self.client_port))
+            self.client_socket.listen(5)
+
+            self.frame_index = 1
+
+            self.client_thread = threading.Thread(target=self.run, name='Streaming Client')
+            self.client_thread.start()
+
+
+        def run(self):
+            while True:
+                try:
+                    server_socket, address = self.client_socket.accept()
+
+                    while True:
+                        data = b''
+                        while True:
+                            try:
+                                r = server_socket.recv(90456)
+                                if len(r) == 0:
+                                    exit(0)
+                                a = r.find(b'!TWIS_END!')
+                                if a != -1:
+                                    data += r[:a]
+                                    break
+                                data += r
+                            except Exception as e:
+                                print(e)
+                                continue
+                        np_arr = np.fromstring(data, np.uint8)
+                        if np_arr is not None:
+                            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+                            if frame is not None:
+                                frame_path = os.path.join(self.save_folder, 'img_{:07d}.jpg'.format(self.frame_index))
+                                self.frame_index += 1
+                                # cv2.imwrite(frame_path, frame)
+
+                                cv2.imshow('frame', frame)
+                                cv2.waitKey(int(1000.0 / 25.0))
+
+                except socket.timeout:
+                    print 'socket timeout'
+                    continue
 
 
 class Extractor():
@@ -1674,44 +1826,57 @@ class Closer():
 
 
 if __name__ == '__main__':
-    global session_closed
+    session = Session()
 
-    one_round = 3
-    whole_round = 2
-    for iter in xrange(whole_round):
-        print '------------------------------ Memory Checking ---------------------------------'
-        cmd = 'free -h'
-        os.system(cmd)
-        sys.stdout.flush()
-        print '--------------------------------------------------------------------------------'
+    while True:
+        time.sleep(3.1451)
+        with session.print_lock:
+            print '------------------------------ Memory Checking ---------------------------------'
+            cmd = 'free -h'
+            with session.extractor.cmd_lock:
+                os.system(cmd)
+                sys.stdout.flush()
+            print '--------------------------------------------------------------------------------'
 
-        if iter == 0:
-            session = Session()
-        else:
-            session.resume()
-        session_closed = False
 
-        for iter_iter in xrange(one_round):
-            time.sleep(3.1451)
-
-            with session.print_lock:
-                print '------------------------------ Memory Checking ---------------------------------'
-                cmd = 'free -h'
-                with session.extractor.cmd_lock:
-                    os.system(cmd)
-                    sys.stdout.flush()
-                print '--------------------------------------------------------------------------------'
-
-        session.in_progress = False
-
-        while not session_closed:
-            time.sleep(3.0)
-
-        gc.collect()
-        print '{:10s}|{} Finished'.format('Main', 'Session')
-
-        print '------------------------------ Memory Checking ---------------------------------'
-        cmd = 'free -h'
-        os.system(cmd)
-        sys.stdout.flush()
-        print '--------------------------------------------------------------------------------'
+    # global session_closed
+    #
+    # one_round = 3
+    # whole_round = 2
+    # for iter in xrange(whole_round):
+    #     print '------------------------------ Memory Checking ---------------------------------'
+    #     cmd = 'free -h'
+    #     os.system(cmd)
+    #     sys.stdout.flush()
+    #     print '--------------------------------------------------------------------------------'
+    #
+    #     if iter == 0:
+    #         session = Session()
+    #     else:
+    #         session.resume()
+    #     session_closed = False
+    #
+    #     for iter_iter in xrange(one_round):
+    #         time.sleep(3.1451)
+    #
+    #         with session.print_lock:
+    #             print '------------------------------ Memory Checking ---------------------------------'
+    #             cmd = 'free -h'
+    #             with session.extractor.cmd_lock:
+    #                 os.system(cmd)
+    #                 sys.stdout.flush()
+    #             print '--------------------------------------------------------------------------------'
+    #
+    #     session.in_progress = False
+    #
+    #     while not session_closed:
+    #         time.sleep(3.0)
+    #
+    #     gc.collect()
+    #     print '{:10s}|{} Finished'.format('Main', 'Session')
+    #
+    #     print '------------------------------ Memory Checking ---------------------------------'
+    #     cmd = 'free -h'
+    #     os.system(cmd)
+    #     sys.stdout.flush()
+    #     print '--------------------------------------------------------------------------------'
