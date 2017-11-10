@@ -566,8 +566,11 @@ def downloadErrors(version='1.2'):
     global_start_time = time.time()
     video_list, identity_list = parseActivityJsonFile(version=version)
 
+    home_folder = os.path.abspath('../../..')
+    save_folder = os.path.join(home_folder, 'temp', 'activityNetError', 'v{}'.format(version))
+
     read_error_identities = []
-    with open('activity_v{}'.format(version), 'r') as f:
+    with open(os.path.join(save_folder, 'activity_v{}'.format(version)), 'r') as f:
         while True:
             identity = f.readline()[:-1]
 
@@ -575,58 +578,64 @@ def downloadErrors(version='1.2'):
                 break
             read_error_identities.append(identity)
 
-    print len(read_error_identities)
+    print 'ERROR: {:05d}'.format(len(read_error_identities))
 
-    error_videos = []
-    error_identities = []
-    for video in video_list:
-        video_identity = video['identity']
-        if video_identity in read_error_identities:
-            error_videos.append(video)
-            error_identities.append(video_identity)
+    while True:
+        read_error_identities = []
+        with open(os.path.join(save_folder, 'activity_v{}'.format(version)), 'r') as f:
+            while True:
+                identity = f.readline()[:-1]
 
-    len_video_list = len(error_videos)
-    num_counter  = Value(c_int)  # defaults to 0
-    time_counter = Value(c_float)
-    counter_lock = Lock()
+                if not identity:
+                    break
+                read_error_identities.append(identity)
 
-    home_folder = os.path.abspath('../../..')
-    save_folder = os.path.join(home_folder, 'temp', 'v{}'.format(version))
+        print 'ERROR: {:05d}'.format(len(read_error_identities))
 
-    if not os.path.exists(save_folder):
-        try:
-            os.makedirs(save_folder)
-        except OSError:
-            pass
+        error_videos = []
+        error_identities = []
+        for video in video_list:
+            video_identity = video['identity']
+            if video_identity in read_error_identities:
+                error_videos.append(video)
+                error_identities.append(video_identity)
 
-    pool = Pool(num_workers)
-    pool.map(downloadFullVideos, zip([save_folder] * len(error_videos), error_videos))
-    pool.close()
-    pool.join()
+        len_video_list = len(error_videos)
+        num_counter  = Value(c_int)  # defaults to 0
+        time_counter = Value(c_float)
+        counter_lock = Lock()
 
-    downloaded_files = glob.glob(os.path.join(save_folder, '*/*'))
-    downloaded_identities = []
-    for downloaded_file in downloaded_files:
-        downloaded_identities.append(downloaded_file.split('/')[-1].split('.')[-2])
+        pool = Pool(num_workers)
+        pool.map(downloadFullVideos, zip([save_folder] * len(error_videos), error_videos))
+        pool.close()
+        pool.join()
 
-    non_downloaded_identities = []
-    for identity in error_identities:
-        if identity not in downloaded_identities:
-            non_downloaded_identities.append(identity)
+        downloaded_files = glob.glob(os.path.join(save_folder, '*/*'))
+        downloaded_identities = []
+        for downloaded_file in downloaded_files:
+            downloaded_identities.append(downloaded_file.split('/')[-1].split('.')[-2])
 
-    with open(os.path.join(save_folder, 'activity_v{}'.format(version)), 'w') as f:
-        for identity in non_downloaded_identities:
-            f.write('{}\n'.format(identity))
+        non_downloaded_identities = []
+        for identity in error_identities:
+            if identity not in downloaded_identities:
+                non_downloaded_identities.append(identity)
 
-    print "----------------------------------------------"
-    print "ActivityNet {} Download Videos Done".format(version)
-    print "Non Downloaded File Count: {:05d}".format(len(non_downloaded_identities))
-    print "----------------------------------------------"
+        with open(os.path.join(save_folder, 'activity_v{}'.format(version)), 'w') as f:
+            for identity in non_downloaded_identities:
+                f.write('{}\n'.format(identity))
+
+        print "----------------------------------------------"
+        print "ActivityNet {} Download Videos Done".format(version)
+        print "Non Downloaded File Count: {:05d}".format(len(non_downloaded_identities))
+        print "----------------------------------------------"
+
+        if len(non_downloaded_identities) == 0:
+            break
 
 
 if __name__ == '__main__':
-    version = '1.2'
+    version = '1.3'
     downloadErrors(version=version)
 
-    version = '1.3'
+    version = '1.2'
     downloadErrors(version=version)
