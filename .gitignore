@@ -16,6 +16,8 @@ __pycache__/
 
 # caffemodel
 *.caffemodel
+*.solverstate
+*.solverstates
 
 # Distribution / packaging
 .Python
