@@ -20,6 +20,8 @@ import socket
 from shutil import copyfile
 from shutil import rmtree
 import datetime
+import pycurl
+from cStringIO import StringIO
 
 
 
@@ -1804,7 +1806,20 @@ class Closer():
                                                   user_clip_send_path.split('/')[-1],
                                                   admin_clip_send_path.split('/')[-1])
 
-        time.sleep(2.31)
+        curl = pycurl.Curl()
+        curl.setOpt(curl.POST, 1)
+        curl.setOpt(curl.URL, 'http://127.0.0.1:8080/receive/')
+        curl.setOpt(curl.HTTPPOST,
+                    [('admin_clip', (curl.FROM_FILE, admin_clip_send_path)),
+                     ('user_clip', (curl.FROM_FILE, user_clip_send_path))])
+        bodyOutput = StringIO()
+        headersOutput = StringIO()
+        curl.setOpt(curl.WRITEFUNCTION, bodyOutput.write)
+        curl.setOpt(curl.HEADERFUNCTION, headersOutput.write)
+        curl.performe()
+        curl.close()
+
+        output = bodyOutput.getvalue()
 
         for send_clip_path in clip_send_paths:
             try:

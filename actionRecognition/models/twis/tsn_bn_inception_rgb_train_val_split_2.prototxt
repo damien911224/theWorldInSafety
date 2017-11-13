@@ -5,7 +5,7 @@ layer {
   top: "data"
   top: "label"
   video_data_param {
-    source: "/home/damien/theWorldInSafety/temporal-segment-networks/data/twis_parsed/twis_rgb_train_split_2.txt"
+    source: "/home/damien/theWorldInSafety/actionRecognition/data/twis_parsed/twis_rgb_train_split_2.txt"
     batch_size: 32
     new_length: 1
     num_segments: 3
@@ -32,7 +32,7 @@ layer {
   top: "data"
   top: "label"
   video_data_param {
-    source: "/home/damien/theWorldInSafety/temporal-segment-networks/data/twis_parsed/twis_rgb_val_split_2.txt"
+    source: "/home/damien/theWorldInSafety/actionRecognition/data/twis_parsed/twis_rgb_val_split_2.txt"
     batch_size: 1
     new_length: 1
     num_segments: 3

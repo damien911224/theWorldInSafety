@@ -1,4 +1,4 @@
-net: "/home/damien/theWorldInSafety/temporal-segment-networks/models/twis/tsn_bn_inception_rgb_train_val_split_1.prototxt"
+net: "/home/damien/theWorldInSafety/actionRecognition/models/twis/tsn_bn_inception_rgb_train_val_split_1.prototxt"
 
 # testing parameter
 test_iter:950
@@ -9,7 +9,7 @@ test_initialization: true
 display: 20
 average_loss: 20
 # snapshot: 1000
-snapshot_prefix: "/home/damien/theWorldInSafety/temporal-segment-networks/models/twis_caffemodels/v4/split1/twis_spatial_net_v4"
+snapshot_prefix: "/home/damien/theWorldInSafety/actionRecognition/models/twis_caffemodels/v4/split1/twis_spatial_net_v4"
 debug_info: false
 
 # learning rate

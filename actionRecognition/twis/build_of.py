@@ -437,8 +437,9 @@ def extractOpticalFlow(video_file_path):
         except OSError:
             pass
     else:
-        file_count = len(glob.glob(out_full_path +'/images/*'))
-        if file_count < frame_count -1:
+        image_count = len(glob.glob(out_full_path +'/images/*'))
+        flow_count = len(glob.glob(out_full_path +'/flows/*'))
+        if image_count < frame_count -2 or flow_count / 2 < frame_count -2:
             images = glob.glob(out_full_path + '/images/*')
             flows = glob.glob(out_full_path + '/optical_flow/*')
             if len(images) != 0:
@@ -1271,9 +1272,9 @@ def makeInputData(version='3'):
 
     len_extract = len(whole_video_paths)
 
-    extract_pool = Pool(processes=num_worker)
-    extract_pool.map(extractOpticalFlowSimple, zip(whole_video_paths, [extract_dst_folder]*len(whole_video_paths), ['gpu']*len(whole_video_paths)))
-    extract_pool.close()
+    # extract_pool = Pool(processes=num_worker)
+    # extract_pool.map(extractOpticalFlowSimple, zip(whole_video_paths, [extract_dst_folder]*len(whole_video_paths), ['gpu']*len(whole_video_paths)))
+    # extract_pool.close()
 
 
     v_file_list = glob.glob("/media/damien/DATA2/cvData/TWIS/v{}/Violence/*.avi".format(version))
@@ -1285,8 +1286,8 @@ def makeInputData(version='3'):
         train_list_f = open("../data/twis_splits/trainlist0%d.txt" % (i + 1), "w")
         test_list_f = open("../data/twis_splits/testlist0%d.txt" % (i + 1), "w")
 
-        v_train_indices = random.sample(range(0, (len(v_file_list) - 1)), int(len(v_file_list) * 1.00))
-        v_test_indices = random.sample(range(0, (len(v_file_list) - 1)), int(len(v_file_list) * 0.30))
+        v_train_indices = random.sample(range(0, len(v_file_list), 1), int(len(v_file_list) * 1.00))
+        v_test_indices = random.sample(range(0, len(v_file_list), 1), int(len(v_file_list) * 0.30))
 
         # for i in xrange(len(v_file_list)):
         #     if i not in v_train_indices:
@@ -1307,9 +1308,9 @@ def makeInputData(version='3'):
 
         ratio_of_normal_to_violence = float(len(v_file_list)) / float(len(n_file_list))
 
-        n_train_indices = random.sample(range(0, (len(n_file_list) - 1)),
+        n_train_indices = random.sample(range(0, len(n_file_list), 1),
                                         int(len(n_file_list) * 1.00 * ratio_of_normal_to_violence))
-        n_test_indices = random.sample(range(0, (len(n_file_list) - 1)),
+        n_test_indices = random.sample(range(0, len(n_file_list), 1),
                                         int(len(n_file_list) * 0.30 * ratio_of_normal_to_violence))
 
         # n_test_count = 0
