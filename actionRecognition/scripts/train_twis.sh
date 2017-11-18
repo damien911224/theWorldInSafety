@@ -25,9 +25,9 @@ do
     SPATIAL_SOLVER=$TSN_ROOT/models/twis/tsn_bn_inception_rgb_solver_split_$SPLIT.prototxt
 	TEMPORAL_SOLVER=$TSN_ROOT/models/twis/tsn_bn_inception_flow_solver_split_$SPLIT.prototxt
 
-	# $TOOLS/caffe train \
-	#  --solver $SPATIAL_SOLVER \
-	#  --weights $SPATIAL_WEIGHTS
+	$TOOLS/caffe train \
+      --solver $SPATIAL_SOLVER \
+	  --weights $SPATIAL_WEIGHTS
 
     $TOOLS/caffe train \
       --solver $TEMPORAL_SOLVER \
@@ -35,10 +35,10 @@ do
 
 	if [ $SPLIT -eq $NUM_OF_SPLITS ]
 	then	    
-        #cp $TSN_ROOT/models/twis_caffemodels/v${NEW_VERSION}/split${SPLIT}/twis_spatial_net_v${NEW_VERSION}_iter_${SPATIAL_ITER}.caffemodel \
-        #   $TSN_ROOT/models/twis_caffemodels/v${NEW_VERISON}/twis_spatial_net_v${NEW_VERSION}.caffemodel
+        cp $TSN_ROOT/models/twis_caffemodels/v${NEW_VERSION}/split${SPLIT}/twis_spatial_net_v${NEW_VERSION}_iter_${SPATIAL_ITER}.caffemodel \
+           $TSN_ROOT/models/twis_caffemodels/v${NEW_VERISON}/twis_spatial_net_v${NEW_VERSION}.caffemodel
         cp $TSN_ROOT/models/twis_caffemodels/v${NEW_VERSION}/split${SPLIT}/twis_temporal_net_v${NEW_VERSION}_iter_${TEMPORAL_ITER}.caffemodel \
-	       $TSN_ROOT/models/twis_caffemodels/v${NEW_VERSION}/twis_temporal_net_v${NEW_VERSION}.caffemodel
+           $TSN_ROOT/models/twis_caffemodels/v${NEW_VERSION}/twis_temporal_net_v${NEW_VERSION}.caffemodel
     fi
 done
 

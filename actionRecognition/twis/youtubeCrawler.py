@@ -127,9 +127,9 @@ def build_net():
     global temporal_net_cpu
 
     spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
-    spatial_net_weights = "../models/twis_caffemodels/v3/twis_spatial_net_v3.caffemodel"
+    spatial_net_weights = "../models/twis_caffemodels/v4/twis_spatial_net_v4.caffemodel"
     temporal_net_proto = "../models/twis/tsn_bn_inception_flow_deploy.prototxt"
-    temporal_net_weights = "../models/twis_caffemodels/v3/twis_temporal_net_v3.caffemodel"
+    temporal_net_weights = "../models/twis_caffemodels/v4/twis_temporal_net_v4.caffemodel"
 
     global score_layer_name
 
@@ -1237,7 +1237,7 @@ def extractAFrame(extract_items):
 def youtube_crawler():
     temp_dst_folder = '/media/damien/DATA2/cvData/Youtube'
     video_dst_folder = temp_dst_folder + '/videos'
-    clip_dst_folder = temp_dst_folder + '/clips2'
+    clip_dst_folder = temp_dst_folder + '/clips'
     mask_dst_folder = temp_dst_folder + '/masked'
     mask_frame_folder = temp_dst_folder + '/temp_frames'
     dst_frame_folder = temp_dst_folder + '/frames'
@@ -1247,16 +1247,16 @@ def youtube_crawler():
 
     keywords = \
         [
-            # 'UFC highlight',
-            # 'how to kick',
-            # 'how to punch',
+            'UFC highlight',
+            'how to kick',
+            'how to punch',
             'how to fight',
             'kickboxing',
             'UFC knockouts'
         ]
 
 
-    needed_clip_number = 900
+    needed_clip_number = 2000
     download_worker = 12
     check_worker = 8
 
@@ -1275,40 +1275,40 @@ def youtube_crawler():
     remaining_clip_results = needed_clip_number
     max_results_per_keyword = int(remaining_clip_results / len(keywords) * 1.0)
     while True:
-        # for keyword in keywords:
-        #     token = None
-        #     remaining_result = max_results_per_keyword
-        #     while True:
-        #         video_urls = []
-        #         current_keyword_result_counter = 0
-        #         max_results = max(1, min(50, remaining_result))
-        #         while True:
-        #             token, current_video_urls = youtube_search(keyword=keyword, max_results=max_results, token=token)
-        #             removed_current_video_urls = []
-        #             for url in current_video_urls:
-        #                 video_id = url.split('=')[-1]
-        #                 if video_id in video_ids:
-        #                     removed_current_video_urls.append(url)
-        #             for url in removed_current_video_urls:
-        #                 current_video_urls.remove(url)
-        #
-        #             current_keyword_result_counter += len(current_video_urls)
-        #             video_urls += current_video_urls
-        #
-        #             if token == 'last_page' or current_keyword_result_counter >= remaining_result:
-        #                 break
-        #
-        #             max_results = max(1, min(50, remaining_result - current_keyword_result_counter))
-        #
-        #         download_pool = Pool(processes=download_worker)
-        #         download_pool.map(download_youtube_video, zip(video_urls, [video_dst_folder]*len(video_urls), [keyword]*len(video_urls)))
-        #         download_pool.close()
-        #
-        #         downloaded_counter = len(glob.glob(video_dst_folder + '/{}_*'.format(keyword.replace(' ', ''))))
-        #         if downloaded_counter >= max_results_per_keyword or token == 'last_page':
-        #             break
-        #
-        #         remaining_result = max_results_per_keyword - downloaded_counter
+        for keyword in keywords:
+            token = None
+            remaining_result = max_results_per_keyword
+            while True:
+                video_urls = []
+                current_keyword_result_counter = 0
+                max_results = max(1, min(50, remaining_result))
+                while True:
+                    token, current_video_urls = youtube_search(keyword=keyword, max_results=max_results, token=token)
+                    removed_current_video_urls = []
+                    for url in current_video_urls:
+                        video_id = url.split('=')[-1]
+                        if video_id in video_ids:
+                            removed_current_video_urls.append(url)
+                    for url in removed_current_video_urls:
+                        current_video_urls.remove(url)
+
+                    current_keyword_result_counter += len(current_video_urls)
+                    video_urls += current_video_urls
+
+                    if token == 'last_page' or current_keyword_result_counter >= remaining_result:
+                        break
+
+                    max_results = max(1, min(50, remaining_result - current_keyword_result_counter))
+
+                download_pool = Pool(processes=download_worker)
+                download_pool.map(download_youtube_video, zip(video_urls, [video_dst_folder]*len(video_urls), [keyword]*len(video_urls)))
+                download_pool.close()
+
+                downloaded_counter = len(glob.glob(video_dst_folder + '/{}_*'.format(keyword.replace(' ', ''))))
+                if downloaded_counter >= max_results_per_keyword or token == 'last_page':
+                    break
+
+                remaining_result = max_results_per_keyword - downloaded_counter
 
         print ''
         print 'Downloading Youtube Files Done!'

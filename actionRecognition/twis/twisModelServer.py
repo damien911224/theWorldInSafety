@@ -164,23 +164,23 @@ class Session():
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
         else:
-            self.test_video_name = 'test_3.mp4'
-        self.model_version = 2
+            self.test_video_name = 'test_2.mp4'
+        self.model_version = 4
         self.build_temporal_net(self.model_version)
 
         self.print_lock = Lock()
 
 
-        self.server_ip_address = 'localhost'
-        self.server_port = 10008
+        self.server_ip_address = '127.0.0.1'
+        self.server_port = 10001
 
         self.client_host_name = 'localhost'
-        self.client_port = 10009
+        self.client_port = 41224
 
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.client_socket.bind((self.client_host_name, self.client_port))
-        self.client_socket.listen(5)
+        if self.src_from_out:
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.client_socket.bind((self.client_host_name, self.client_port))
 
 
         self.extractor = Extractor(self)
@@ -210,7 +210,29 @@ class Session():
                     self.sock_closed = False
 
                     try:
-                        self.server_socket, address = self.client_socket.accept()
+                        self.client_socket.connect((self.server_ip_address, self.server_port))
+
+                        print 'Connected'
+
+                        try:
+                            self.client_socket.send('Model')
+                        except socket.error:
+                            print 'Socket Error'
+                            continue
+
+                        try:
+                            r = self.client_socket.recv(90456)
+                        except Exception as e:
+                            print e
+                            continue
+
+                        try:
+                            self.client_socket.send('OK')
+                        except socket.error:
+                            print 'Socket Error'
+                            continue
+
+                        self.session_name = r
 
                         with self.print_lock:
                             print '==============================================================================='
@@ -222,10 +244,10 @@ class Session():
                             data = b''
                             while True:
                                 try:
-                                    r = self.server_socket.recv(90456)
+                                    r = self.client_socket.recv(90456)
 
                                     if len(r) == 0:
-                                        self.server_socket.close()
+                                        self.client_socket.close()
                                         self.sock_closed = True
                                         break
 
@@ -257,8 +279,8 @@ class Session():
                         continue
 
                     except KeyboardInterrupt:
-                        if self.server_socket is not None:
-                            self.server_socket.close()
+                        if self.client_socket is not None:
+                            self.client_socket.close()
 
                         self.finalize()
 
@@ -1806,20 +1828,20 @@ class Closer():
                                                   user_clip_send_path.split('/')[-1],
                                                   admin_clip_send_path.split('/')[-1])
 
-        curl = pycurl.Curl()
-        curl.setOpt(curl.POST, 1)
-        curl.setOpt(curl.URL, 'http://127.0.0.1:8080/receive/')
-        curl.setOpt(curl.HTTPPOST,
-                    [('admin_clip', (curl.FROM_FILE, admin_clip_send_path)),
-                     ('user_clip', (curl.FROM_FILE, user_clip_send_path))])
-        bodyOutput = StringIO()
-        headersOutput = StringIO()
-        curl.setOpt(curl.WRITEFUNCTION, bodyOutput.write)
-        curl.setOpt(curl.HEADERFUNCTION, headersOutput.write)
-        curl.performe()
-        curl.close()
-
-        output = bodyOutput.getvalue()
+        # curl = pycurl.Curl()
+        # curl.setOpt(curl.POST, 1)
+        # curl.setOpt(curl.URL, 'http://127.0.0.1:8080/receive/')
+        # curl.setOpt(curl.HTTPPOST,
+        #             [('admin_clip', (curl.FROM_FILE, admin_clip_send_path)),
+        #              ('user_clip', (curl.FROM_FILE, user_clip_send_path))])
+        # bodyOutput = StringIO()
+        # headersOutput = StringIO()
+        # curl.setOpt(curl.WRITEFUNCTION, bodyOutput.write)
+        # curl.setOpt(curl.HEADERFUNCTION, headersOutput.write)
+        # curl.performe()
+        # curl.close()
+        #
+        # output = bodyOutput.getvalue()
 
         for send_clip_path in clip_send_paths:
             try:
