@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}manager - Video list{% endblock %}
+
+{% load static %}
+{% block extrastyle %}{% static 'css/overall.css' %}{% endblock %}
+
+{% block content %}
+	<div class="container">
+		<div class="outer">
+			<div class="inner">
+				<div class="contents">
+					<h4>Overall</h4>
+					<div>
+						<img src="{% static 'img/camera.jpg' %}" alt="Smiley face" height="42" width="42">
+					
+					</div>
+					<table class="table table-striped scroll">
+						<thead>
+							<tr>
+								<th>Video ID</th>
+								<th>Video snapshot</th>
+								<th>Checked</th>
+							</tr>
+						</thead>
+						{% if object_list %}
+						<tbody id="search-prescription-results">	
+							{% for video in object_list %}
+							<tr>
+								<td>{{ video.id }}</td>
+								<td><a href="{{ video.get_absolute_url }}">{{ video.get_absolute_url }}</a></td>
+								<td>{{ video.Video_checked }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+						{% endif %}
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends base.html %}
+
+{% block title %}TWIS manager - overall{% block title %}
+
+<div class="table-responsive">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<!--<th></th>
+				<th>차트번호</th>
+				<th>상병시작일자</th>
+				<th>상병종료일자</th>
+				<th>외래, 입원</th>
+				<th>과코드</th>
+				<th>입력과</th>
+				<th>입력의사</th>-->
+				<th>상병</th>
+				<!--<th>특정기호</th>
+				<th>증상, 부상병</th>
+				<th>추가정보</th>-->
+				<th>처방코드</th>
+			</tr>
+		</thead>
+			{% if disease_list %}
+			<tbody>	
+				{% for disease in disease_list %}
+				<tr>
+					<td>{{ disease.dxcode }}</td>
+					<td>{{ disease.prescriptionlist}}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+			{% endif %}
+	</table>
+</div>

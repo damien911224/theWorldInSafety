@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}manager - Facility List{% endblock %}
+
+{% load staticfiles %}
+{% block extrastyle %}{% static 'management_facility.css' %}{% endblock %}
+
+{% block content %}
+	<div class="container">
+		<div class="outer">
+			<div class="inner">
+				<div class="contents">
+					<table class="table table-striped scroll">
+						<thead>
+							<tr>
+								<th>Facility name</th>
+								<th>Video list link</th>
+								<th>Facility homepage</th>
+							</tr>
+						</thead>
+						{% if object_list %}
+						<tbody id="search-prescription-results">	
+							{% for facility in object_list %}
+							<tr>
+								<td>{{ facility.Facility_name }}</td>
+								<td><a href="{{ facility.get_absolute_url }}">{{ facility.get_absolute_url }}</a></td>
+								<td>{{ facility.Facility_homepage}}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+						{% endif %}
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}login.html{% endblock %}
+
+{% load staticfiles %}
+{% block extrastyle %}{% static 'css/forms.css' %}{% endblock %}
+
+{% block content %}
+	<div id="content">
+		<h1>Please Login</h1>
+ 
+		<form action="." method="post">
+			{% csrf_token %}
+			{% if form.errors %}
+			<p class="errornote">Wrong!! Please correct the error(s) below</p>
+			{% endif %}
+			<p>Please enter your id and password</p>
+
+			<fieldset class="aligned">
+				<div class="form-row">
+					{{ form.username.label_tag }}{{ form.username }}
+				</div>
+				<div class="form-row">
+					{{ form.password.label_tag }}{{ form.password }}
+				</div>
+			</fieldset>
+
+			<div class="submit-row">
+				<input type="submit" value="Log In"/>
+				<input type="hidden" name="next" value="{{ next }}" />
+			</div>
+
+			<script type="text/javascript">
+				document.getElementById('id_username').focus();
+			</script>
+		</form>
+	</div>
+{% endblock %}
