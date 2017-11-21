@@ -1,38 +1,41 @@
 {% extends 'base.html' %}
 
-{% block title %}login.html{% endblock %}
+{% block title %}login{% endblock %}
 
 {% load staticfiles %}
-{% block extrastyle %}{% static 'css/forms.css' %}{% endblock %}
+{% block extrastyle %}{% static 'css/login_register.css' %}{% endblock %}
 
 {% block content %}
-	<div id="content">
-		<h1>Please Login</h1>
- 
-		<form action="." method="post">
+	<div class="container" style="width: 30%">
+		<form class="form-set" action="." method="post">
 			{% csrf_token %}
+			<h2 class="form-login-register-heading">Please sign in</h2>
 			{% if form.errors %}
 			<p class="errornote">Wrong!! Please correct the error(s) below</p>
 			{% endif %}
-			<p>Please enter your id and password</p>
-
+			
+			{% load widget_tweaks %}
 			<fieldset class="aligned">
-				<div class="form-row">
-					{{ form.username.label_tag }}{{ form.username }}
+				<div class="form-login-register">
+					{{ form.username.label_tag }}
+					{{ form.username|add_class:"input_ID" }}
 				</div>
-				<div class="form-row">
-					{{ form.password.label_tag }}{{ form.password }}
+				<div class="form-login-register ">
+					{{ form.password.label_tag }}
+					{{ form.password|add_class:"input_password" }}
 				</div>
 			</fieldset>
 
 			<div class="submit-row">
-				<input type="submit" value="Log In"/>
-				<input type="hidden" name="next" value="{{ next }}" />
+				<button class="btn btn-lg btn-primary btn-block" type="submit" value="Log In"/>Log in</button>
+				<input type="hidden" name="next" value="" />
 			</div>
-
+			
 			<script type="text/javascript">
 				document.getElementById('id_username').focus();
 			</script>
+
 		</form>
 	</div>
-{% endblock %}
+
+{% endblock %}:
