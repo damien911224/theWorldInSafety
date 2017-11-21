@@ -1,0 +1,49 @@
+body {
+  padding-top: 100px;
+  padding-bottom: 40px;
+}
+
+div .form-set {
+	background-color: rgb(217, 217, 217);
+	padding: 15px;
+	border: 2px solid rgb(10, 41, 41);
+	border-radius: 5px
+}
+
+.form-login-register {
+  max-width: 330px;
+  padding: 10px;
+  margin: 0 auto;
+}
+.form-login-register .form-login-register-heading,
+.form-login-register .checkbox {
+  margin-bottom: 10px;
+}
+.form-login-register .checkbox {
+  font-weight: normal;
+}
+.form-login-register .form-control {
+  position: relative;
+  height: auto;
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+  padding: 10px;
+  font-size: 16px;
+}
+.form-login-register .form-control:focus {
+  z-index: 2;
+}
+.form-login-register .input_ID {
+  margin-bottom: -1px;
+  float: right;
+  width: 70%;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.form-login-register .input_password {
+  margin-bottom: 10px;
+  float: right;
+  width: 70%;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}

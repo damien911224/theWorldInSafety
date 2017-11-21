@@ -1,38 +1,46 @@
 {% extends 'base.html' %}
 
-{% block title %}register.html{% endblock %}
+{% block title %}register{% endblock %}
 
 {% load staticfiles %}
-{% block extrastyle %}{% static 'css/forms.css' %}{% endblock %}
+{% block extrastyle %}{% static 'css/login_register.css' %}{% endblock %}
 
 {% block content %}
-	<div id="content">
-		<h1>New User Register</h1>
-		<form method="post" action=".">
-		{% csrf_token %}
+	<div class="container" style="width: 30%">
+		<form class="form-set" action="." method="post">
+			{% csrf_token %}
+			<h2 class="form-login-register-heading">New user register</h2>
 			{% if form.errors %}
-			<p class="errornote">"Wrong!! Please correct the error(s) below"</p>
+			<p class="errornote">Wrong!! Please correct the error(s) below</p>
 			{% endif %}
-			<p>please enter your username etc.</p>
-
+			
+			{% load widget_tweaks %}
 			<fieldset class="aligned">
-				<div class="form-row">
-					{{ form.username.label_tag }} {{ form.username }}
+				<div class="form-login-register">
+					{{ form.username.label_tag }}
+					{{ form.username|add_class:"input_ID" }}
 				</div>
-				<div class="form-row">
-					{{ form.password1.label_tag }} {{ form.password1 }}
+				<div class="form-login-register">
+					{{ form.password1.label_tag }}
+					{{ form.password1|add_class:"input_password" }}
 				</div>
-				<div class="form-row">
-					{{ form.password2.label_tag }} {{ form.password2 }}
+				<div class="form-login-register">
+					{{ form.password2.label_tag }} 
+					{{ form.password2|add_class:"input_password" }}
 				</div>
-			</fieldset>
-			<div class="submit-row">
-				<input type="submit" value="Register" />
-			</div>
 
+			</fieldset>
+
+			<div class="submit-row">
+				<button class="btn btn-lg btn-primary btn-block" type="submit" value="Register"/>Register</button>
+				<input type="hidden" name="next" value="" />
+			</div>
+			
 			<script type="text/javascript">
 				document.getElementById('id_username').focus();
 			</script>
+
 		</form>
 	</div>
+
 {% endblock %}

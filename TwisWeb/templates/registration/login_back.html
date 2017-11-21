@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}login.html{% endblock %}
+
+{% load staticfiles %}
+{% block extrastyle %}{% static 'css/forms.css' %}{% endblock %}
+
+{% block content %}
+<!--	<div class="container" style="width: 30%">
+		<form class="form-signin" action="." method="post">
+			<h2 class="form-signin-heading">Please sign in</h2>
+				<p class="errornote">Wrong!! Please correct the error(s) below</p>
+			
+			<fieldset class="aligned">
+				<div class="form-row">
+				</div>
+				<div class="form-row">
+				</div>
+			</fieldset>
+
+			<div class="checkbox">
+				<label>
+					<input type="checkbox" value="remember-me"> Remember me
+				</label>
+			</div>
+
+			<div class="submit-row">
+				<button class="btn btn-lg btn-primary btn-block" type="submit" value="Log In"/>Sign in</button>
+				<input type="hidden" name="next" value="" />
+			</div>
+
+			<script type="text/javascript">
+				document.getElementById('id_username').focus();
+			</script>
+
+		</form>
+	</div>
+
+-->
+
+
+
+	<div id="content">
+		<h1>Please Login</h1>
+ 
+		<form action="." method="post">
+			{% csrf_token %}
+			{% if form.errors %}
+			<p class="errornote">Wrong!! Please correct the error(s) below</p>
+			{% endif %}
+			<p>Please enter your id and password</p>
+
+			<fieldset class="aligned">
+				<div class="form-row">
+					{{ form.username.label_tag }}{{ form.username }}
+				</div>
+				<div class="form-row">
+					{{ form.password.label_tag }}{{ form.password }}
+				</div>
+			</fieldset>
+
+			<div class="submit-row">
+				<input type="submit" value="Log In"/>
+				<input type="hidden" name="next" value="{{ next }}" />
+			</div>
+
+			<script type="text/javascript">
+				document.getElementById('id_username').focus();
+			</script>
+		</form>
+	</div>
+{% endblock %}
