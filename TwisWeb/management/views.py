@@ -19,4 +19,5 @@ class FacilityDV(DetailView):
 	model = Facility
 
 class VideoDV(DetailView):
+	template_name = 'video_detail.html'
 	model = Video

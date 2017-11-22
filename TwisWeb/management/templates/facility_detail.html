@@ -10,9 +10,9 @@
 		<div class="outer">
 			<div class="inner">
 				<div class="contents">
-					<h4>Facility name</h4>
+					<h4>{{ object.Facility_name }}</h4>
 					<div>
-						<img src="{{ static 'img/camera.jpg'}}" alt="Smiley face" height="42" width="42">
+						<img src="{% static 'img/camera.jpg'%}" alt="Smiley face" height="42" width="42">
 					
 					</div>
 					<table class="table table-striped scroll">
@@ -23,9 +23,8 @@
 								<th>Checked</th>
 							</tr>
 						</thead>
-						{% if object_list %}
 						<tbody id="search-prescription-results">	
-							{% for video in object_list %}
+							{% for video in object.video_set.all %}
 							<tr>
 								<td>{{ video.Video_id }}</td>
 								<td><a href="{{ video.get_absolute_url }}">{{ facility.get_absolute_url }}</a></td>
@@ -33,7 +32,6 @@
 							</tr>
 							{% endfor %}
 						</tbody>
-						{% endif %}
 					</table>
 				</div>
 			</div>

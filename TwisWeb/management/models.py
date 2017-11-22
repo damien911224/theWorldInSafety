@@ -16,7 +16,7 @@ class Facility(models.Model):
 		ordering = ['Facility_name']
 
 	def __str__(self):
-		return self.name
+		return self.Facility_name
 
 	def get_absolute_url(self):
 		return reverse('management:Facility_detail', args=(self.id,))
@@ -41,7 +41,7 @@ class Video(models.Model):
 		ordering = ['id']
 
 	def __str__(self):
-		return self.title
+		return self.Video_name
 
 	def get_absolute_url(self):
 		return reverse('management:Video_detail', args=(self.id,))

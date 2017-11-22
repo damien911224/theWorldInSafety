@@ -29,7 +29,7 @@
 		<div class="collapse navbar-collapse" id="navbarsExampleDefault">
 			<ul class="navbar-nav mr-auto">
 				{% if user.is_active %}
-				<li class="nav-item"><a class="nav-link" href=#>Facility</a></li>
+				<li class="nav-item"><a class="nav-link" href="{%url 'management:Facility_list' %}">Facility</a></li>
 				<li class="nav-item"><a class="nav-link" href=#>Users</a></li>
 				{% endif %}
 			</ul>
