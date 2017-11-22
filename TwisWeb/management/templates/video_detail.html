@@ -12,5 +12,11 @@
 	<div>
 		<img style="max-width:100%" src="{{ object.Video_snapshot.url }}">
 	</div>
+{{ object.Video_snapshot.url }}
+	<div>
+		<video width="320" height="280" controls>
+			<source src="{{ object.Video_record_path }}">
+		</video>
+	</div>
 </div>
 {% endblock %}

@@ -28,6 +28,7 @@ class Video(models.Model):
 
 	Video_facility = models.ForeignKey(Facility)
 	Video_snapshot = VideoField(upload_to='video/%Y/%m')
+	Video_record_path = models.CharField(max_length=128)
 	upload_date = models.DateTimeField(auto_now_add=True)
 
 	Video_checked = models.BooleanField(default=False)
