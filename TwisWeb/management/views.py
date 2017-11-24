@@ -1,11 +1,13 @@
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView
+from django.http import HttpResponse, HttpResponseRedirect
+
+from django.core.files.base import ContentFile
+
+import cv2
 
 from management.models import Video, Facility
 
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
-#from .forms import UploadFileForm
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import user_passes_test
 from django.utils.decorators import method_decorator
@@ -33,8 +35,24 @@ class VideoDV(DetailView):
 def receive(request):
 	if request.method == 'POST':
 		print("Received file")
-		print("file:", request.FILES)
-		
+		print("file:", request.FILES['file'].name)
+
+		file_content = ContentFile(request.FILES['file'].read())
+
+		fout = open("cat.mp4", 'wb+')
+		for chunk in file_content.chunks():
+			fout.write(chunk)
+		fout.close()
+
+		#TODO: make a snapshot with the file sent
+		#TODO: save the snapshot in database
+		#TODO: get the path of the snapshot
+		#TODO: modify the path for the video
+		#TODO: save the video in the modified path 
+		#cv2.VideoWriter('cat.avi', request.FILES['file'], 20.0, (640, 480))
+	
+	
+	
 	#context = {}
 
 	return HttpResponse('Hello world\n')
