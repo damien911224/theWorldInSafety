@@ -6,7 +6,7 @@
 {% block extrastyle %}{% static 'css/login_register.css' %}{% endblock %}
 
 {% block content %}
-	<div class="container" style="width: 30%">
+	<div id= "form-div" class="container">
 		<form class="form-set" action="." method="post">
 			{% csrf_token %}
 			<h2 class="form-login-register-heading">Please sign in</h2>

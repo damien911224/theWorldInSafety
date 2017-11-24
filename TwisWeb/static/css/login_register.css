@@ -3,6 +3,10 @@ body {
   padding-bottom: 40px;
 }
 
+#form-div {
+	width: 30%;
+}
+
 div .form-set {
 	background-color: rgb(217, 217, 217);
 	padding: 15px;

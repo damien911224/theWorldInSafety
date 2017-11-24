@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
 
 {% block title %}logged_out.html{% endblock %}
+{% load staticfiles %}
+{% block extrastyle %}{% static 'css/login_register.css' %}{% endblock %}
 
 {% block content %}
-	<div id="content">
+	<div class="container">
 		<h1>Logged out</h1>
 		<p>Thanks</p>
 		<p><a href="{% url 'login' %}">Log in again</a></p>
