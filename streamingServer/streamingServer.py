@@ -70,12 +70,12 @@ class StreamingServer():
 
                 self.raspberry_socket.listen(5)
 
-                self.ready = True
-
                 while self.in_progress:
                     try:
                         if not self.in_progress:
                             break
+
+                        self.ready = True
                         client_socket, address = self.raspberry_socket.accept()
                         self.session_is_opened = False
 
@@ -151,6 +151,10 @@ class StreamingServer():
                     except socket.timeout:
                         print 'socket timeout'
                         continue
+
+                    except KeyboardInterrupt:
+                        self.raspberry_socket.close()
+                        break
 
                 self.raspberry_socket.close()
 
@@ -250,6 +254,10 @@ class StreamingServer():
                 except socket.timeout:
                     print 'socket timeout'
                     continue
+
+                except KeyboardInterrupt:
+                    self.controller_socket.close()
+                    break
 
 
     def run_model(self):

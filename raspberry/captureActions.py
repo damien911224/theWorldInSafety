@@ -60,7 +60,6 @@ class Raspberry():
         def run(self):
             while True:
                 while not self.in_progress:
-                    print 'waiting'
                     time.sleep(0.3)
 
                 video_cap = cv2.VideoCapture(self.web_cam_device_id)
