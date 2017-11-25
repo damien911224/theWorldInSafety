@@ -15,7 +15,10 @@ class Raspberry():
 
     def __init__(self):
         self.camera = self.Camera(self)
+        self.controller = self.Controller(self)
+
         self.camera_thread = threading.Thread(target=self.camera.run, name='Camera')
+        self.controller_thread = threading.Thread(target=self.controller.run, name='Controller')
 
         self.raspberry_thread = threading.Thread(target=self.run, name='Raspberry')
         self.raspberry_thread.start()
@@ -23,6 +26,7 @@ class Raspberry():
 
     def run(self):
         self.camera_thread.start()
+        self.controller_thread.start()
 
         while True:
             time.sleep(0.5)
@@ -54,43 +58,44 @@ class Raspberry():
 
 
         def run(self):
-            while not self.in_progress:
-                time.sleep(0.3)
+            while True:
+                while not self.in_progress:
+                    time.sleep(0.3)
 
-            video_cap = cv2.VideoCapture(self.web_cam_device_id)
+                video_cap = cv2.VideoCapture(self.web_cam_device_id)
 
-            if video_cap.isOpened():
-                while self.in_progress:
-                    ok, frame = video_cap.read()
-                    if not ok:
-                        break
+                if video_cap.isOpened():
+                    while self.in_progress:
+                        ok, frame = video_cap.read()
+                        if not ok:
+                            break
 
-                    is_moving = self.motionDetector.motionDetect(frame)
-                    if is_moving:
-                        if not self.session_is_open:
-                            self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-                            self.session_index = 1
+                        is_moving = self.motionDetector.motionDetect(frame)
+                        if is_moving:
+                            if not self.session_is_open:
+                                self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                                self.session_index = 1
 
-                            self.motionDetector = self.MotionDetector(self)
+                                self.motionDetector = self.MotionDetector(self)
 
-                            self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
-                            self.camera_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            self.camera_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                            self.camera_socket.bind((self.client_name, self.client_port_number))
-                            self.camera_socket.connect((self.server_ip_address, self.server_port_number))
+                                self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
+                                self.camera_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                self.camera_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                                self.camera_socket.bind((self.client_name, self.client_port_number))
+                                self.camera_socket.connect((self.server_ip_address, self.server_port_number))
 
-                            self.session_is_open = True
+                                self.session_is_open = True
 
-                        self.send(frame)
-                        self.session_index += 1
-                    else:
-                        if self.session_is_open:
-                            self.camera_socket.close()
-                            self.camera_socket = None
+                            self.send(frame)
+                            self.session_index += 1
+                        else:
+                            if self.session_is_open:
+                                self.camera_socket.close()
+                                self.camera_socket = None
 
-                            self.session_is_open = False
+                                self.session_is_open = False
 
-                video_cap.release()
+                    video_cap.release()
 
 
         def send(self, frame):
@@ -156,7 +161,7 @@ class Raspberry():
 
         def run(self):
             while True:
-                message = input()
+                message = raw_input()
                 print 'message: {}'.format(message)
 
                 self.client_port_number = random.sample(range(20000, 30000, 1), 1)[0]
@@ -166,7 +171,7 @@ class Raspberry():
                 self.controller_socket.connect((self.server_ip_address, self.server_port_number))
 
                 if message == 'stop':
-                    self.raspberry.in_progress = False
+                    self.raspberry.camera.in_progress = False
                     self.send(message)
                 elif message == 'resume' or message == 'start':
                     self.raspberry.in_progress = True
