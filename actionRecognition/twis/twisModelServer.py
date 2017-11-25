@@ -212,58 +212,66 @@ class Session():
                     try:
                         self.client_socket.connect((self.server_ip_address, self.server_port))
 
-                        print 'Connected'
-
-                        try:
-                            self.client_socket.send('Model')
-                        except socket.error:
-                            print 'Socket Error'
-                            continue
-
-                        try:
-                            r = self.client_socket.recv(90456)
-                        except Exception as e:
-                            print e
-                            continue
-
-                        try:
-                            self.client_socket.send('OK')
-                        except socket.error:
-                            print 'Socket Error'
-                            continue
-
-                        self.session_name = r
-
-                        with self.print_lock:
-                            print '==============================================================================='
-                            print '                         Session {} Start                                      '.format(
-                                self.session_name)
-                            print '==============================================================================='
+                        session_initialized = False
 
                         while not self.sock_closed:
-                            data = b''
-                            while True:
-                                try:
-                                    r = self.client_socket.recv(90456)
+                            frame_data = b''
+                            r = self.client_socket.recv(90456)
+                            if len(r) == 0:
+                                self.socket_closed = True
 
-                                    if len(r) == 0:
-                                        self.client_socket.close()
-                                        self.sock_closed = True
-                                        break
+                            if not self.socket_closed:
+                                header = r[:22]
+                                session_name = str(header[:15])
+                                index = int(header[15:22])
+                                header_found = True
 
+                                if not session_initialized:
+                                    self.session_name = session_name
+                                    folders = [self.session_folder, self.image_folder,
+                                               self.flow_folder, self.clip_folder, self.clip_view_folder,
+                                               self.clip_send_folder, self.keep_folder]
+
+                                    previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
+                                    for folder in previous_session_folders:
+                                        rmtree(folder, ignore_errors=True)
+
+                                    for folder in folders:
+                                        try:
+                                            os.mkdir(folder)
+                                        except OSError:
+                                            pass
+
+                                    with self.print_lock:
+                                        print '==============================================================================='
+                                        print '                         Session {} Start                                      '.format(
+                                            self.session_name)
+                                        print '==============================================================================='
+
+
+                                while True:
                                     a = r.find(b'!TWIS_END!')
                                     if a != -1:
-                                        data += r[:a]
+                                        if header_found:
+                                            frame_data += r[22:a]
+                                        else:
+                                            frame_data += r[:a]
+
                                         break
+                                    else:
+                                        if header_found:
+                                            frame_data += r[22:]
+                                            header_found = False
+                                        else:
+                                            frame_data += r
 
-                                    data += r
+                                    r = self.client_socket.recv(90456)
+                                    if len(r) == 0:
+                                        self.socket_closed = True
 
-                                except Exception as e:
-                                    print(e)
-                                    continue
 
                             if not self.sock_closed:
-                                np_arr = np.fromstring(data, np.uint8)
+                                np_arr = np.fromstring(frame_data, np.uint8)
                                 if np_arr is not None:
                                     try:
                                         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -283,6 +291,8 @@ class Session():
                             self.client_socket.close()
 
                         self.finalize()
+
+                    self.client_socket.close()
 
                     self.finalize()
 
