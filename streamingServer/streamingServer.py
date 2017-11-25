@@ -61,6 +61,7 @@ class StreamingServer():
         def run(self):
             while True:
                 try:
+                    print 'Waiting'
                     client_socket, address = self.raspberry_socket.accept()
                     self.session_is_opened = False
 
