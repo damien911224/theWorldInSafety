@@ -25,18 +25,11 @@ class Facility(models.Model):
 class Video(models.Model):
 	#Video_id = models.IntegerField(default=0)
 	Video_name = models.CharField(max_length=128)
-
 	Video_facility = models.ForeignKey(Facility)
 	Video_snapshot = VideoField(upload_to='video/%Y/%m')
 	Video_record_path = models.CharField(max_length=128)
 	upload_date = models.DateTimeField(auto_now_add=True)
-
 	Video_checked = models.BooleanField(default=False)
-#substitude to register library
-#class registed_user(models.Model):
-#	User_id = models.IntegerField(default=0)
-#
-#	Registered_facility = models.IntegerField(default=0)
 
 	class Meta:
 		ordering = ['id']
