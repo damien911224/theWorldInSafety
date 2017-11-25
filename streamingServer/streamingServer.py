@@ -55,11 +55,11 @@ class StreamingServer():
             self.raspberry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.raspberry_socket.bind((self.streaming_server.streaming_server_host_name,
                                      self.streaming_server.raspberry_port_number))
-            self.raspberry_socket.listen(5)
 
 
         def run(self):
             while True:
+                self.raspberry_socket.listen(5)
                 try:
                     print 'Waiting'
                     client_socket, address = self.raspberry_socket.accept()
