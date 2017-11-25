@@ -136,4 +136,4 @@ if __name__ == '__main__':
     raspberry = Raspberry()
 
     while True:
-        time.sleep(3)
+        time.sleep(10.314)
