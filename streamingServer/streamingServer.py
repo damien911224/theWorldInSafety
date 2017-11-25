@@ -244,6 +244,9 @@ class StreamingServer():
                                 self.streaming_server.raspberry.in_progress = True
                                 while self.streaming_server.raspberry.ready:
                                     time.sleep(0.1)
+
+                                time.sleep(0.5)
+
                                 client_socket.send('Ready')
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
