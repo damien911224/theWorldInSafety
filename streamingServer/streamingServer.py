@@ -13,8 +13,8 @@ from shutil import rmtree, copyfile
 class StreamingServer():
 
     def __init__(self):
-        # self.streaming_server_host_name = '172.31.0.152'
-        self.streaming_server_host_name = 'localhost'
+        self.streaming_server_host_name = '172.31.0.152'
+        # self.streaming_server_host_name = 'localhost'
 
         self.home_folder = os.path.abspath('../..')
         self.save_folder = os.path.join(self.home_folder, 'streaming_data')
@@ -82,24 +82,6 @@ class StreamingServer():
                                 else:
                                     frame_data += r
 
-                                header = r[:22]
-                                session_name = str(header[:15])
-                                frame_index = int(header[15:22])
-
-                                if not self.session_is_opened:
-                                    self.session_name = session_name
-                                    self.session_folder = os.path.join(self.streaming_server.save_folder,
-                                                                       session_name)
-                                    try:
-                                        os.mkdir(self.session_folder)
-                                    except OSError:
-                                        pass
-
-                                    with self.streaming_server.print_lock:
-                                        print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Start', self.session_name)
-
-                                    self.session_is_opened = True
-
                         except Exception as e:
                             print(e)
                             continue
@@ -110,6 +92,27 @@ class StreamingServer():
                                 print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
                             break
                         else:
+                            header = r[:22]
+                            session_name = str(header[:15])
+                            frame_index = int(header[15:22])
+
+                            frame_data = r[23:]
+
+                            if not self.session_is_opened:
+                                self.session_name = session_name
+                                self.session_folder = os.path.join(self.streaming_server.save_folder,
+                                                                   session_name)
+                                try:
+                                    os.mkdir(self.session_folder)
+                                except OSError:
+                                    pass
+
+                                with self.streaming_server.print_lock:
+                                    print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Start', self.session_name)
+
+                                self.session_is_opened = True
+                                
+
                             np_arr = np.fromstring(frame_data, np.uint8)
                             if np_arr is not None:
                                 frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
