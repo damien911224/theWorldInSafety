@@ -75,6 +75,8 @@ class StreamingServer():
 
                 while self.in_progress:
                     try:
+                        if not self.in_progress:
+                            break
                         client_socket, address = self.raspberry_socket.accept()
                         self.session_is_opened = False
 
