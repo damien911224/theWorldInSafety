@@ -79,7 +79,6 @@ class StreamingServer():
                                     a = r.find(b'raspberry')
                                     if a != -1:
                                         frame_data += r[a+9:]
-                                        print frame_data
                                         start_found = True
                                 else:
                                     a = r.find(b'!TWIS_END!')
@@ -99,6 +98,7 @@ class StreamingServer():
                                 print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
                             break
                         else:
+                            print frame_data[:22]
                             header = r[:22]
                             print header
                             session_name = str(header[:15])
