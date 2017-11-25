@@ -35,8 +35,9 @@ class Raspberry():
             self.web_cam_device_id = 0
 
             self.camera_socket = None
-            self.server_ip_address = 'localhost'
-            self.server_port_number = 10001
+            # self.server_ip_address = 'localhost'
+            self.server_ip_address = '13.125.52.6'
+            self.server_port_number = 7777
 
             self.client_name = '127.0.0.1'
             self.client_port_number = 21224
@@ -98,7 +99,7 @@ class Raspberry():
                 self.camera = camera
 
                 self.frame_diff_threshold = 1.0
-                self.minimum_capture_count = 300
+                self.minimum_capture_count = 100
 
                 self.countdown_to_stop = self.minimum_capture_count
                 self.no_moving = False
