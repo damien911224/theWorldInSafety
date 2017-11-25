@@ -79,6 +79,7 @@ class StreamingServer():
                                     a = r.find(b'raspberry')
                                     if a != -1:
                                         frame_data += r[a+9:]
+                                        print frame_data
                                         start_found = True
                                 else:
                                     a = r.find(b'!TWIS_END!')
