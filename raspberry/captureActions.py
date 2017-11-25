@@ -39,7 +39,8 @@ class Raspberry():
             self.server_ip_address = '13.125.52.6'
             self.server_port_number = 7777
 
-            self.client_name = '127.0.0.1'
+            # self.client_name = '127.0.0.1'
+            self.client_name = '10.211.55.10'
             self.client_port_number = 21224
 
             self.jpg_boundary = b'!TWIS_END!'

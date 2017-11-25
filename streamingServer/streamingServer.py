@@ -13,7 +13,7 @@ from shutil import rmtree, copyfile
 class StreamingServer():
 
     def __init__(self):
-        # self.streaming_server_host_name = '13.125.52.6'
+        # self.streaming_server_host_name = '172.31.0.152'
         self.streaming_server_host_name = 'localhost'
 
         self.home_folder = os.path.abspath('../..')
@@ -69,15 +69,22 @@ class StreamingServer():
                         frame_index = 1
                         frame_data = b''
                         try:
-                            r = client_socket.recv(90456)
-                            if len(r) == 0:
-                                socket_closed = True
+                            while True:
+                                r = client_socket.recv(90456)
+                                if len(r) == 0:
+                                    socket_closed = True
+                                    break
 
-                            if not socket_closed:
+                                a = r.find(b'!TWIS_END!')
+                                if a != -1:
+                                    frame_data += r[:a]
+                                    break
+                                else:
+                                    frame_data += r
+
                                 header = r[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                header_found = True
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
@@ -93,27 +100,6 @@ class StreamingServer():
 
                                     self.session_is_opened = True
 
-
-                                while True:
-                                    a = r.find(b'!TWIS_END!')
-                                    if a != -1:
-                                        if header_found:
-                                            frame_data += r[22:a]
-                                        else:
-                                            frame_data += r[:a]
-
-                                        break
-                                    else:
-                                        if header_found:
-                                            frame_data += r[22:]
-                                            header_found = False
-                                        else:
-                                            frame_data += r
-
-                                    r = client_socket.recv(90456)
-                                    if len(r) == 0:
-                                        socket_closed = True
-
                         except Exception as e:
                             print(e)
                             continue
@@ -123,13 +109,13 @@ class StreamingServer():
                             with self.streaming_server.print_lock:
                                 print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
                             break
+                        else:
+                            np_arr = np.fromstring(frame_data, np.uint8)
+                            if np_arr is not None:
+                                frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-                        np_arr = np.fromstring(frame_data, np.uint8)
-                        if np_arr is not None:
-                            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-                            if frame is not None:
-                                self.dumpFrames([frame], frame_index)
+                                if frame is not None:
+                                    self.dumpFrames([frame], frame_index)
 
                 except socket.timeout:
                     print 'socket timeout'
