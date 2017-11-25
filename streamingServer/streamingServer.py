@@ -70,6 +70,8 @@ class StreamingServer():
 
                 self.raspberry_socket.listen(5)
 
+                self.ready = True
+
                 while self.in_progress:
                     try:
                         client_socket, address = self.raspberry_socket.accept()
@@ -229,13 +231,17 @@ class StreamingServer():
                                 self.streaming_server.raspberry.in_progress = False
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
-                                    print '{:10s}|{:15s}'.format('Controller',  message_data)
+                                    print '{:10s}|{:15s}'.format('Controller',  message_data.upper())
                                 break
                             elif message_data == 'resume' or message_data == 'start':
+                                self.streaming_server.raspberry.ready = False
                                 self.streaming_server.raspberry.in_progress = True
+                                while self.streaming_server.raspberry.ready:
+                                    time.sleep(0.1)
+                                client_socket.send('Ready')
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
-                                    print '{:10s}|{:15s}'.format('Controller', message_data)
+                                    print '{:10s}|{:15s}'.format('Controller', message_data.upper())
                                 break
 
 
