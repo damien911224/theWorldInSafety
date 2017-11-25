@@ -61,6 +61,7 @@ class StreamingServer():
         def run(self):
             while True:
                 while not self.in_progress:
+                    print 'waiting'
                     time.sleep(0.3)
 
                 self.raspberry_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

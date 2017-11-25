@@ -105,7 +105,7 @@ class Raspberry():
             try:
                 self.camera_socket.send(send_data)
             except socket.error:
-                print 'SOCKET ERROR!'
+                print 'CAMERA SOCKET ERROR!'
 
 
         class MotionDetector():
