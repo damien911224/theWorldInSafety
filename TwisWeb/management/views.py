@@ -26,16 +26,25 @@ class overall(ListView):
 	def get_queryset(self):
 		return Video.objects.all()[0:10]
 
+@method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
 class FacilityLV(ListView):
-	template_name = 'facility_list.html'
+	template_name = 'admin_facility_list.html'
 	model = Facility
+#	def get_queryset(self):
+#		return Facility.objects.get()
 
+
+@method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
 class FacilityDV(DetailView):
-	template_name = 'facility_detail.html'
+	template_name = 'admin_facility_detail.html'
 	model = Facility
+	def get_queryset(self):
+		return Video.objects.all()[0:10]
 
+
+@method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
 class VideoDV(DetailView):
-	template_name = 'video_detail.html'
+	template_name = 'admin_video_detail.html'
 	model = Video
 
 
@@ -48,7 +57,7 @@ def receive(request):
 		facility = Facility.objects.get(id=facility_id)
 		
 		#TODO: make a snapshot with the file sent
-		with open('management/test.jpg', 'rb') as f:
+		with open('test.jpg', 'rb') as f:
 			snapshot = File(f)
 			
 		#save the snapshot in database

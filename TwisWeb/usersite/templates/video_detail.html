@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}photo_detail{% endblock %}
+
+{% load staticfiles %}
+{%block extrastyle %}{% static 'css/video.css' %}{% endblock %}
+
+{% block content %}
+<div>
+	<h2>{{ object.Video_name }}</h2>
+
+	<div>
+		<img style="max-width:100%" src="{{ object.Video_snapshot.url }}">
+	</div>
+{{ object.Video_snapshot.url }}
+	<div>
+		<video width="320" height="280" controls>
+			<source src="{{ object.Video_record_path }}">
+		</video>
+	</div>
+</div>
+{% endblock %}

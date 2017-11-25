@@ -31,4 +31,5 @@ urlpatterns = [
 	url(r'^accounts/register/done$', UserCreateDone.as_view(), name='register_done'),
 
 	url(r'^management/', include('management.urls', namespace='management')),
+	url(r'^user/', include('usersite.urls', namespace='usersite')),
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
