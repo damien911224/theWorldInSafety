@@ -6,6 +6,7 @@ import os
 import numpy as np
 import time
 import glob
+import subprocess
 from multiprocessing import Pool, Value, Lock, current_process, Manager
 from shutil import rmtree, copyfile
 
@@ -14,7 +15,6 @@ class StreamingServer():
 
     def __init__(self):
         self.streaming_server_host_name = '172.31.0.152'
-        # self.streaming_server_host_name = 'localhost'
 
         self.home_folder = os.path.abspath('../..')
         self.save_folder = os.path.join(self.home_folder, 'streaming_data')
@@ -171,10 +171,73 @@ class StreamingServer():
         def __init__(self, streaming_server):
             self.streaming_server = streaming_server
 
+            self.in_progress = True
+
+            self.jpg_boundary = b'!TWIS_END!'
+
 
         def run(self):
+            while True:
+                while not self.in_progress:
+                    time.sleep(0.3)
 
-            print ''
+                self.model_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.model_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.model_socket.bind((self.streaming_server.streaming_server_host_name,
+                                            self.streaming_server.model_port_number))
+
+                self.model_socket.listen(5)
+
+                while self.in_progress:
+                    while len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) <= 0:
+                        time.sleep(0.5)
+                    session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+                    self.session_index = 1
+                    self.session_folder = session_list[0]
+                    self.session_name = self.session_folder.split('/')[-1]
+
+                    frame_paths = glob.glob(os.path.join(self.session_name, '*'))
+                    for frame_path in frame_paths:
+                        self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                        frame = cv2.imread(frame_path)
+                        self.send(frame)
+                        self.session_index += 1
+                        rmtree(frame_path, ignore_errors=True)
+
+
+                    if len(session_list) == 1:
+                        while True:
+                            while len(glob.glob(os.path.join(self.session_name, '*'))) <= 0 and \
+                                len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) == 1:
+                                time.sleep(0.3)
+
+                            frame_paths = glob.glob(os.path.join(self.session_name, '*'))
+                            if len(frame_paths) == 0:
+                                rmtree(self.session_folder, ignore_errors=True)
+                                break
+                            else:
+                                for frame_path in frame_paths:
+                                    self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                                    frame = cv2.imread(frame_path)
+                                    self.send(frame)
+                                    self.session_index += 1
+                                    rmtree(frame_path, ignore_errors=True)
+
+
+
+
+
+
+
+
+        def send(self, frame):
+            header = b'model{:15s}{:07d}'.format(self.session_name, self.session_index)
+            frame_data = cv2.imencode('.jpg', frame)[1].tostring()
+            send_data = header + frame_data + self.jpg_boundary
+            try:
+                self.model_socket.send(send_data)
+            except socket.error:
+                print 'MODEL SOCKET ERROR!'
 
 
     class Controller():

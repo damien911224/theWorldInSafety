@@ -62,6 +62,8 @@ class Raspberry():
                 while not self.in_progress:
                     time.sleep(0.3)
 
+                self.session_is_open = False
+
                 video_cap = cv2.VideoCapture(self.web_cam_device_id)
 
                 if video_cap.isOpened():
