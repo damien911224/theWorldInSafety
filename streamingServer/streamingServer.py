@@ -76,7 +76,7 @@ class StreamingServer():
                         client_socket, address = self.raspberry_socket.accept()
                         self.session_is_opened = False
 
-                        while True:
+                        while self.in_progress:
                             socket_closed = False
                             start_found = False
                             frame_data = b''
@@ -136,6 +136,8 @@ class StreamingServer():
 
                                     if frame is not None:
                                         self.dumpFrames([frame], frame_index)
+
+                        client_socket.close()
 
                     except socket.timeout:
                         print 'socket timeout'
@@ -220,6 +222,8 @@ class StreamingServer():
                             if message_data == 'stop':
                                 self.streaming_server.raspberry.in_progress = False
                                 client_socket.close()
+                                with self.streaming_server.print_lock:
+                                    print '{:10s}|{:15s}|{}'.format('Controller', 'Stop', self.session_name)
                                 break
 
                 except socket.timeout:
