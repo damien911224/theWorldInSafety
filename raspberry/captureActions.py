@@ -157,6 +157,7 @@ class Raspberry():
         def run(self):
             while True:
                 message = input()
+                print 'message: {}'.format(message)
 
                 self.client_port_number = random.sample(range(20000, 30000, 1), 1)[0]
                 self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

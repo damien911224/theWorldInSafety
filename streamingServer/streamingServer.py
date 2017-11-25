@@ -216,6 +216,7 @@ class StreamingServer():
                             client_socket.close()
                             break
                         else:
+                            print message_data
                             if message_data == 'stop':
                                 self.streaming_server.raspberry.in_progress = False
                                 client_socket.close()
