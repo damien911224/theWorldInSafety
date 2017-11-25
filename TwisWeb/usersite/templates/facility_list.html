@@ -23,7 +23,7 @@
 							{% for facility in object_list %}
 							<tr>
 								<td>{{ facility.Facility_name }}</td>
-								<td><a href="{{ facility.get_absolute_url }}">{{ facility.get_absolute_url }}</a></td>
+								<td><a href="{{ facility.get_user_absolute_url }}">{{ facility.get_user_absolute_url }}</a></td>
 								<td>{{ facility.Facility_homepage}}</td>
 							</tr>
 							{% endfor %}

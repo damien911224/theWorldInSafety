@@ -11,6 +11,9 @@ from management.fields import VideoField
 
 class Facility(models.Model):
 	#Facility_id = models.IntegerField(default=0)
+
+	group = models.OneToOneField(Group)
+
 	Facility_name = models.CharField(max_length=256)
 	Facility_homepage = models.CharField(max_length=256)
 
@@ -22,6 +25,9 @@ class Facility(models.Model):
 
 	def get_absolute_url(self):
 		return reverse('management:Facility_detail', args=(self.id,))
+
+	def get_user_absolute_url(self):
+		return reverse('usersite:Facility_detail', args=(self.id,))
 
 
 class Video(models.Model):
@@ -41,4 +47,7 @@ class Video(models.Model):
 
 	def get_absolute_url(self):
 		return reverse('management:Video_detail', args=(self.id,))
+
+	def get_user_absolute_url(self):
+		return reverse('usersite:Video_detail', args=(self.id,))
 

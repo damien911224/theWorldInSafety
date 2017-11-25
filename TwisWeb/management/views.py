@@ -30,16 +30,14 @@ class overall(ListView):
 class FacilityLV(ListView):
 	template_name = 'admin_facility_list.html'
 	model = Facility
-#	def get_queryset(self):
-#		return Facility.objects.get()
+	def get_queryset(self):
+		return Facility.objects.all()
 
 
 @method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
 class FacilityDV(DetailView):
 	template_name = 'admin_facility_detail.html'
 	model = Facility
-	def get_queryset(self):
-		return Video.objects.all()[0:10]
 
 
 @method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
@@ -53,7 +51,7 @@ def receive(request):
 	if request.method == 'POST':
 		
 		#TODO: get the file information
-		facility_id = 2
+		facility_id = 1
 		facility = Facility.objects.get(id=facility_id)
 		
 		#TODO: make a snapshot with the file sent
