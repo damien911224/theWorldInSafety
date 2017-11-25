@@ -28,12 +28,15 @@ class StreamingServer():
 
         self.raspberry_port_number = 7777
         self.model_port_number = 8888
+        self.controller_port_number = 9999
 
         self.raspberry = self.Raspberry(self)
         self.model = self.Model(self)
+        self.controller = self.Controller(self)
 
         self.raspberry_thread = threading.Thread(target=self.raspberry.run, name='Raspberry')
         self.model_thread = threading.Thread(target=self.model.run, name='Model')
+        self.controller_thread = threading.Thread(target=self.controller.run, name='Controller')
 
         self.streaming_server_thread = threading.Thread(target=self.run, name='Streaming Server')
         self.streaming_server_thread.start()
@@ -42,6 +45,7 @@ class StreamingServer():
     def run(self):
         self.raspberry_thread.start()
         # self.model_thread.start()
+        self.controller_thread.start()
 
         while True:
             time.sleep(0.7)
@@ -51,84 +55,92 @@ class StreamingServer():
         def __init__(self, streaming_server):
             self.streaming_server = streaming_server
 
+            self.in_progress = True
+
 
         def run(self):
             while True:
-                try:
-                    self.raspberry_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    self.raspberry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    self.raspberry_socket.bind((self.streaming_server.streaming_server_host_name,
-                                                self.streaming_server.raspberry_port_number))
+                while not self.in_progress:
+                    time.sleep(0.3)
 
-                    self.raspberry_socket.listen(5)
+                self.raspberry_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.raspberry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.raspberry_socket.bind((self.streaming_server.streaming_server_host_name,
+                                            self.streaming_server.raspberry_port_number))
 
-                    client_socket, address = self.raspberry_socket.accept()
-                    self.session_is_opened = False
+                self.raspberry_socket.listen(5)
 
-                    while True:
-                        socket_closed = False
-                        start_found = False
-                        frame_data = b''
-                        try:
-                            while True:
-                                r = client_socket.recv(90456)
-                                if len(r) == 0:
-                                    socket_closed = True
-                                    break
+                while self.in_progress:
+                    try:
+                        client_socket, address = self.raspberry_socket.accept()
+                        self.session_is_opened = False
 
-                                if not start_found:
-                                    a = r.find(b'raspberry')
-                                    if a != -1:
-                                        frame_data += r[a+9:]
-                                        start_found = True
-                                else:
-                                    a = r.find(b'!TWIS_END!')
-                                    if a != -1:
-                                        frame_data += r[:a]
+                        while True:
+                            socket_closed = False
+                            start_found = False
+                            frame_data = b''
+                            try:
+                                while True:
+                                    r = client_socket.recv(90456)
+                                    if len(r) == 0:
+                                        socket_closed = True
                                         break
+
+                                    if not start_found:
+                                        a = r.find(b'raspberry')
+                                        if a != -1:
+                                            frame_data += r[a+9:]
+                                            start_found = True
                                     else:
-                                        frame_data += r
+                                        a = r.find(b'!TWIS_END!')
+                                        if a != -1:
+                                            frame_data += r[:a]
+                                            break
+                                        else:
+                                            frame_data += r
 
-                        except Exception as e:
-                            print(e)
-                            continue
+                            except Exception as e:
+                                print(e)
+                                continue
 
-                        if socket_closed:
-                            client_socket.close()
-                            with self.streaming_server.print_lock:
-                                print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
-                            break
-                        else:
-                            header = frame_data[:22]
-                            session_name = str(header[:15])
-                            frame_index = int(header[15:22])
-                            frame_data = r[23:]
-
-                            if not self.session_is_opened:
-                                self.session_name = session_name
-                                self.session_folder = os.path.join(self.streaming_server.save_folder,
-                                                                   session_name)
-                                try:
-                                    os.mkdir(self.session_folder)
-                                except OSError:
-                                    pass
-
+                            if socket_closed:
+                                client_socket.close()
                                 with self.streaming_server.print_lock:
-                                    print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Start', self.session_name)
+                                    print '{:10s}|{:15s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
+                                break
+                            else:
+                                header = frame_data[:22]
+                                session_name = str(header[:15])
+                                frame_index = int(header[15:22])
+                                frame_data = r[23:]
 
-                                self.session_is_opened = True
+                                if not self.session_is_opened:
+                                    self.session_name = session_name
+                                    self.session_folder = os.path.join(self.streaming_server.save_folder,
+                                                                       session_name)
+                                    try:
+                                        os.mkdir(self.session_folder)
+                                    except OSError:
+                                        pass
+
+                                    with self.streaming_server.print_lock:
+                                        print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Start', self.session_name)
+
+                                    self.session_is_opened = True
 
 
-                            np_arr = np.fromstring(frame_data, np.uint8)
-                            if np_arr is not None:
-                                frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                                np_arr = np.fromstring(frame_data, np.uint8)
+                                if np_arr is not None:
+                                    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-                                if frame is not None:
-                                    self.dumpFrames([frame], frame_index)
+                                    if frame is not None:
+                                        self.dumpFrames([frame], frame_index)
 
-                except socket.timeout:
-                    print 'socket timeout'
-                    continue
+                    except socket.timeout:
+                        print 'socket timeout'
+                        continue
+
+                self.raspberry_socket.close()
 
 
         def dumpFrames(self, frames, start_index):
@@ -147,6 +159,71 @@ class StreamingServer():
         def run(self):
 
             print ''
+
+
+    class Controller():
+        def __init__(self, streaming_server):
+            self.streaming_server = streaming_server
+
+            self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.controller_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.controller_socket.bind((self.streaming_server.streaming_server_host_name,
+                                     self.streaming_server.controller_port_number))
+
+            self.controller_socket.listen(5)
+
+
+        def run(self):
+            while True:
+                try:
+                    client_socket, address = self.controller_socket.accept()
+
+                    while True:
+                        socket_closed = False
+                        start_found = False
+                        message_data = b''
+                        try:
+                            while True:
+                                r = client_socket.recv(90456)
+                                if len(r) == 0:
+                                    socket_closed = True
+                                    break
+
+                                if not start_found:
+                                    a = r.find(b'raspberry')
+                                    if a != -1:
+                                         r = r[a+9:]
+                                         a = r.find(b'!TWIS_END!')
+                                         if a != -1:
+                                             message_data += r[:a]
+                                             break
+                                         else:
+                                             message_data += r
+                                    start_found = True
+                                else:
+                                    a = r.find(b'!TWIS_END!')
+                                    if a != -1:
+                                        message_data += r[:a]
+                                        break
+                                    else:
+                                        message_data += r
+
+                        except Exception as e:
+                            print(e)
+                            continue
+
+                        if socket_closed:
+                            client_socket.close()
+                            break
+                        else:
+                            if message_data == 'stop':
+                                self.streaming_server.raspberry.in_progress = False
+                                client_socket.close()
+                                break
+
+                except socket.timeout:
+                    print 'socket timeout'
+                    continue
 
 
     def run_model(self):

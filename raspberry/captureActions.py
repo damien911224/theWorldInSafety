@@ -7,6 +7,7 @@ import cv2
 import datetime
 import threading
 import time
+import random
 
 
 
@@ -32,6 +33,7 @@ class Raspberry():
         def __init__(self, raspberry):
             self.raspberry = raspberry
 
+            self.in_progress = True
             self.web_cam_device_id = 0
 
             self.camera_socket = None
@@ -41,7 +43,7 @@ class Raspberry():
 
             # self.client_name = '127.0.0.1'
             self.client_name = '10.211.55.10'
-            self.client_port_number = 21224
+            self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = None
@@ -52,10 +54,13 @@ class Raspberry():
 
 
         def run(self):
+            while not self.in_progress:
+                time.sleep(0.3)
+
             video_cap = cv2.VideoCapture(self.web_cam_device_id)
 
             if video_cap.isOpened():
-                while True:
+                while self.in_progress:
                     ok, frame = video_cap.read()
                     if not ok:
                         break
@@ -68,6 +73,7 @@ class Raspberry():
 
                             self.motionDetector = self.MotionDetector(self)
 
+                            self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
                             self.camera_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             self.camera_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                             self.camera_socket.bind((self.client_name, self.client_port_number))
@@ -83,6 +89,8 @@ class Raspberry():
                             self.camera_socket = None
 
                             self.session_is_open = False
+
+                video_cap.release()
 
 
         def send(self, frame):
@@ -131,6 +139,47 @@ class Raspberry():
                         self.no_moving = True
 
                 return not self.no_moving
+
+
+    class Controller():
+
+        def __init__(self, raspberry):
+            self.raspberry = raspberry
+
+            self.controller_socket = None
+            self.server_ip_address = '13.125.52.6'
+            self.server_port_number = 9999
+
+            self.client_name = '10.211.55.10'
+            self.client_port_number = random.sample(range(20000, 30000, 1), 1)[0]
+
+
+        def run(self):
+            while True:
+                message = input()
+
+                self.client_port_number = random.sample(range(20000, 30000, 1), 1)[0]
+                self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.controller_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.controller_socket.bind((self.client_name, self.client_port_number))
+                self.controller_socket.connect((self.server_ip_address, self.server_port_number))
+
+                if message == 'stop':
+                    self.raspberry.in_progress = False
+                    self.send(message)
+                elif message == 'resume' or message == 'start':
+                    self.raspberry.in_progress = True
+                    self.send(message)
+
+                self.controller_socket.close()
+
+
+        def send(self, message):
+            send_message = b'raspberry{:15s}!TWIS_END!'.format(message)
+            try:
+                self.controller_socket.send(send_message)
+            except socket.error:
+                print 'SOCKET ERROR!'
 
 
 
