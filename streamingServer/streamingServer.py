@@ -219,11 +219,11 @@ class StreamingServer():
                             client_socket.close()
                             break
                         else:
-                            if message_data == 'stop':
+                            if str(message_data) == 'stop':
                                 self.streaming_server.raspberry.in_progress = False
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
-                                    print '{:10s}|{:15s}|{}'.format('Controller', 'Stop', self.session_name)
+                                    print '{:10s}|{:15s}'.format('Controller', 'Stop')
                                 break
 
                 except socket.timeout:
