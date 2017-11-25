@@ -224,19 +224,18 @@ class StreamingServer():
                             client_socket.close()
                             break
                         else:
-                            print str(message_data)
-                            print len(str(message_data))
-                            if str(message_data) == 'stop':
+                            message_data = str(message_data).replace(' ', '')
+                            if message_data == 'stop':
                                 self.streaming_server.raspberry.in_progress = False
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
-                                    print '{:10s}|{:15s}'.format('Controller',  str(message_data))
+                                    print '{:10s}|{:15s}'.format('Controller',  message_data)
                                 break
-                            elif str(message_data) == 'resume' or str(message_data) == 'start':
+                            elif message_data == 'resume' or message_data == 'start':
                                 self.streaming_server.raspberry.in_progress = True
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
-                                    print '{:10s}|{:15s}'.format('Controller', str(message_data))
+                                    print '{:10s}|{:15s}'.format('Controller', message_data)
                                 break
 
 
