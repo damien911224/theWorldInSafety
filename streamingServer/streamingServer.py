@@ -80,7 +80,7 @@ class StreamingServer():
                             start_found = False
                             frame_data = b''
                             try:
-                                while True:
+                                while self.in_progress:
                                     r = client_socket.recv(90456)
                                     if len(r) == 0:
                                         socket_closed = True
@@ -109,7 +109,7 @@ class StreamingServer():
                                 print(e)
                                 continue
 
-                            if socket_closed:
+                            if socket_closed or not self.in_progress:
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
@@ -224,6 +224,7 @@ class StreamingServer():
                             client_socket.close()
                             break
                         else:
+                            print str(message_data)
                             if str(message_data) == 'stop':
                                 self.streaming_server.raspberry.in_progress = False
                                 client_socket.close()
