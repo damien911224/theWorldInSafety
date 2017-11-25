@@ -62,8 +62,8 @@ class StreamingServer():
             while True:
                 try:
                     client_socket, address = self.raspberry_socket.accept()
-
                     self.session_is_opened = False
+
                     while True:
                         socket_closed = False
                         start_found = False
