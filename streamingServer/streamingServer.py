@@ -66,7 +66,6 @@ class StreamingServer():
                     self.session_is_opened = False
                     while True:
                         socket_closed = False
-                        frame_index = 1
                         frame_data = b''
                         try:
                             while True:
@@ -93,6 +92,7 @@ class StreamingServer():
                             break
                         else:
                             header = r[:22]
+                            print header
                             session_name = str(header[:15])
                             frame_index = int(header[15:22])
 
@@ -111,7 +111,7 @@ class StreamingServer():
                                     print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Start', self.session_name)
 
                                 self.session_is_opened = True
-                                
+
 
                             np_arr = np.fromstring(frame_data, np.uint8)
                             if np_arr is not None:
