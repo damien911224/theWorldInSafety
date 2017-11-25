@@ -98,9 +98,7 @@ class StreamingServer():
                                 print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
                             break
                         else:
-                            print frame_data[:22]
-                            header = r[:22]
-                            print header
+                            header = frame_data[:22]
                             session_name = str(header[:15])
                             frame_index = int(header[15:22])
 
