@@ -101,7 +101,6 @@ class StreamingServer():
                             header = frame_data[:22]
                             session_name = str(header[:15])
                             frame_index = int(header[15:22])
-
                             frame_data = r[23:]
 
                             if not self.session_is_opened:
