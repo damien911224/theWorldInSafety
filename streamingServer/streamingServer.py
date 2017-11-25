@@ -135,7 +135,7 @@ class StreamingServer():
                                         pass
 
                                     with self.streaming_server.print_lock:
-                                        print '{:10s}|{:13s}|{}'.format('Raspberry', 'Session Start', self.session_name)
+                                        print '{:10s}|{:15s}|{}'.format('Raspberry', 'Session Start', self.session_name)
 
                                     self.session_is_opened = True
 
