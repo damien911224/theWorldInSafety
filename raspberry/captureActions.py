@@ -174,7 +174,7 @@ class Raspberry():
                     self.raspberry.camera.in_progress = False
                     self.send(message)
                 elif message == 'resume' or message == 'start':
-                    self.raspberry.in_progress = True
+                    self.raspberry.camera.in_progress = True
                     self.send(message)
 
                 self.controller_socket.close()
