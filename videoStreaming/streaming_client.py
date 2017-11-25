@@ -12,7 +12,7 @@ class StreamingClient():
         self.server_ip_address = '10.211.55.10'
         self.server_port = 10000
 
-        self.client_host_name = '192.168.1.101'
+        self.client_host_name = 'localhost'
         self.client_port = 10001
 
         self.save_folder = os.path.join('/home/damien/temp/streaming')
@@ -23,7 +23,7 @@ class StreamingClient():
                 pass
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.client_socket.bind((self.client_host_name, self.client_port))
         self.client_socket.listen(5)
 
@@ -40,21 +40,49 @@ class StreamingClient():
                 server_socket, address = self.client_socket.accept()
 
                 while True:
-                    data = b''
-                    while True:
-                        try:
-                            r = server_socket.recv(90456)
-                            if len(r) == 0:
-                                exit(0)
-                            a = r.find(b'!TWIS_END!')
-                            if a != -1:
-                                data += r[:a]
-                                break
-                            data += r
-                        except Exception as e:
-                            print(e)
-                            continue
-                    np_arr = numpy.fromstring(data, numpy.uint8)
+                    socket_closed = False
+                    frame_data = b''
+                    try:
+                        r = server_socket.recv(90456)
+                        if len(r) == 0:
+                            socket_closed = True
+
+                        if not socket_closed:
+                            header = r[:22]
+                            session_name = str(header[:15])
+                            index = int(header[15:22])
+                            header_found = True
+                            print session_name, index
+
+                            while True:
+                                a = r.find(b'!TWIS_END!')
+                                if a != -1:
+                                    if header_found:
+                                        frame_data += r[22:a]
+                                    else:
+                                        frame_data += r[:a]
+
+                                    break
+                                else:
+                                    if header_found:
+                                        frame_data += r[22:]
+                                        header_found = False
+                                    else:
+                                        frame_data += r
+
+                                r = server_socket.recv(90456)
+                                if len(r) == 0:
+                                    socket_closed = True
+
+                    except Exception as e:
+                        print(e)
+                        continue
+
+                    if socket_closed:
+                        server_socket.close()
+                        break
+
+                    np_arr = numpy.fromstring(frame_data, numpy.uint8)
                     if np_arr is not None:
                         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 

@@ -16,16 +16,17 @@ class StreamingServer():
         self.client_ip_address = '127.0.0.1'
         self.client_port = 41224
 
+        self.server_video_cap = cv2.VideoCapture(0)
+
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.server_host_name, self.server_port_number))
 
-        self.server_video_cap = cv2.VideoCapture(0)
+        self.server_socket.listen(5)
+
 
         self.server_thread = threading.Thread(target=self.run, name='Streaming Server')
         self.server_thread.start()
-
-        self.server_socket.listen(5)
 
     def run(self):
         while True:
