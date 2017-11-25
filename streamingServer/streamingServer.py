@@ -44,7 +44,7 @@ class StreamingServer():
 
     def run(self):
         self.raspberry_thread.start()
-        # self.model_thread.start()
+        self.model_thread.start()
         self.controller_thread.start()
 
         while True:
@@ -189,12 +189,20 @@ class StreamingServer():
                 self.model_socket.listen(5)
 
                 while self.in_progress:
-                    while len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) <= 0:
-                        time.sleep(0.5)
+                    self.client_socket, address = self.model_socket.accept()
+
                     session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+                    if len(session_list) <= 0:
+                        self.sendMessage('wait')
+                        self.client_socket.close()
+                        continue
+
                     self.session_index = 1
                     self.session_folder = session_list[0]
                     self.session_name = self.session_folder.split('/')[-1]
+
+                    with self.streaming_server.print_lock:
+                        print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
                     frame_paths = glob.glob(os.path.join(self.session_name, '*'))
                     for frame_path in frame_paths:
@@ -214,6 +222,8 @@ class StreamingServer():
                             frame_paths = glob.glob(os.path.join(self.session_name, '*'))
                             if len(frame_paths) == 0:
                                 rmtree(self.session_folder, ignore_errors=True)
+                                with self.streaming_server.print_lock:
+                                    print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                                 break
                             else:
                                 for frame_path in frame_paths:
@@ -224,10 +234,7 @@ class StreamingServer():
                                     rmtree(frame_path, ignore_errors=True)
 
 
-
-
-
-
+                    self.client_socket.close()
 
 
         def send(self, frame):
@@ -235,10 +242,17 @@ class StreamingServer():
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
             send_data = header + frame_data + self.jpg_boundary
             try:
-                self.model_socket.send(send_data)
+                self.client_socket.send(send_data)
             except socket.error:
                 print 'MODEL SOCKET ERROR!'
 
+
+        def sendMessage(self, message):
+            send_message = b'model{}{}'.format(self.session_name, message, '!TWIS_END!')
+            try:
+                self.client_socket.send(send_message)
+            except socket.error:
+                print 'MODEL SOCKET ERROR!'
 
     class Controller():
         def __init__(self, streaming_server):
@@ -361,6 +375,7 @@ class StreamingServer():
 
                     except Exception as e:
                         print e
+
 
 if __name__ == '__main__':
     streaming_server = StreamingServer()

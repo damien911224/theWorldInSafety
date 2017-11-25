@@ -19,6 +19,7 @@ import gc
 import socket
 from shutil import copyfile
 from shutil import rmtree
+import random
 import datetime
 import pycurl
 from cStringIO import StringIO
@@ -170,18 +171,11 @@ class Session():
 
         self.print_lock = Lock()
 
+        self.server_ip_address = '13.125.52.6'
+        self.server_port_number = 8888
 
-        self.server_ip_address = '127.0.0.1'
-        self.server_port = 10001
-
-        self.client_host_name = 'localhost'
-        self.client_port = 41224
-
-        if self.src_from_out:
-            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.client_socket.bind((self.client_host_name, self.client_port))
-
+        self.client_host_name = '192.168.1.101'
+        self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
         self.extractor = Extractor(self)
         self.extractor_thread = threading.Thread(target=self.extractor.run, name='Extractor')
@@ -207,26 +201,66 @@ class Session():
                     self.child_thread_started = True
 
                 while self.in_progress:
-                    self.sock_closed = False
-
                     try:
-                        self.client_socket.connect((self.server_ip_address, self.server_port))
+                        if self.wait_please:
+                            time.sleep(1.1)
 
-                        session_initialized = False
+                        self.wait_please = False
+                        self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
+                        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        self.client_socket.bind((self.client_host_name, self.client_port_number))
+                        self.client_socket.connect((self.server_ip_address, self.server_port_number))
 
-                        while not self.sock_closed:
+                        self.session_is_opened = False
+
+                        while self.in_progress:
+                            socket_closed = False
+                            start_found = False
                             frame_data = b''
-                            r = self.client_socket.recv(90456)
-                            if len(r) == 0:
-                                self.socket_closed = True
+                            try:
+                                while self.in_progress:
+                                    r = self.client_socket.recv(90456)
+                                    if len(r) == 0:
+                                        socket_closed = True
+                                        break
 
-                            if not self.socket_closed:
-                                header = r[:22]
+                                    if not start_found:
+                                        a = r.find(b'model')
+                                        if a != -1:
+                                            r = r[a + 9:]
+                                            a = r.find(b'!TWIS_END!')
+                                            if a != -1:
+                                                frame_data += r[:a]
+                                                break
+                                            else:
+                                                frame_data += r
+                                            start_found = True
+                                    else:
+                                        a = r.find(b'!TWIS_END!')
+                                        if a != -1:
+                                            frame_data += r[:a]
+                                            break
+                                        else:
+                                            frame_data += r
+
+                            except Exception as e:
+                                print(e)
+                                continue
+
+                            if socket_closed or not self.in_progress:
+                                break
+                            else:
+                                if frame_data.find(b'wait') != -1:
+                                    self.wait_please = True
+                                    break
+
+                                header = frame_data[:22]
                                 session_name = str(header[:15])
-                                index = int(header[15:22])
-                                header_found = True
+                                frame_index = int(header[15:22])
+                                frame_data = r[23:]
 
-                                if not session_initialized:
+                                if not self.session_is_opened:
                                     self.session_name = session_name
                                     folders = [self.session_folder, self.image_folder,
                                                self.flow_folder, self.clip_folder, self.clip_view_folder,
@@ -248,40 +282,16 @@ class Session():
                                             self.session_name)
                                         print '==============================================================================='
 
+                                    self.session_is_opened = True
 
-                                while True:
-                                    a = r.find(b'!TWIS_END!')
-                                    if a != -1:
-                                        if header_found:
-                                            frame_data += r[22:a]
-                                        else:
-                                            frame_data += r[:a]
-
-                                        break
-                                    else:
-                                        if header_found:
-                                            frame_data += r[22:]
-                                            header_found = False
-                                        else:
-                                            frame_data += r
-
-                                    r = self.client_socket.recv(90456)
-                                    if len(r) == 0:
-                                        self.socket_closed = True
-
-
-                            if not self.sock_closed:
                                 np_arr = np.fromstring(frame_data, np.uint8)
                                 if np_arr is not None:
-                                    try:
-                                        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                                    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-                                        if frame is not None:
-                                            self.dumpFrames([frame])
-                                            self.start_index += 1
-                                            self.dumped_index = self.start_index - 1
-                                    except:
-                                        pass
+                                    if frame is not None:
+                                        self.dumpFrames([frame])
+                                        self.start_index += 1
+                                        self.dumped_index = self.start_index - 1
 
                     except socket.timeout:
                         continue
