@@ -61,7 +61,6 @@ class StreamingServer():
         def run(self):
             while True:
                 while not self.in_progress:
-                    print 'waiting'
                     time.sleep(0.3)
 
                 self.raspberry_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -90,7 +89,13 @@ class StreamingServer():
                                     if not start_found:
                                         a = r.find(b'raspberry')
                                         if a != -1:
-                                            frame_data += r[a+9:]
+                                            r = r[a+9:]
+                                            a = r.find(b'!TWIS_END!')
+                                            if a != -1:
+                                                frame_data += r[:a]
+                                                break
+                                            else:
+                                                frame_data += r
                                             start_found = True
                                     else:
                                         a = r.find(b'!TWIS_END!')
@@ -223,8 +228,15 @@ class StreamingServer():
                                 self.streaming_server.raspberry.in_progress = False
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
-                                    print '{:10s}|{:15s}'.format('Controller', 'Stop')
+                                    print '{:10s}|{:15s}'.format('Controller',  str(message_data))
                                 break
+                            elif str(message_data) == 'resume' or str(message_data) == 'start':
+                                self.streaming_server.raspberry.in_progress = True
+                                client_socket.close()
+                                with self.streaming_server.print_lock:
+                                    print '{:10s}|{:15s}'.format('Controller', str(message_data))
+                                break
+
 
                 except socket.timeout:
                     print 'socket timeout'
