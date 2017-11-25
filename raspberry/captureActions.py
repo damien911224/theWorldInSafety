@@ -187,11 +187,16 @@ class Raspberry():
             except socket.error:
                 print 'SOCKET ERROR!'
 
-            try:
-                r = self.controller_socket.recv(90456)
-                print r
-            except socket.error:
-                print 'SOCKET ERROR!'
+            if message == 'resume' or message == 'start':
+                while True:
+                    try:
+                        r = str(self.controller_socket.recv(90456)).replace(' ', '')
+                        if r == 'Ready':
+                            break
+                    except socket.error:
+                        print 'SOCKET ERROR!'
+
+                time.sleep(0.3)
 
 
 if __name__ == '__main__':
