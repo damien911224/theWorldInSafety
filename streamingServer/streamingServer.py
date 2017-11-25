@@ -66,6 +66,7 @@ class StreamingServer():
                     self.session_is_opened = False
                     while True:
                         socket_closed = False
+                        start_found = False
                         frame_data = b''
                         try:
                             while True:
@@ -74,12 +75,18 @@ class StreamingServer():
                                     socket_closed = True
                                     break
 
-                                a = r.find(b'!TWIS_END!')
-                                if a != -1:
-                                    frame_data += r[:a]
-                                    break
+                                if not start_found:
+                                    a = r.find(b'raspberry')
+                                    if a != -1:
+                                        frame_data += r[a+9:]
+                                        start_found = True
                                 else:
-                                    frame_data += r
+                                    a = r.find(b'!TWIS_END!')
+                                    if a != -1:
+                                        frame_data += r[:a]
+                                        break
+                                    else:
+                                        frame_data += r
 
                         except Exception as e:
                             print(e)
