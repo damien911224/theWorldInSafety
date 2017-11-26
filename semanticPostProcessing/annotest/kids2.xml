@@ -1,0 +1,20 @@
+<annotation>
+  <folder>sample_img</folder>
+  <filename>kids2.jpg</filename>
+  <source>
+    <database>Unknown</database>
+    <annotation>None</annotation>
+    <image>None</image>
+    <flickrid>None</flickrid>
+  </source>
+  <owner>
+    <flickrid>None</flickrid>
+    <name>None</name>
+  </owner>
+  <size>
+    <width>550</width>
+    <height>412</height>
+    <depth>3</depth>
+  </size>
+  <segmented>0</segmented>
+</annotation>

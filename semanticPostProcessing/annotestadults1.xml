@@ -1,0 +1,40 @@
+<annotation>
+  <folder>sample_img</folder>
+  <filename>adults1.jpg</filename>
+  <source>
+    <database>Unknown</database>
+    <annotation>None</annotation>
+    <image>None</image>
+    <flickrid>None</flickrid>
+  </source>
+  <owner>
+    <flickrid>None</flickrid>
+    <name>None</name>
+  </owner>
+  <size>
+    <width>640</width>
+    <height>640</height>
+    <depth>3</depth>
+  </size>
+  <segmented>0</segmented>
+</annotation>
+<annotation>
+  <folder>sample_img</folder>
+  <filename>adults1.jpg</filename>
+  <source>
+    <database>Unknown</database>
+    <annotation>None</annotation>
+    <image>None</image>
+    <flickrid>None</flickrid>
+  </source>
+  <owner>
+    <flickrid>None</flickrid>
+    <name>None</name>
+  </owner>
+  <size>
+    <width>640</width>
+    <height>640</height>
+    <depth>3</depth>
+  </size>
+  <segmented>0</segmented>
+</annotation>
