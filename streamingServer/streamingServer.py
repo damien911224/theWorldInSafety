@@ -161,8 +161,10 @@ class StreamingServer():
 
         def dumpFrames(self, frames, start_index):
             frame_index =   start_index
+            print len(frames)
             for frame in frames:
-                frame_path = os.path.join(self.session_folder, '{:07d}.jpg'.format(frame_index))
+                print frame
+                frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
                 frame_index += 1
 
