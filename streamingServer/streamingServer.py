@@ -234,7 +234,10 @@ class StreamingServer():
                                     frame = cv2.imread(frame_path)
                                     self.send(frame)
                                     rmtree(frame_path, ignore_errors=True)
-
+                    else:
+                        rmtree(self.session_folder, ignore_errors=True)
+                        with self.streaming_server.print_lock:
+                            print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
                     self.client_socket.close()
 
