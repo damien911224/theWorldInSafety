@@ -44,7 +44,7 @@ class Raspberry():
             self.server_ip_address = '13.125.52.6'
             self.server_port_number = 7777
 
-            self.client_name = '10.211.55.10'
+            self.client_name = '192.168.9.5'
             self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
             self.jpg_boundary = b'!TWIS_END!'

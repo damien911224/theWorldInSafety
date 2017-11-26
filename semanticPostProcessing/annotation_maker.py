@@ -53,7 +53,7 @@ for path in image_paths:
     f = open('annotest/'+txt_name, 'a+')
     for i in range(0, len(result), 1):
         print result[i]['label']
-        if result[i]['label'] == 'person' and result[i]['confidence'] > 0.000000:
+        if (result[i]['label'] == 'Adult' or result[i]['label'] == 'Child') and result[i]['confidence'] > 0.000000:
             x_object = etree.Element("object")
             if txt_name[0:3] == 'adu':
                 etree.SubElement(x_object, "name").text = "Adult"
