@@ -26,7 +26,7 @@
 						<tbody id="search-prescription-results">	
 							{% for video in object.video_set.all %}
 							<tr>
-								<td>{{ video.Video_id }}</td>
+								<td>{{ video.id }}</td>
 								<td><a href="{{ video.get_absolute_url }}">{{ facility.get_absolute_url }}</a></td>
 								<td>{{ video.Video_checked }}</td>
 							</tr>
