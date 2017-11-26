@@ -122,7 +122,7 @@ class StreamingServer():
                                 header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_data = r[23:]
+                                frame_data = frame_data[22:]
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
@@ -160,9 +160,9 @@ class StreamingServer():
 
 
         def dumpFrames(self, frames, start_index):
-            frame_index =   start_index
+            frame_index = start_index
             for frame in frames:
-                frame_path = os.path.join(self.session_folder, '{:07d}.jpg'.format(frame_index))
+                frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
                 frame_index += 1
 
@@ -197,6 +197,9 @@ class StreamingServer():
                         self.client_socket.close()
                         continue
 
+                    if len(session_list) >= 2:
+                        session_list.sort()
+
                     self.session_index = 1
                     self.session_folder = session_list[0]
                     self.session_name = self.session_folder.split('/')[-1]
@@ -204,35 +207,41 @@ class StreamingServer():
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
-                    frame_paths = glob.glob(os.path.join(self.session_name, '*'))
+                    frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
+                    if len(frame_paths) >= 2:
+                        frame_paths.sort()
                     for frame_path in frame_paths:
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                         frame = cv2.imread(frame_path)
                         self.send(frame)
-                        self.session_index += 1
                         rmtree(frame_path, ignore_errors=True)
 
 
                     if len(session_list) == 1:
                         while True:
-                            while len(glob.glob(os.path.join(self.session_name, '*'))) <= 0 and \
-                                len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) == 1:
+                            while len(glob.glob(os.path.join(self.session_folder, '*.jpg'))) <= 0 and \
+                                len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) <= 1:
+                                print len(glob.glob(os.path.join(self.session_folder, '*.jpg'))), len(glob.glob(os.path.join(self.streaming_server.save_folder, '*')))
                                 time.sleep(0.3)
 
-                            frame_paths = glob.glob(os.path.join(self.session_name, '*'))
-                            if len(frame_paths) == 0:
+                            frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
+                            if len(frame_paths) <= 0:
                                 rmtree(self.session_folder, ignore_errors=True)
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                                 break
                             else:
+                                if len(frame_paths) >= 2:
+                                    frame_paths = frame_paths.sort()
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                                     frame = cv2.imread(frame_path)
                                     self.send(frame)
-                                    self.session_index += 1
                                     rmtree(frame_path, ignore_errors=True)
-
+                    else:
+                        rmtree(self.session_folder, ignore_errors=True)
+                        with self.streaming_server.print_lock:
+                            print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
                     self.client_socket.close()
 
@@ -253,6 +262,7 @@ class StreamingServer():
                 self.client_socket.send(send_message)
             except socket.error:
                 print 'MODEL SOCKET ERROR!'
+
 
     class Controller():
         def __init__(self, streaming_server):
@@ -339,42 +349,6 @@ class StreamingServer():
                     self.controller_socket.close()
                     break
 
-
-    def run_model(self):
-        while True:
-            if True:
-                while True:
-                    try:
-                        client_socket, address = self.model_socket.accept()
-
-                        print address
-
-                        try:
-                            self.server_video_cap = cv2.VideoCapture(self.video_path)
-                            #dir list sort and get name
-                            # session_name = #get dir name
-
-                            #client_socket.send()
-                        except socket.error:
-                            print 'Socket Error'
-                            continue
-
-
-                        while True:
-                            ok, frame = self.server_video_cap.read()
-                            if not ok:
-                                break
-                            frame_data = cv2.imencode('.jpg', frame)[1].tostring()
-                            try:
-                                client_socket.send(frame_data)
-                                client_socket.send(b'!TWIS_END!')
-                            except socket.error:
-                                print 'SOCKET ERROR!'
-                                break
-
-
-                    except Exception as e:
-                        print e
 
 
 if __name__ == '__main__':
