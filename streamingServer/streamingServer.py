@@ -124,8 +124,6 @@ class StreamingServer():
                                 frame_index = int(header[15:22])
                                 frame_data = frame_data[23:]
 
-                                print frame_data
-
                                 if not self.session_is_opened:
                                     self.session_name = session_name
                                     self.session_folder = os.path.join(self.streaming_server.save_folder,
@@ -142,10 +140,14 @@ class StreamingServer():
 
 
                                 np_arr = np.fromstring(frame_data, np.uint8)
+                                print np_arr
                                 if np_arr is not None:
                                     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                                    print 'frame!'
+                                    print frame.shape
 
                                     if frame is not None:
+                                        print frame_index
                                         self.dumpFrames([frame], frame_index)
 
                         client_socket.close()
@@ -162,7 +164,7 @@ class StreamingServer():
 
 
         def dumpFrames(self, frames, start_index):
-            frame_index =   start_index
+            frame_index = start_index
             print len(frames)
             for frame in frames:
                 print frame
