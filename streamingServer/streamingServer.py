@@ -224,6 +224,7 @@ class StreamingServer():
                             frame_paths = frame_paths.sort()
                             if len(frame_paths) == 0:
                                 rmtree(self.session_folder, ignore_errors=True)
+                                self.sendMessage('done')
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                                 break
@@ -340,7 +341,7 @@ class StreamingServer():
                 except KeyboardInterrupt:
                     self.controller_socket.close()
                     break
-                    
+
 
 
 if __name__ == '__main__':
