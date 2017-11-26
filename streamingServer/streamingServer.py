@@ -225,7 +225,7 @@ class StreamingServer():
                                 time.sleep(0.3)
 
                             frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
-                            if len(frame_paths) <= 0:
+                            if len(frame_paths) <= 0 or frame_paths is None:
                                 rmtree(self.session_folder, ignore_errors=True)
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
