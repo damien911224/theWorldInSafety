@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# tensorflow pb
+.pb
+*.pb
+
 # caffemodel h5
 .h5
 
