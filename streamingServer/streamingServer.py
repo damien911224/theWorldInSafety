@@ -217,7 +217,8 @@ class StreamingServer():
                     if len(session_list) == 1:
                         while True:
                             while len(glob.glob(os.path.join(self.session_folder, '*.jpg'))) <= 0 and \
-                                len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) == 1:
+                                len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) <= 1:
+                                print len(glob.glob(os.path.join(self.session_folder, '*.jpg'))), len(glob.glob(os.path.join(self.streaming_server.save_folder, '*')))
                                 time.sleep(0.3)
 
                             frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
