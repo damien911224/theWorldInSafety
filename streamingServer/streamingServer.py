@@ -220,7 +220,10 @@ class StreamingServer():
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                         frame = cv2.imread(frame_path)
                         self.send(frame)
-                        rmtree(frame_path, ignore_errors=True)
+                        try:
+                            os.remove(frame_path)
+                        except OSError:
+                            pass
 
 
                     if len(session_list) == 1:
@@ -247,7 +250,10 @@ class StreamingServer():
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                                     frame = cv2.imread(frame_path)
                                     self.send(frame)
-                                    rmtree(frame_path, ignore_errors=True)
+                                    try:
+                                        os.remove(frame_path)
+                                    except OSError:
+                                        pass
                     else:
                         rmtree(self.session_folder, ignore_errors=True)
                         with self.streaming_server.print_lock:
@@ -257,7 +263,6 @@ class StreamingServer():
 
 
         def send(self, frame):
-            print self.session_index
             header = b'model{:15s}{:07d}'.format(self.session_name, self.session_index)
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
             send_data = header + frame_data + self.jpg_boundary
