@@ -124,6 +124,8 @@ class StreamingServer():
                                 frame_index = int(header[15:22])
                                 frame_data = frame_data[23:]
 
+                                print frame_data
+
                                 if not self.session_is_opened:
                                     self.session_name = session_name
                                     self.session_folder = os.path.join(self.streaming_server.save_folder,
