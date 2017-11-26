@@ -155,6 +155,7 @@ class Session():
         self.print_term = 50
         self.fps = 25.0
         self.wait_time = 1.0 / self.fps
+        self.wait_please = False
 
         self.start_index = 1
         self.dumped_index = 0
@@ -228,7 +229,7 @@ class Session():
                                     if not start_found:
                                         a = r.find(b'model')
                                         if a != -1:
-                                            r = r[a + 9:]
+                                            r = r[a + 5:]
                                             a = r.find(b'!TWIS_END!')
                                             if a != -1:
                                                 frame_data += r[:a]
@@ -244,21 +245,22 @@ class Session():
                                         else:
                                             frame_data += r
 
+
+
                             except Exception as e:
                                 print(e)
                                 continue
 
-                            if socket_closed or not self.in_progress:
-                                break
-                            else:
+                            if self.in_progress and not socket_closed:
                                 if frame_data.find(b'wait') != -1:
                                     self.wait_please = True
                                     break
 
+
                                 header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_data = r[23:]
+                                frame_data = frame_data[22:]
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
@@ -292,6 +294,8 @@ class Session():
                                         self.dumpFrames([frame])
                                         self.start_index += 1
                                         self.dumped_index = self.start_index - 1
+                            else:
+                                break
 
                     except socket.timeout:
                         continue
@@ -1548,7 +1552,7 @@ class Secretary():
             gc.collect()
 
             if self.view_type == 'frames':
-                cv2.destroyWindow(self.window_name)
+                cv2.destroyAllWindows()
                 self.secretary.progress_viewer_closed = True
             elif self.view_type == 'clips':
                 self.secretary.clip_viewer_closed = True
