@@ -170,10 +170,10 @@ class StreamingServer():
     class Model():
         def __init__(self, streaming_server):
             self.streaming_server = streaming_server
-
             self.in_progress = True
 
             self.jpg_boundary = b'!TWIS_END!'
+            self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
 
         def run(self):
