@@ -194,7 +194,8 @@ class StreamingServer():
                 while self.in_progress:
                     self.client_socket, address = self.model_socket.accept()
 
-                    session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*')).sort()
+                    session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+                    session_list.sort()
                     print session_list
                     if len(session_list) <= 0:
                         self.sendMessage('wait')
@@ -208,7 +209,8 @@ class StreamingServer():
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
-                    frame_paths = glob.glob(os.path.join(self.session_name, '*')).sort()
+                    frame_paths = glob.glob(os.path.join(self.session_name, '*'))
+                    frame_paths.sort()
                     for frame_path in frame_paths:
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                         frame = cv2.imread(frame_path)
@@ -223,7 +225,8 @@ class StreamingServer():
                                 len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) == 1:
                                 time.sleep(0.3)
 
-                            frame_paths = glob.glob(os.path.join(self.session_name, '*')).sort()
+                            frame_paths = glob.glob(os.path.join(self.session_name, '*'))
+                            frame_paths = frame_paths.sort()
                             if len(frame_paths) == 0:
                                 rmtree(self.session_folder, ignore_errors=True)
                                 with self.streaming_server.print_lock:
