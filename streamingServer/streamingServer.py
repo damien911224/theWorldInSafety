@@ -195,6 +195,7 @@ class StreamingServer():
                     if len(session_list) <= 0:
                         self.sendMessage('wait')
                         self.client_socket.close()
+                        time.sleep(0.3)
                         continue
 
                     if len(session_list) >= 2:
@@ -213,13 +214,13 @@ class StreamingServer():
                         self.client_socket.close()
                         continue
 
-                    if len(frame_paths) >= 1:
+                    if len(frame_paths) >= 2:
                         frame_paths.sort()
-                        for frame_path in frame_paths:
-                            self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                            frame = cv2.imread(frame_path)
-                            self.send(frame)
-                            rmtree(frame_path, ignore_errors=True)
+                    for frame_path in frame_paths:
+                        self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                        frame = cv2.imread(frame_path)
+                        self.send(frame)
+                        rmtree(frame_path, ignore_errors=True)
 
 
                     if len(session_list) == 1:
@@ -240,7 +241,8 @@ class StreamingServer():
                                     print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                                 break
                             else:
-                                frame_paths = frame_paths.sort()
+                                if len(frame_paths) >= 2:
+                                    frame_paths = frame_paths.sort()
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                                     frame = cv2.imread(frame_path)
