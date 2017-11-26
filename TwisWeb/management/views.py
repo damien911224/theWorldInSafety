@@ -45,8 +45,14 @@ class FacilityDV(DetailView):
 class VideoDV(DetailView):
 	template_name = 'admin_video_detail.html'
 	model = Video
-	#TODO: get video object and change Video_check field to true
 	#TODO: extend as_view and set Video_check field true
+	def get_object(self, queryset=None):
+		obj = super(VideoDV, self).get_object(queryset=queryset)
+		obj.Video_checked = True
+		obj.save()
+
+		return obj
+
 #	model.save()
 
 def violence(request, video_id):
