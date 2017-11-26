@@ -233,11 +233,12 @@ class StreamingServer():
                             else:
                                 if len(frame_paths) >= 2:
                                     frame_paths = frame_paths.sort()
-                                for frame_path in frame_paths:
-                                    self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                                    frame = cv2.imread(frame_path)
-                                    self.send(frame)
-                                    rmtree(frame_path, ignore_errors=True)
+                                if frame_paths is not None:
+                                    for frame_path in frame_paths:
+                                        self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                                        frame = cv2.imread(frame_path)
+                                        self.send(frame)
+                                        rmtree(frame_path, ignore_errors=True)
                     else:
                         rmtree(self.session_folder, ignore_errors=True)
                         with self.streaming_server.print_lock:
