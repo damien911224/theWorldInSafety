@@ -91,12 +91,12 @@ def receive(request):
 		#get the path of the snapshot
 		v_thumbnail_path = v.Video_snapshot.url
 		#modify the path for the video
-		v_video_path = v_thumbnail_path.split('.')[0] + ".mp4"
+		v_video_path = v_thumbnail_path.split('.')[0] + ".avi"
 		v.Video_record_path = v_video_path
 		v.save()
 
 		#save the video in the modified path 
-		file_content = ContentFile(request.FILES['file'].read())
+		file_content = ContentFile(request.FILES['admin_clip'].read())
 
 		fout = open(os.path.join(settings.MEDIA_ROOT, v_video_path)[1:], 'wb+')
 		for chunk in file_content.chunks():
