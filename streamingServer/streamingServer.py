@@ -110,7 +110,6 @@ class StreamingServer():
                                             frame_data += r
 
                             except Exception as e:
-                                print(e)
                                 continue
 
                             if socket_closed or not self.in_progress:
@@ -149,7 +148,6 @@ class StreamingServer():
                         client_socket.close()
 
                     except socket.timeout:
-                        print 'socket timeout'
                         continue
 
                     except KeyboardInterrupt:
@@ -219,7 +217,12 @@ class StreamingServer():
                     for frame_path in frame_paths:
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                         frame = cv2.imread(frame_path)
-                        self.send(frame)
+                        ok = self.send(frame)
+                        if not ok:
+                            self.client_socket.close()
+                            with self.streaming_server.print_lock:
+                                print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
+                            continue
                         try:
                             os.remove(frame_path)
                         except OSError:
@@ -249,7 +252,11 @@ class StreamingServer():
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                                     frame = cv2.imread(frame_path)
-                                    self.send(frame)
+                                    ok = self.send(frame)
+                                    if not ok:
+                                        with self.streaming_server.print_lock:
+                                            print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
+                                        break
                                     try:
                                         os.remove(frame_path)
                                     except OSError:
@@ -270,9 +277,12 @@ class StreamingServer():
                 try:
                     self.client_socket.send(send_data)
                 except socket.error:
-                    print 'MODEL SOCKET ERROR!'
+                    return False
+                    pass
             except:
                 pass
+
+            return True
 
 
         def sendMessage(self, message):
@@ -280,7 +290,7 @@ class StreamingServer():
             try:
                 self.client_socket.send(send_message)
             except socket.error:
-                print 'MODEL SOCKET ERROR!'
+                pass
 
 
     class Controller():
@@ -331,7 +341,6 @@ class StreamingServer():
                                         message_data += r
 
                         except Exception as e:
-                            print(e)
                             continue
 
                         if socket_closed:
@@ -361,7 +370,6 @@ class StreamingServer():
 
 
                 except socket.timeout:
-                    print 'socket timeout'
                     continue
 
                 except KeyboardInterrupt:
