@@ -161,12 +161,12 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out =True
+        self.src_from_out = True
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
         else:
-            self.test_video_name = 'test_2.mp4'
+            self.test_video_name = 'test_1.mp4'
         self.model_version = 4
         self.build_temporal_net(self.model_version)
 
@@ -244,8 +244,6 @@ class Session():
                                             break
                                         else:
                                             frame_data += r
-
-
 
                             except Exception as e:
                                 print(e)
@@ -1652,11 +1650,11 @@ class Closer():
         current_datetime = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
         admin_clip_send_path = os.path.join(self.session.clip_send_folder,
-                                       'Admin_{}.avi'.format(current_datetime))
+                                       'Admin_{}.mp4'.format(current_datetime))
         user_clip_send_path = os.path.join(self.session.clip_send_folder,
-                                      'User_{}.avi'.format(current_datetime))
+                                      'User_{}.mp4'.format(current_datetime))
         clip_view_path = os.path.join(self.session.clip_view_folder,
-                                            'View_{}.avi'.format(current_datetime))
+                                            'View_{}.mp4'.format(current_datetime))
 
         admin_writer_initialized = False
         user_writer_initialized = False
@@ -1674,7 +1672,8 @@ class Closer():
 
                 if not user_writer_initialized:
                     video_fps = self.session.video_fps
-                    video_fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+                    video_fourcc = 0x00000021
+                    # video_fourcc = cv2.VideoWriter_fourcc(*'MJPG')
                     video_size = (int(image.shape[1]), int(image.shape[0]))
                     user_video_writer = cv2.VideoWriter(user_clip_send_path, video_fourcc, video_fps, video_size)
                     user_writer_initialized = True
@@ -1808,7 +1807,8 @@ class Closer():
 
                 if not admin_writer_initialized:
                     video_fps = self.session.video_fps
-                    video_fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+                    video_fourcc = 0x00000021
+                    # video_fourcc = cv2.VideoWriter_fourcc(*'MJPG')
                     video_size = (int(frame.shape[1]), int(frame.shape[0]))
                     admin_video_writer = cv2.VideoWriter(admin_clip_send_path, video_fourcc, video_fps, video_size)
                     admin_writer_initialized = True
@@ -1852,19 +1852,19 @@ class Closer():
                                                   user_clip_send_path.split('/')[-1],
                                                   admin_clip_send_path.split('/')[-1])
 
-        # curl = pycurl.Curl()
-        # curl.setOpt(curl.POST, 1)
-        # curl.setOpt(curl.URL, 'http://127.0.0.1:8080/receive/')
-        # curl.setOpt(curl.HTTPPOST,
-        #             [('admin_clip', (curl.FROM_FILE, admin_clip_send_path)),
-        #              ('user_clip', (curl.FROM_FILE, user_clip_send_path))])
+        # c = pycurl.Curl()
+        # c.setopt(c.POST, 1)
+        # c.setopt(c.URL, 'http://13.228.101.253:8000/management/receive/')
+        # c.setopt(c.HTTPPOST,
+        #             [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
+        #              # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
         # bodyOutput = StringIO()
         # headersOutput = StringIO()
-        # curl.setOpt(curl.WRITEFUNCTION, bodyOutput.write)
-        # curl.setOpt(curl.HEADERFUNCTION, headersOutput.write)
-        # curl.performe()
-        # curl.close()
-        #
+        # c.setopt(c.WRITEFUNCTION, bodyOutput.write)
+        # c.setopt(c.HEADERFUNCTION, headersOutput.write)
+        # c.perform()
+        # c.close()
+
         # output = bodyOutput.getvalue()
 
         for send_clip_path in clip_send_paths:
