@@ -122,7 +122,7 @@ class StreamingServer():
                                 header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_data = frame_data[23:]
+                                frame_data = frame_data[22:]
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
@@ -140,11 +140,9 @@ class StreamingServer():
 
 
                                 np_arr = np.fromstring(frame_data, np.uint8)
-                                print np_arr
                                 if np_arr is not None:
                                     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
                                     print 'frame!'
-                                    print frame.shape
 
                                     if frame is not None:
                                         print frame_index
@@ -165,9 +163,8 @@ class StreamingServer():
 
         def dumpFrames(self, frames, start_index):
             frame_index = start_index
-            print len(frames)
+            print frame_index
             for frame in frames:
-                print frame
                 frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
                 frame_index += 1
