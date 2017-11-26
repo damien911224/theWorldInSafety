@@ -242,8 +242,7 @@ class StreamingServer():
                                 break
                             else:
                                 if len(frame_paths) >= 2:
-                                    print frame_paths
-                                    frame_paths = frame_paths.sort()
+                                    frame_paths.sort()
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                                     frame = cv2.imread(frame_path)
