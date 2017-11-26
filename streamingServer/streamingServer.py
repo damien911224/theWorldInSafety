@@ -196,7 +196,6 @@ class StreamingServer():
 
                     session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                     session_list.sort()
-                    print session_list
                     if len(session_list) <= 0:
                         self.sendMessage('wait')
                         self.client_socket.close()
@@ -214,8 +213,8 @@ class StreamingServer():
                     for frame_path in frame_paths:
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                         frame = cv2.imread(frame_path)
+                        print self.session_index, frame.shape
                         self.send(frame)
-                        self.session_index += 1
                         rmtree(frame_path, ignore_errors=True)
 
 
@@ -237,7 +236,6 @@ class StreamingServer():
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                                     frame = cv2.imread(frame_path)
                                     self.send(frame)
-                                    self.session_index += 1
                                     rmtree(frame_path, ignore_errors=True)
 
 
