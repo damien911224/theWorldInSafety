@@ -1,24 +1,30 @@
 import cv2
+import os
 from darkflow.net import build
 
 
 class SemanticPostProcessor:
+
     def __init__(self):
         self.build_net()
 
+
     def build_net(self):
         print "Semantic Post Process is started ! "
-        options = {"pbLoad": "own/my-yolo.pb", "metaLoad": "own/my-yolo.meta", "gpu": 0.6}
+        root_folder =  os.path.abspath('../../semanticPostProcessing')
+        options = {"pbLoad": os.path.join(root_folder, "own/my-yolo.pb"),
+                   "metaLoad": os.path.join(root_folder, "own/my-yolo.meta"), "gpu": 0.9}
         self.tfnet = build.TFNet(options)
+
 
     def semantic_post_process(self, clip):
         adult = False
         child = False
         flag = False
         frame_semantics = []
-        for j in range(0, len(clip['frames']), 1):
+        for frame in clip['frames']:
             boxes = []
-            img = cv2.imread(clip['frames'][j])
+            img = cv2.imread(frame['image'])
             if img is None:
                 continue
             result = self.tfnet.return_predict(img)
@@ -40,26 +46,3 @@ class SemanticPostProcessor:
 
             frame_semantics.append(boxes)
         return flag, frame_semantics
-
-
-# if __name__ == '__main__':
-#     clip = dict()
-#     temp_save_folder = '/home/najm/theWorldInSafety/semanticPostProcessing/temp'
-#     video_file = '/home/najm/theWorldInSafety/semanticPostProcessing/testVideo.mp4'
-#     video_cap = cv2.VideoCapture(video_file)
-#     index = 1
-#     frames = []
-#     while True:
-#         ok, frame = video_cap.read()
-#         if not ok:
-#             break
-#         if index > len(frame):
-#             break
-#         frame_path = os.path.join(temp_save_folder, 'img_{:07}.jpg'.format(index))
-#         index += 1
-#         # cv2.imwrite(frame_path, frame)
-#         frames.append(frame_path)
-#     clip['frames'] = frames
-#     semanticPostProcessor = SemanticPostProcessor()
-#     ok, bounding_boxes = semanticPostProcessor.semantic_post_process(clip)
-#     print ok, bounding_boxes

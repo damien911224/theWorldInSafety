@@ -2,6 +2,7 @@ import cv2
 import sys
 sys.path.append("../lib/caffe-action/python")
 import caffe
+import tensorflow as tf
 import os
 import numpy as np
 import time
@@ -21,12 +22,16 @@ from shutil import copyfile
 from shutil import rmtree
 import random
 import datetime
+sys.path.append("../../semanticPostProcessing")
+sys.path.append('../../semanticPostProcessing/darkflow')
+from post_process import SemanticPostProcessor
 import pycurl
 from cStringIO import StringIO
 
 
 
 class CaffeNet(object):
+
     def __init__(self, net_proto, net_weights, device_id, input_size=None):
         caffe.set_logging_disabled()
 
@@ -117,6 +122,7 @@ class CaffeNet(object):
 
 
 class Session():
+
     def __init__(self):
         self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         self.seesion_closed = False
@@ -161,7 +167,7 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = True
+        self.src_from_out = False
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
@@ -510,6 +516,7 @@ class Session():
 
 
 class Extractor():
+
     def __init__(self, session):
         self.in_progress = True
         self.evaluator_closed = False
@@ -610,6 +617,7 @@ class Extractor():
 
 
 class Evaluator():
+
     def __init__(self, session, extractor):
         self.in_progress =True
         self.analyzer_closed = False
@@ -765,6 +773,7 @@ class Evaluator():
 
 
 class Scanner():
+
     def __init__(self, flow_folder, num_workers, num_using_gpu):
         self.flow_folder = flow_folder
         self.num_workers = num_workers
@@ -851,6 +860,7 @@ class Scanner():
 
 
 class Analyzer():
+
     def __init__(self, session, extractor, evaluator):
         self.in_progress = True
 
@@ -1136,6 +1146,7 @@ class Analyzer():
 
 
 class Secretary():
+
     def __init__(self, session, extractor, evaluator, analyzer):
         self.in_progress = True
         self.progress_viewer_closed = False
@@ -1306,6 +1317,7 @@ class Secretary():
 
 
     class Viewer():
+
         def __init__(self, secretary):
             self.in_progress = True
             self.secretary = secretary
@@ -1566,6 +1578,7 @@ class Secretary():
 
 
 class Closer():
+
     def __init__(self, session, extractor, evaluator, analyzer, secretary):
         self.in_progress = True
 
@@ -1582,6 +1595,8 @@ class Closer():
         self.clip_round = 5
         self.violence_index = 0
         self.normal_index = 1
+
+        self.semanticPostProcessor = SemanticPostProcessor()
 
 
     def run(self):
@@ -1605,7 +1620,20 @@ class Closer():
                             for frame in clip['frames']:
                                 frame['score'] = filtered_scores[clip['frames'].index(frame)]
 
-                            self.visualize(clip)
+                            ok, clip_semantics = self.semanticPostProcessor.semantic_post_process(clip)
+                            semantic_index = 0
+                            for frame in clip['frames']:
+                                if semantic_index >= len(clip_semantics):
+                                    frame['semantics'] = []
+                                else:
+                                    frame['semantics'] = clip_semantics[semantic_index]
+                                semantic_index += 1
+
+                            if True or ok:
+                                self.visualize(clip)
+                            else:
+                                rmtree(clip['keep_folder'], ignore_errors=True)
+
                         else:
                             rmtree(clip['keep_folder'], ignore_errors=True)
 
@@ -1673,13 +1701,36 @@ class Closer():
                 if not user_writer_initialized:
                     video_fps = self.session.video_fps
                     video_fourcc = 0x00000021
-                    # video_fourcc = cv2.VideoWriter_fourcc(*'MJPG')
                     video_size = (int(image.shape[1]), int(image.shape[0]))
                     user_video_writer = cv2.VideoWriter(user_clip_send_path, video_fourcc, video_fps, video_size)
                     user_writer_initialized = True
 
                 for iter in xrange(round):
                     user_video_writer.write(image)
+
+
+                semantics = frame['semantics']
+                semantic_size = ( image.shape[1], image.shape[0] )
+                for box in semantics:
+                    semantic_thick = int((semantic_size[1] + semantic_size[0]) // 300)
+                    semantic_label = box['label']
+                    semantic_confidence = box['confidence']
+                    semantic_topleft_x = box['topleft_x']
+                    semantic_topleft_y = box['topleft_y']
+                    semantic_bottomright_x = box['bottomright_x']
+                    semantic_bottomright_y = box['bottomright_y']
+                    if semantic_label == 'Adult':
+                        semantic_box_colors = (254, 0, 254)
+                    else:
+                        semantic_box_colors = (254, 254, 254)
+
+                    cv2.rectangle(image, (semantic_topleft_x, semantic_topleft_y),
+                                  (semantic_bottomright_x, semantic_bottomright_y),
+                                  semantic_box_colors, semantic_thick)
+                    cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
+                                (semantic_topleft_x, semantic_topleft_y - 12), 0,
+                                1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
+
 
                 flow_bound = 20.0
                 angle_bound = 180.0
@@ -1808,7 +1859,6 @@ class Closer():
                 if not admin_writer_initialized:
                     video_fps = self.session.video_fps
                     video_fourcc = 0x00000021
-                    # video_fourcc = cv2.VideoWriter_fourcc(*'MJPG')
                     video_size = (int(frame.shape[1]), int(frame.shape[0]))
                     admin_video_writer = cv2.VideoWriter(admin_clip_send_path, video_fourcc, video_fps, video_size)
                     admin_writer_initialized = True
@@ -1898,46 +1948,3 @@ if __name__ == '__main__':
                 os.system(cmd)
                 sys.stdout.flush()
             print '--------------------------------------------------------------------------------'
-
-
-    # global session_closed
-    #
-    # one_round = 3
-    # whole_round = 2
-    # for iter in xrange(whole_round):
-    #     print '------------------------------ Memory Checking ---------------------------------'
-    #     cmd = 'free -h'
-    #     os.system(cmd)
-    #     sys.stdout.flush()
-    #     print '--------------------------------------------------------------------------------'
-    #
-    #     if iter == 0:
-    #         session = Session()
-    #     else:
-    #         session.resume()
-    #     session_closed = False
-    #
-    #     for iter_iter in xrange(one_round):
-    #         time.sleep(3.1451)
-    #
-    #         with session.print_lock:
-    #             print '------------------------------ Memory Checking ---------------------------------'
-    #             cmd = 'free -h'
-    #             with session.extractor.cmd_lock:
-    #                 os.system(cmd)
-    #                 sys.stdout.flush()
-    #             print '--------------------------------------------------------------------------------'
-    #
-    #     session.in_progress = False
-    #
-    #     while not session_closed:
-    #         time.sleep(3.0)
-    #
-    #     gc.collect()
-    #     print '{:10s}|{} Finished'.format('Main', 'Session')
-    #
-    #     print '------------------------------ Memory Checking ---------------------------------'
-    #     cmd = 'free -h'
-    #     os.system(cmd)
-    #     sys.stdout.flush()
-    #     print '--------------------------------------------------------------------------------'

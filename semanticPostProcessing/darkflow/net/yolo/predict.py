@@ -4,6 +4,10 @@ import numpy as np
 import cv2
 import os
 import json
+import sys
+sys.path.append('../../..')
+# from darkflow import cython_utils
+# #cy_yolo_findboxes.yolo_box_constructor
 from ...cython_utils.cy_yolo_findboxes import yolo_box_constructor
 
 def _fix(obj, dims, scale, offs):

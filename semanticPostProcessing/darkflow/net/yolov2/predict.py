@@ -7,6 +7,11 @@ import json
 #from utils.box import BoundBox, box_iou, prob_compare
 #from utils.box import prob_compare2, box_intersection
 from ...utils.box import BoundBox
+import sys
+sys.path.append('../../..')
+# from darkflow import cython_utils
+# from darkflow import cython_utils
+# .cy_yolo2_findboxes import box_constructor
 from ...cython_utils.cy_yolo2_findboxes import box_constructor
 
 def expit(x):
@@ -21,7 +26,7 @@ def findboxes(self, net_out):
 	# meta
 	meta = self.meta
 	boxes = list()
-	boxes=box_constructor(meta,net_out)
+	boxes= box_constructor(meta,net_out)
 	return boxes
 
 def postprocess(self, net_out, im, save = True):

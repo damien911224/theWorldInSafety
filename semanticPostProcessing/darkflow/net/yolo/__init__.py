@@ -1,7 +1,9 @@
-from . import train
-from . import predict
-from . import data
-from . import misc
+import sys
+sys.path.append('.')
+import train
+import predict
+import data
+import misc
 import numpy as np
 
 
