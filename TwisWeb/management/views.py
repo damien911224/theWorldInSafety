@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect
 from django.views.generic import ListView, DetailView
-from django.views.generic.edit import CreateView, UpdateView
+from django.views.generic.edit import CreateView, UpdateView, FormView
 from django.http import HttpResponse, HttpResponseRedirect
 
 from django.core.files.base import ContentFile
 from django.core.files import File
 from django.core.urlresolvers import reverse_lazy
+from django import forms
 
 import cv2
 import os
@@ -13,6 +14,7 @@ import os
 from TwisWeb import settings
 from management.models import Video, Facility
 from management.forms import VideoInlineFormSet
+from usersite.models import Uservideo
 
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import user_passes_test
@@ -39,12 +41,27 @@ class FacilityDV(DetailView):
 	template_name = 'admin_facility_detail.html'
 	model = Facility
 
-
 @method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
 class VideoDV(DetailView):
 	template_name = 'admin_video_detail.html'
 	model = Video
+	#TODO: get video object and change Video_check field to true
+	#TODO: extend as_view and set Video_check field true
+#	model.save()
 
+def violence(request, video_id):
+	if request.method == 'POST':
+		v = Video.objects.get(id=video_id)
+		
+		uv = Uservideo(id=None,
+				Video_name=v.Video_name,
+				Video_facility=v.Video_facility,
+				Video_snapshot=v.Video_snapshot,
+				Video_record_path=v.Video_record_path,
+		)
+		uv.save()
+
+	return HttpResponse('Sended Alarm\n')
 
 @csrf_exempt
 def receive(request):
