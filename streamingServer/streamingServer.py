@@ -197,7 +197,8 @@ class StreamingServer():
                         self.client_socket.close()
                         continue
 
-                    session_list.sort()
+                    if len(session_list) >= 2:
+                        session_list.sort()
 
                     self.session_index = 1
                     self.session_folder = session_list[0]
@@ -207,7 +208,7 @@ class StreamingServer():
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
                     frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
-                    if len(frame_paths) >= 1:
+                    if len(frame_paths) >= 2:
                         frame_paths.sort()
                     for frame_path in frame_paths:
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
@@ -224,13 +225,14 @@ class StreamingServer():
                                 time.sleep(0.3)
 
                             frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
-                            if len(frame_paths) == 0:
+                            if len(frame_paths) <= 0:
                                 rmtree(self.session_folder, ignore_errors=True)
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                                 break
                             else:
-                                frame_paths = frame_paths.sort()
+                                if len(frame_paths) >= 2:
+                                    frame_paths = frame_paths.sort()
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                                     frame = cv2.imread(frame_path)
