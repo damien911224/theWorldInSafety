@@ -192,6 +192,7 @@ class StreamingServer():
                     self.client_socket, address = self.model_socket.accept()
 
                     session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*')).sort()
+                    print session_list
                     if len(session_list) <= 0:
                         self.sendMessage('wait')
                         self.client_socket.close()
