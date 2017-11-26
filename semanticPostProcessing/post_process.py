@@ -14,7 +14,7 @@ class SemanticPostProcessor:
         root_folder =  os.path.abspath('../../semanticPostProcessing')
         options = {"pbLoad": os.path.join(root_folder, "own/my-yolo.pb"),
                    "metaLoad": os.path.join(root_folder, "own/my-yolo.meta"),
-                   "threshold": 0.1, "gpu": 0.9}
+                   "threshold": 0.1, "gpu": 0.8}
         self.tfnet = build.TFNet(options)
 
 
