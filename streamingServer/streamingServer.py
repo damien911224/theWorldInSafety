@@ -212,6 +212,7 @@ class StreamingServer():
                         self.client_socket.close()
                         continue
 
+                    first_not_ok = False
                     if len(frame_paths) >= 2:
                         frame_paths.sort()
                     for frame_path in frame_paths:
@@ -219,15 +220,18 @@ class StreamingServer():
                         frame = cv2.imread(frame_path)
                         ok = self.send(frame)
                         if not ok:
-                            self.client_socket.close()
-                            with self.streaming_server.print_lock:
-                                print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
-                            continue
+                            first_not_ok = True
+                            break
                         try:
                             os.remove(frame_path)
                         except OSError:
                             pass
 
+                    if first_not_ok:
+                        self.client_socket.close()
+                        with self.streaming_server.print_lock:
+                            print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
+                        continue
 
                     if len(session_list) == 1:
                         while True:
