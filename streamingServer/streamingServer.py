@@ -212,7 +212,6 @@ class StreamingServer():
                     frame_paths.sort()
                     for frame_path in frame_paths:
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                        print self.session_index
                         frame = cv2.imread(frame_path)
                         self.send(frame)
                         rmtree(frame_path, ignore_errors=True)
@@ -234,7 +233,6 @@ class StreamingServer():
                             else:
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                                    print self.session_index
                                     frame = cv2.imread(frame_path)
                                     self.send(frame)
                                     rmtree(frame_path, ignore_errors=True)
