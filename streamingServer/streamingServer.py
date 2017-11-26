@@ -208,23 +208,22 @@ class StreamingServer():
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
-                    frame_paths = glob.glob(os.path.join(self.session_name, '*'))
+                    frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
                     frame_paths.sort()
                     for frame_path in frame_paths:
                         self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
                         frame = cv2.imread(frame_path)
-                        print self.session_index, frame.shape
                         self.send(frame)
                         rmtree(frame_path, ignore_errors=True)
 
 
                     if len(session_list) == 1:
                         while True:
-                            while len(glob.glob(os.path.join(self.session_name, '*'))) <= 0 and \
+                            while len(glob.glob(os.path.join(self.session_folder, '*.jpg'))) <= 0 and \
                                 len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) == 1:
                                 time.sleep(0.3)
 
-                            frame_paths = glob.glob(os.path.join(self.session_name, '*'))
+                            frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
                             frame_paths = frame_paths.sort()
                             if len(frame_paths) == 0:
                                 rmtree(self.session_folder, ignore_errors=True)
