@@ -208,37 +208,44 @@ class StreamingServer():
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
                     frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
-                    if len(frame_paths) >= 2:
+                    if frame_paths is None or len(frame_paths) == 0:
+                        self.sendMessage('wait')
+                        self.client_socket.close()
+                        continue
+
+                    if len(frame_paths) >= 1:
                         frame_paths.sort()
-                    for frame_path in frame_paths:
-                        self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                        frame = cv2.imread(frame_path)
-                        self.send(frame)
-                        rmtree(frame_path, ignore_errors=True)
+                        for frame_path in frame_paths:
+                            self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                            frame = cv2.imread(frame_path)
+                            self.send(frame)
+                            rmtree(frame_path, ignore_errors=True)
 
 
                     if len(session_list) == 1:
                         while True:
-                            while len(glob.glob(os.path.join(self.session_folder, '*.jpg'))) <= 0 and \
-                                len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) <= 1:
-                                print len(glob.glob(os.path.join(self.session_folder, '*.jpg'))), len(glob.glob(os.path.join(self.streaming_server.save_folder, '*')))
-                                time.sleep(0.3)
+                            while True:
+                                check_frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
+                                check_session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+
+                                if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
+                                    break
+                                else:
+                                    time.sleep(0.3)
 
                             frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
-                            if len(frame_paths) <= 0 or frame_paths is None:
+                            if frame_paths is None or len(frame_paths) <= 0:
                                 rmtree(self.session_folder, ignore_errors=True)
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                                 break
                             else:
-                                if len(frame_paths) >= 2:
-                                    frame_paths = frame_paths.sort()
-                                if frame_paths is not None:
-                                    for frame_path in frame_paths:
-                                        self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                                        frame = cv2.imread(frame_path)
-                                        self.send(frame)
-                                        rmtree(frame_path, ignore_errors=True)
+                                frame_paths = frame_paths.sort()
+                                for frame_path in frame_paths:
+                                    self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                                    frame = cv2.imread(frame_path)
+                                    self.send(frame)
+                                    rmtree(frame_path, ignore_errors=True)
                     else:
                         rmtree(self.session_folder, ignore_errors=True)
                         with self.streaming_server.print_lock:
