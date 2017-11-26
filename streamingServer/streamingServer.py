@@ -170,10 +170,10 @@ class StreamingServer():
     class Model():
         def __init__(self, streaming_server):
             self.streaming_server = streaming_server
-
             self.in_progress = True
 
             self.jpg_boundary = b'!TWIS_END!'
+            self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
 
         def run(self):
@@ -195,6 +195,7 @@ class StreamingServer():
                     if len(session_list) <= 0:
                         self.sendMessage('wait')
                         self.client_socket.close()
+                        time.sleep(0.3)
                         continue
 
                     if len(session_list) >= 2:
@@ -208,6 +209,11 @@ class StreamingServer():
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
                     frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
+                    if frame_paths is None or len(frame_paths) == 0:
+                        self.sendMessage('wait')
+                        self.client_socket.close()
+                        continue
+
                     if len(frame_paths) >= 2:
                         frame_paths.sort()
                     for frame_path in frame_paths:
@@ -219,13 +225,17 @@ class StreamingServer():
 
                     if len(session_list) == 1:
                         while True:
-                            while len(glob.glob(os.path.join(self.session_folder, '*.jpg'))) <= 0 and \
-                                len(glob.glob(os.path.join(self.streaming_server.save_folder, '*'))) <= 1:
-                                print len(glob.glob(os.path.join(self.session_folder, '*.jpg'))), len(glob.glob(os.path.join(self.streaming_server.save_folder, '*')))
-                                time.sleep(0.3)
+                            while True:
+                                check_frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
+                                check_session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+
+                                if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
+                                    break
+                                else:
+                                    time.sleep(0.3)
 
                             frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
-                            if len(frame_paths) <= 0:
+                            if frame_paths is None or len(frame_paths) <= 0:
                                 rmtree(self.session_folder, ignore_errors=True)
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
