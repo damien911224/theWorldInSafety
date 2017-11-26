@@ -142,10 +142,8 @@ class StreamingServer():
                                 np_arr = np.fromstring(frame_data, np.uint8)
                                 if np_arr is not None:
                                     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-                                    print 'frame!'
 
                                     if frame is not None:
-                                        print frame_index
                                         self.dumpFrames([frame], frame_index)
 
                         client_socket.close()
@@ -163,7 +161,6 @@ class StreamingServer():
 
         def dumpFrames(self, frames, start_index):
             frame_index = start_index
-            print frame_index
             for frame in frames:
                 frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
@@ -258,6 +255,7 @@ class StreamingServer():
             except socket.error:
                 print 'MODEL SOCKET ERROR!'
 
+
     class Controller():
         def __init__(self, streaming_server):
             self.streaming_server = streaming_server
@@ -342,43 +340,7 @@ class StreamingServer():
                 except KeyboardInterrupt:
                     self.controller_socket.close()
                     break
-
-
-    def run_model(self):
-        while True:
-            if True:
-                while True:
-                    try:
-                        client_socket, address = self.model_socket.accept()
-
-                        print address
-
-                        try:
-                            self.server_video_cap = cv2.VideoCapture(self.video_path)
-                            #dir list sort and get name
-                            # session_name = #get dir name
-
-                            #client_socket.send()
-                        except socket.error:
-                            print 'Socket Error'
-                            continue
-
-
-                        while True:
-                            ok, frame = self.server_video_cap.read()
-                            if not ok:
-                                break
-                            frame_data = cv2.imencode('.jpg', frame)[1].tostring()
-                            try:
-                                client_socket.send(frame_data)
-                                client_socket.send(b'!TWIS_END!')
-                            except socket.error:
-                                print 'SOCKET ERROR!'
-                                break
-
-
-                    except Exception as e:
-                        print e
+                    
 
 
 if __name__ == '__main__':
