@@ -52,6 +52,9 @@ class Raspberry():
 
             self.in_progress = True
             self.web_cam_device_id = 0
+            self.want_to_resize = False
+            self.resize_size = ( 60.0, 60.0 )
+            self.original_size = ( 640, 480 )
 
             self.camera_socket = None
             self.server_ip_address = '13.125.52.6'
@@ -83,9 +86,19 @@ class Raspberry():
                 video_fps = int(video_cap.get(cv2.CAP_PROP_FPS)) + 1
                 self.wait_time = max(int(1000.0 / float(video_fps)), 1)
 
+                if self.want_to_resize:
+                    video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resize_size[0])
+                    video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resize_size[1])
+                    with self.raspberry.print_lock:
+                        print  '{:10s}|{:12s}|{}'.format('Camera', 'Resizing Camera', 
+                                '( {}, {} )'.format(int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 
+                                    int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+
                 if video_cap.isOpened():
                     while self.in_progress:
                         ok, frame = video_cap.read()
+                        if self.want_to_resize:
+                            frame = cv2.resize(frame, self.original_size, interpolation = cv2.INTER_AREA)
                         if not ok:
                             break
 
