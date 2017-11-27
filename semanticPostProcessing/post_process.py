@@ -47,3 +47,23 @@ class SemanticPostProcessor:
                         flag = True
             frame_semantics.append(boxes)
         return flag, frame_semantics
+
+
+    def single_frame_semantics(self, frame):
+        boxes = []
+        img = cv2.imread(frame)
+        if img is None:
+            return boxes
+        result = self.tfnet.return_predict(img)
+        for i in range(0, len(result), 1):
+            if result[i]['confidence'] > 0.15:
+                bounding_box = dict()
+                bounding_box['label'] = result[i]['label']
+                bounding_box['confidence'] = result[i]['confidence']
+                bounding_box['topleft_x'] = result[i]['topleft']['x']
+                bounding_box['topleft_y'] = result[i]['topleft']['y']
+                bounding_box['bottomright_x'] = result[i]['bottomright']['x']
+                bounding_box['bottomright_y'] = result[i]['bottomright']['y']
+                boxes.append(bounding_box)
+
+        return boxes
