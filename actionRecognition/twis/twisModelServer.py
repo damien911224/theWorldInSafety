@@ -249,10 +249,6 @@ class Session():
 
                                     if frame_data.find(b'wait') != -1:
                                         time.sleep(1.3)
-                                        try:
-                                            self.client_socket.send(b'Model is waiting')
-                                        except:
-                                            pass
 
                                         if not socket_closed:
                                             continue
@@ -262,10 +258,6 @@ class Session():
 
                             if frame_data.find(b'wait') != -1:
                                 time.sleep(1.3)
-                                try:
-                                    self.client_socket.send(b'Model is waiting')
-                                except:
-                                    pass
 
                                 continue
 
