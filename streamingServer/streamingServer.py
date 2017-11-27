@@ -258,6 +258,7 @@ class StreamingServer():
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
                                 else:
+                                    print 'wait'
                                     self.sendMessage(b'wait')
                                     try:
                                         model_return = str(self.client_socket.recv(90456))
