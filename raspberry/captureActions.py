@@ -1,6 +1,3 @@
-import os
-import sys
-import glob
 import socket
 import numpy as np
 import cv2
@@ -8,12 +5,16 @@ import datetime
 import threading
 import time
 import random
+from multiprocessing import Lock
 
 
 
 class Raspberry():
 
     def __init__(self):
+        self.print_lock = Lock()
+        self.client_name = self.getRaspberryIpAddress()
+
         self.camera = self.Camera(self)
         self.controller = self.Controller(self)
 
@@ -32,6 +33,19 @@ class Raspberry():
             time.sleep(0.5)
 
 
+    def getRaspberryIpAddress(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect(("8.8.8.8", 80))
+
+        raspberry_ip_address = sock.getsockname()[0]
+        sock.close()
+
+        with self.print_lock:
+            print '{:10s}|{:12s}|{}'.format('Raspberry', 'Connection', 'With IP {}'.format(raspberry_ip_address))
+
+        return raspberry_ip_address
+
+
     class Camera():
 
         def __init__(self, raspberry):
@@ -44,13 +58,15 @@ class Raspberry():
             self.server_ip_address = '13.125.52.6'
             self.server_port_number = 7777
 
-            self.client_name = '192.168.168.238'
+            self.client_name = self.raspberry.client_name
             self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = None
             self.session_is_open = False
             self.session_index = 1
+            self.window_name = 'Raspberry'
+            self.window_position = (0, 0)
 
             self.motionDetector = self.MotionDetector(self)
 
@@ -63,6 +79,8 @@ class Raspberry():
                 self.session_is_open = False
 
                 video_cap = cv2.VideoCapture(self.web_cam_device_id)
+                video_fps = int(video_cap.get(cv2.CAP_PROP_FPS)) + 1
+                self.wait_time = max(int(1000.0 / float(video_fps)), 1)
 
                 if video_cap.isOpened():
                     while self.in_progress:
@@ -86,6 +104,9 @@ class Raspberry():
 
                                 self.session_is_open = True
 
+                                with self.raspberry.print_lock:
+                                    print '{:10s}|{:12s}|{}'.format('Camera', 'Session Start', self.session_name)
+
                             self.send(frame)
                             self.session_index += 1
                         else:
@@ -94,6 +115,11 @@ class Raspberry():
                                 self.camera_socket = None
 
                                 self.session_is_open = False
+
+                        visualized_frame = self.visualize(frame, is_moving)
+                        cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
+                        cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
+                        cv2.waitKey(self.wait_time)
 
                     video_cap.release()
 
@@ -105,15 +131,69 @@ class Raspberry():
             try:
                 self.camera_socket.send(send_data)
             except socket.error:
-                print 'CAMERA SOCKET ERROR!'
+                pass
+
+
+        def visualize(self, frame, is_moving):
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            top_left = (0, 0)
+            text_margin = (15, 10)
+
+            scale = 0.60
+            thickness = 2
+            line_type = cv2.LINE_8
+
+            text_color = (255, 255, 255)
+
+            if is_moving:
+                frame_label = 'Motion Detected'
+                label_background_color = (150, 150, 255)
+            else:
+                frame_label = 'No Movement'
+                label_background_color = (250, 150, 150)
+
+            label_text = 'Frame {:07d} | {:^8s} | Timer {:05d}'.format(self.session_index,
+                                                                       frame_label,
+                                                                       max(self.motionDetector.countdown_to_stop, 0))
+
+            box_size, dummy = cv2.getTextSize(label_text, font, scale, thickness)
+
+            box_top_left = top_left
+            box_bottom_right = (frame.shape[1], top_left[1] + box_size[1] + text_margin[1] * 2)
+            box_width = box_bottom_right[0]
+            box_height = box_bottom_right[1]
+
+            image_label_text_bottom_left = (top_left[0] + text_margin[0], top_left[1] + text_margin[1] + box_size[1])
+
+            image_box_top_left = box_top_left
+            image_box_bottom_right = box_bottom_right
+
+            image_headline = np.zeros((box_height, box_width, 3), dtype='uint8')
+            cv2.rectangle(image_headline, image_box_top_left, image_box_bottom_right,
+                          label_background_color, cv2.FILLED)
+
+            cv2.putText(image_headline, label_text, image_label_text_bottom_left,
+                        font, scale, text_color, thickness, line_type)
+
+            image_frame = np.concatenate((image_headline, frame), axis=0)
+
+            boundary_top_left = (0, 0)
+            image_boundary_bottom_right = (image_frame.shape[1], image_frame.shape[0])
+            boundary_color = (255, 255, 255)
+
+            cv2.rectangle(image_frame, boundary_top_left, image_boundary_bottom_right,
+                          boundary_color, thickness=3)
+
+            return image_frame
 
 
         class MotionDetector():
+
             def __init__(self, camera):
                 self.camera = camera
 
-                self.frame_diff_threshold = 1.0
-                self.minimum_capture_count = 1000
+                self.frame_diff_threshold = 0.45
+                self.minimum_capture_count = 50
 
                 self.countdown_to_stop = self.minimum_capture_count
                 self.no_moving = False
@@ -155,14 +235,13 @@ class Raspberry():
             self.server_ip_address = '13.125.52.6'
             self.server_port_number = 9999
 
-            self.client_name = self.raspberry.camera.client_name
+            self.client_name = self.raspberry.client_name
             self.client_port_number = random.sample(range(20000, 30000, 1), 1)[0]
 
 
         def run(self):
             while True:
                 message = raw_input()
-                print 'message: {}'.format(message)
 
                 self.client_port_number = random.sample(range(20000, 30000, 1), 1)[0]
                 self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -172,6 +251,7 @@ class Raspberry():
 
                 if message == 'stop':
                     self.raspberry.camera.in_progress = False
+                    cv2.destroyAllWindows()
                     self.send(message)
                 elif message == 'resume' or message == 'start':
                     self.send(message)
@@ -179,13 +259,16 @@ class Raspberry():
 
                 self.controller_socket.close()
 
+                with self.raspberry.print_lock:
+                    print '{:10s}|{:12s}|{}'.format('Controller', 'Message', message.upper())
+
 
         def send(self, message):
             send_message = b'raspberry{:15s}!TWIS_END!'.format(message)
             try:
                 self.controller_socket.send(send_message)
             except socket.error:
-                print 'SOCKET ERROR!'
+                pass
 
             if message == 'resume' or message == 'start':
                 while True:
@@ -194,7 +277,8 @@ class Raspberry():
                         if r == 'Ready':
                             break
                     except socket.error:
-                        print 'SOCKET ERROR!'
+                        pass
+
 
 
 if __name__ == '__main__':

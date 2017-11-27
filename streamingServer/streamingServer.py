@@ -6,9 +6,8 @@ import os
 import numpy as np
 import time
 import glob
-import subprocess
-from multiprocessing import Pool, Value, Lock, current_process, Manager
-from shutil import rmtree, copyfile
+from multiprocessing import Lock
+from shutil import rmtree
 
 
 class StreamingServer():
