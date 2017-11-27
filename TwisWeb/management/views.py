@@ -16,6 +16,8 @@ from management.models import Video, Facility, ExtendedUser
 from management.forms import VideoInlineFormSet
 from usersite.models import Uservideo
 
+from django.contrib.auth.models import User
+
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import user_passes_test
 from django.utils.decorators import method_decorator
@@ -66,9 +68,10 @@ def violence(request, video_id):
 		)
 		uv.save()
 		#TODO: get users who registered in this facility
-		#registered_users = User.objects.get(Groups=uv.Video_facility)
+		registered_users = User.objects.filter(groups__name=uv.Video_facility)
+		for user in registered_users:
+			print(user.profile.phone_num)
 
-		print(registered_user)
 	return HttpResponse('Sended Alarm\n')
 
 @csrf_exempt
