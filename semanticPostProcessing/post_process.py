@@ -51,7 +51,7 @@ class SemanticPostProcessor:
 
     def single_frame_semantics(self, frame):
         boxes = []
-        img = cv2.imread(frame)
+        img = frame
         if img is None:
             return boxes
         result = self.tfnet.return_predict(img)

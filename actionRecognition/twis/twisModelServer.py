@@ -167,7 +167,7 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = False
+        self.src_from_out = True
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
