@@ -188,12 +188,13 @@ class StreamingServer():
                 while self.in_progress:
                     self.client_socket, address = self.model_socket.accept()
 
-                    session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
-                    if len(session_list) <= 0:
-                        self.sendMessage('wait')
-                        self.client_socket.close()
-                        time.sleep(0.3)
-                        continue
+                    while True:
+                        session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+                        if len(session_list) <= 0:
+                            self.sendMessage('wait')
+                            time.sleep(0.3)
+                        else:
+                            break
 
                     if len(session_list) >= 2:
                         session_list.sort()
