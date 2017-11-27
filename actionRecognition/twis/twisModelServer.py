@@ -260,6 +260,15 @@ class Session():
                             except:
                                 continue
 
+                            if frame_data.find(b'wait') != -1:
+                                time.sleep(1.3)
+                                try:
+                                    self.client_socket.send(b'Model is waiting')
+                                except:
+                                    pass
+
+                                continue
+
                             if self.in_progress and not socket_closed:
                                 header = frame_data[:22]
                                 session_name = str(header[:15])
@@ -1281,7 +1290,6 @@ class Secretary():
             print '{:10s}|{} Finished'.format('Secretary', 'Progress Viewer')
 
         while not self.clip_viewer_closed:
-            print 'wait'
             time.sleep(0.3)
 
         time.sleep(0.3)
