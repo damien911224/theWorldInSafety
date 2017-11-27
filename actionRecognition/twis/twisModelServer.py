@@ -167,7 +167,7 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = False
+        self.src_from_out = True
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
@@ -209,10 +209,6 @@ class Session():
 
                 while self.in_progress:
                     try:
-                        if self.wait_please:
-                            time.sleep(1.1)
-
-                        self.wait_please = False
                         self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
                         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -251,16 +247,20 @@ class Session():
                                         else:
                                             frame_data += r
 
-                            except Exception as e:
-                                print(e)
+                                    if frame_data.find(b'wait') != -1:
+                                        time.sleep(1.3)
+                                        try:
+                                            self.client_socket.send(b'Model is waiting')
+                                        except:
+                                            pass
+
+                                        if not socket_closed:
+                                            continue
+
+                            except:
                                 continue
 
                             if self.in_progress and not socket_closed:
-                                if frame_data.find(b'wait') != -1:
-                                    self.wait_please = True
-                                    break
-
-
                                 header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
