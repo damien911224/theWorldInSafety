@@ -7,7 +7,11 @@ from django.core.urlresolvers import reverse
 
 from management.fields import VideoField
 
-#from datetime import datetime
+from django.contrib.auth.models import User
+
+class ExtendedUser(models.Model):
+	user = models.OneToOneField(User)
+	phone_num = models.CharField(max_length=20)
 
 class Facility(models.Model):
 	#Facility_id = models.IntegerField(default=0)

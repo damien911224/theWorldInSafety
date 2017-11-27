@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 	'widget_tweaks',
 	'management.apps.ManagementConfig',
-	'usersite.apps.UsersiteConfig'
+	'usersite.apps.UsersiteConfig',
+	'userprofile.apps.UserprofileConfig'
 ]
 
 MIDDLEWARE = [
@@ -90,6 +91,8 @@ DATABASES = {
     }
 }
 
+
+AUTH_PROFILE_MODULE = 'userprofile.Userprofile'
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
