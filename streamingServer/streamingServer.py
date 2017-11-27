@@ -196,7 +196,7 @@ class StreamingServer():
                             self.sendMessage(b'wait')
                             model_return = str(self.client_socket.recv(90456))
                             print model_return
-                            if model_return == 'model is waiting':
+                            if model_return == 'Model is waiting':
                                 time.sleep(0.2)
                             else:
                                 print 'exit!'
