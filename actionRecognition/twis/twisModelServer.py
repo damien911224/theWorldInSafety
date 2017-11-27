@@ -298,7 +298,7 @@ class Session():
                                     if frame is not None:
                                         self.dumpFrames([frame])
                                         self.start_index += 1
-                                        self.dumped_index = self.start_index - 1
+                                        self.dumped_index = max(self.start_index - 1, 1)
                             else:
                                 break
 
