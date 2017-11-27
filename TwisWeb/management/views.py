@@ -10,6 +10,9 @@ from django import forms
 
 import cv2
 import os
+import base64
+#import httplib
+import json
 
 from TwisWeb import settings
 from management.models import Video, Facility, ExtendedUser
@@ -72,7 +75,49 @@ def violence(request, video_id):
 		for user in registered_users:
 			print(user.profile.phone_num)
 
+
 	return HttpResponse('Sended Alarm\n')
+
+#
+#import base64
+#
+#appid = 'twis'
+#apikey = 'api-key'
+#address = 'api.bluehouselab.com'
+#
+#sender = 'phone-number'
+#receivers = ['phone-number', ]
+#content = u'Hi ru'  # url
+#
+#credential = "Basic "+base64.encodestring(appid+':'+apikey).strip()
+#headers = {
+#		  "Content-type": "application/json;charset=utf-8",
+#		    "Authorization": credential,
+#			}
+#
+#import httplib
+#import json
+#from conf import address, sender, receivers, headers, content
+#
+#c = httplib.HTTPSConnection(address)
+#
+#path = "/smscenter/v1.0/sendsms"
+#value = {
+#		    'sender': sender,
+#			    'receivers': receivers,
+#				    'content': content,
+#					}
+#data = json.dumps(value, ensure_ascii=False).encode('utf-8')
+#
+#c.request("POST", path, data, headers)
+#r = c.getresponse()
+#
+#print r.status, r.reason
+#print r.read()
+#
+
+
+
 
 @csrf_exempt
 def receive(request):
@@ -96,11 +141,14 @@ def receive(request):
 			fout.write(chunk)
 		fout.close()
 	
-		#TODO: make a snapshot with the file sent
 		print(request.FILES['admin_clip'].name)
-		video_cap = cv2.VideoCapture(request.FILES['admin_clip'].name)
-		#print("asdfasdf")
-		ok, frame = video_cap.read()
+		current_folder_path = os.path.abspath('.')
+		print(os.path.join(current_folder_path, request.FILES['admin_clip'].name))
+		video_cap = cv2.VideoCapture(os.path.join(current_folder_path, request.FILES['admin_clip'].name))
+		if video_cap.isOpened():
+			#print("asdfasdf")
+			ok, frame = video_cap.read()
+			
 		video_cap.release()
 
 		snapshot_path = request.FILES['admin_clip'].name.split('.')[0] + ".jpg"
@@ -113,19 +161,11 @@ def receive(request):
 			#get the path of the snapshot
 			v_thumbnail_path = v.Video_snapshot.url
 			#modify the path for the video
-			v_video_path = v_thumbnail_path.split('.')[0] + ".avi"
+			v_video_path = v_thumbnail_path.split('.')[0] + ".mp4"
 			v.Video_record_path = v_video_path
 		v.save()
 
-		#save the video in the correct path 
-		file_content = ContentFile(request.FILES['admin_clip'].read())
-		#fout = open(request.FILES['admin_clip'].name, 'wb+')
-		fout = open(os.path.join(settings.MEDIA_ROOT, v_video_path)[1:], 'wb+')
-		for chunk in file_content.chunks():
-			fout.write(chunk)
-		fout.close()
-
-		os.remove(request.FILES['admin_clip'].name)
+		os.rename(request.FILES['admin_clip'].name, v_video_path[1:])
 		os.remove(snapshot_path)
 
 	return HttpResponse('Hello world\n')
