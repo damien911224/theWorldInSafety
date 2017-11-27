@@ -190,6 +190,7 @@ class StreamingServer():
 
                     socket_closed = False
                     while True:
+                        print 'wait_2'
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
                             self.sendMessage(b'wait')
@@ -255,9 +256,12 @@ class StreamingServer():
                                 check_frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
                                 check_session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
 
+                                print 'wait_1'
+
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
                                 else:
+                                    '
                                     self.sendMessage(b'wait')
                                     try:
                                         model_return = str(self.client_socket.recv(90456))
@@ -302,9 +306,8 @@ class StreamingServer():
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
-
-                    if not socket_closed:
-                        self.client_socket.close()
+                    print 'wait_3'
+                    self.client_socket.close()
 
 
         def send(self, frame):
