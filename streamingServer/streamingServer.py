@@ -193,10 +193,11 @@ class StreamingServer():
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
                             print 'wait!'
-                            self.sendMessage('wait')
+                            self.sendMessage(b'wait')
                             model_return = str(self.client_socket.recv(90456))
+                            print model_return
                             if model_return == 'model is waiting':
-                                time.sleep(0.3)
+                                time.sleep(0.2)
                             else:
                                 print 'exit!'
                                 self.client_socket.close()
@@ -220,7 +221,7 @@ class StreamingServer():
 
                     frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
                     if frame_paths is None or len(frame_paths) == 0:
-                        self.sendMessage('wait')
+                        self.sendMessage(b'wait')
                         self.client_socket.close()
                         continue
 
@@ -302,7 +303,7 @@ class StreamingServer():
 
 
         def sendMessage(self, message):
-            send_message = b'model{}{}'.format(self.session_name, message, '!TWIS_END!')
+            send_message = b'model{}{}'.format(self.session_name, message, b'!TWIS_END!')
             try:
                 self.client_socket.send(send_message)
             except socket.error:
