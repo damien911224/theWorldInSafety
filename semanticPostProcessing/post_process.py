@@ -30,7 +30,7 @@ class SemanticPostProcessor:
                 continue
             result = self.tfnet.return_predict(img)
             for i in range(0, len(result), 1):
-                if result[i]['confidence'] > 0.15:
+                if result[i]['confidence'] > 0.3:
                     bounding_box = dict()
                     bounding_box['label'] = result[i]['label']
                     bounding_box['confidence'] = result[i]['confidence']
