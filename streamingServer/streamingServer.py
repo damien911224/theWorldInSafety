@@ -188,6 +188,7 @@ class StreamingServer():
                 while self.in_progress:
                     self.client_socket, address = self.model_socket.accept()
 
+                    socket_closed = False
                     while True:
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
@@ -199,9 +200,13 @@ class StreamingServer():
                             else:
                                 print 'exit!'
                                 self.client_socket.close()
-                                continue
+                                socket_closed = True
+                                break
                         else:
                             break
+
+                    if socket_closed:
+                        continue
 
                     if len(session_list) >= 2:
                         session_list.sort()
