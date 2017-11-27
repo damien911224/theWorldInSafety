@@ -67,6 +67,8 @@ class Raspberry():
             self.window_name = 'Raspberry'
             self.window_position = (0, 0)
 
+            self.visualization = False
+            self.display_term = 20
             self.motionDetector = self.MotionDetector(self)
 
 
@@ -114,11 +116,16 @@ class Raspberry():
                                 self.camera_socket = None
 
                                 self.session_is_open = False
+                        
+                        if self.visualization:
+                            visualized_frame = self.visualize(frame, is_moving)
+                            cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
+                            cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
+                            cv2.waitKey(self.wait_time)
 
-                        visualized_frame = self.visualize(frame, is_moving)
-                        cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
-                        cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
-                        cv2.waitKey(self.wait_time)
+                        if self.session_index % self.display_term == 0:
+                            with self.raspberry.print_lock:
+                                print '{:10s}|{:12s}|{}'.format('Camera', 'Sending Frames', 'Unitl {:07d}'.format(self.session_index))
 
                     video_cap.release()
 
