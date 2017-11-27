@@ -186,11 +186,12 @@ class StreamingServer():
                 self.model_socket.listen(5)
 
                 while self.in_progress:
+                    print 'wait_4'
                     self.client_socket, address = self.model_socket.accept()
 
                     socket_closed = False
                     while True:
-                        print 'wait_2'
+                        print 'wait_4'
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
                             self.sendMessage(b'wait')
@@ -261,11 +262,14 @@ class StreamingServer():
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
                                 else:
+                                    print 'wait_13'
                                     self.sendMessage(b'wait')
+                                    print 'wait_11'
                                     try:
                                         model_return = str(self.client_socket.recv(90456))
                                     except:
                                         self.client_socket.close()
+                                        print 'wait_14'
                                         socket_closed = True
                                         break
 
@@ -275,6 +279,7 @@ class StreamingServer():
                                         self.client_socket.close()
                                         socket_closed = True
                                         break
+                                    print 'wait_15'
 
                             if socket_closed:
                                 break
