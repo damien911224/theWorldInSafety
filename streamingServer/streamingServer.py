@@ -222,32 +222,32 @@ class StreamingServer():
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
+
                     frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
-                    if frame_paths is None or len(frame_paths) == 0:
-                        self.sendMessage(b'wait')
-                        self.client_socket.close()
-                        continue
 
                     first_not_ok = False
-                    if len(frame_paths) >= 2:
-                        frame_paths.sort()
-                    for frame_path in frame_paths:
-                        self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                        frame = cv2.imread(frame_path)
-                        ok = self.send(frame)
-                        if not ok:
-                            first_not_ok = True
-                            break
-                        try:
-                            os.remove(frame_path)
-                        except OSError:
-                            pass
+                    if frame_paths is not None and len(frame_paths) >= 1:
+                        if len(frame_paths) >= 2:
+                            frame_paths.sort()
+                        for frame_path in frame_paths:
+                            self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                            frame = cv2.imread(frame_path)
+                            ok = self.send(frame)
+                            if not ok:
+                                first_not_ok = True
+                                break
+                            try:
+                                os.remove(frame_path)
+                            except OSError:
+                                pass
+
 
                     if first_not_ok:
                         self.client_socket.close()
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                         continue
+
 
                     if len(session_list) == 1:
                         while True:
@@ -258,7 +258,23 @@ class StreamingServer():
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
                                 else:
-                                    time.sleep(0.3)
+                                    self.sendMessage(b'wait')
+                                    try:
+                                        model_return = str(self.client_socket.recv(90456))
+                                    except:
+                                        self.client_socket.close()
+                                        socket_closed = True
+                                        break
+
+                                    if model_return == 'Model is waiting':
+                                        time.sleep(0.3)
+                                    else:
+                                        self.client_socket.close()
+                                        socket_closed = True
+                                        break
+
+                            if socket_closed:
+                                break
 
                             frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
                             if frame_paths is None or len(frame_paths) <= 0:
@@ -286,7 +302,9 @@ class StreamingServer():
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
-                    self.client_socket.close()
+
+                    if not socket_closed:
+                        self.client_socket.close()
 
 
         def send(self, frame):
