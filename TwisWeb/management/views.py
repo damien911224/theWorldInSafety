@@ -11,7 +11,7 @@ from django import forms
 import cv2
 import os
 import base64
-#import httplib
+from http import client
 import json
 
 from TwisWeb import settings
@@ -70,52 +70,49 @@ def violence(request, video_id):
 				Video_record_path=v.Video_record_path,
 		)
 		uv.save()
+		
+		send_to_registed_users(uv)
 		#TODO: get users who registered in this facility
-		registered_users = User.objects.filter(groups__name=uv.Video_facility)
-		for user in registered_users:
-			print(user.profile.phone_num)
-
 
 	return HttpResponse('Sended Alarm\n')
 
-#
-#import base64
-#
-#appid = 'twis'
-#apikey = 'api-key'
-#address = 'api.bluehouselab.com'
-#
-#sender = 'phone-number'
-#receivers = ['phone-number', ]
-#content = u'Hi ru'  # url
-#
-#credential = "Basic "+base64.encodestring(appid+':'+apikey).strip()
-#headers = {
-#		  "Content-type": "application/json;charset=utf-8",
-#		    "Authorization": credential,
-#			}
-#
-#import httplib
-#import json
-#from conf import address, sender, receivers, headers, content
-#
-#c = httplib.HTTPSConnection(address)
-#
-#path = "/smscenter/v1.0/sendsms"
-#value = {
-#		    'sender': sender,
-#			    'receivers': receivers,
-#				    'content': content,
-#					}
-#data = json.dumps(value, ensure_ascii=False).encode('utf-8')
-#
-#c.request("POST", path, data, headers)
-#r = c.getresponse()
-#
-#print r.status, r.reason
-#print r.read()
-#
+def send_to_registed_users(uv):
+	appid = 'twis'
+	apikey = 'cb4eb398d21a11e794990cc47a1fcfae'
+	address = 'api.bluehouselab.com'
 
+	sender = '01091261777'
+	registered_users = User.objects.filter(groups__name=uv.Video_facility)
+
+	receivers = []
+	for user in registered_users:
+		receivers.append(user.profile.phone_num)
+
+	content = u'Hi ru'  # url
+
+	credential = "Basic "+base64.encodestring((appid+':'+apikey).encode()).decode().strip()
+	headers = {
+		"Content-type": "application/json;charset=utf-8",
+		"Authorization": credential,
+	}
+
+	c = client.HTTPSConnection(address)
+	
+	path = "/smscenter/v1.0/sendsms"
+	value = {
+		'sender': sender,
+		'receivers': receivers,
+		'content': content,
+	}
+	data = json.dumps(value, ensure_ascii=False).encode('utf-8')
+
+	c.request("POST", path, data, headers)
+	r = c.getresponse()
+
+	print(r.status, r.reason)
+	print(r.read())
+
+	return
 
 
 
