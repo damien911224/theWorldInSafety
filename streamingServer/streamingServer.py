@@ -191,6 +191,7 @@ class StreamingServer():
                     while True:
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
+                            print 'wait'
                             self.sendMessage('wait')
                             time.sleep(0.3)
                         else:
