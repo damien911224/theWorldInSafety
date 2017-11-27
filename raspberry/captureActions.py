@@ -67,7 +67,7 @@ class Raspberry():
             self.window_name = 'Raspberry'
             self.window_position = (0, 0)
 
-            self.visualization = False
+            self.visualization = True
             self.display_term = 20
             self.motionDetector = self.MotionDetector(self)
 
