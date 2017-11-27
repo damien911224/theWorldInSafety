@@ -167,7 +167,7 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = True
+        self.src_from_out = False
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
@@ -1338,6 +1338,8 @@ class Secretary():
             self.view_clips = []
             self.violence_index = 0
 
+            self.semantic_display_step = 3
+
 
         def run(self):
             while True:
@@ -1369,27 +1371,28 @@ class Secretary():
                                 score = view_frames[frame_index]['score']
                                 image = cv2.imread(view_frames[frame_index]['image'])
 
-                                semantics = self.secretary.session.extractor.evaluator.closer.semanticPostProcessor.single_frame_semantics(image)
-                                semantic_size = (image.shape[1], image.shape[0])
-                                for box in semantics:
-                                    semantic_thick = int((semantic_size[1] + semantic_size[0]) // 300)
-                                    semantic_label = box['label']
-                                    semantic_confidence = box['confidence']
-                                    semantic_topleft_x = box['topleft_x']
-                                    semantic_topleft_y = box['topleft_y']
-                                    semantic_bottomright_x = box['bottomright_x']
-                                    semantic_bottomright_y = box['bottomright_y']
-                                    if semantic_label == 'Adult':
-                                        semantic_box_colors = (254, 0, 254)
-                                    else:
-                                        semantic_box_colors = (254, 254, 254)
+                                if frame_index % self.semantic_display_step == 0:
+                                    semantics = self.secretary.session.extractor.evaluator.closer.semanticPostProcessor.single_frame_semantics(image)
+                                    semantic_size = (image.shape[1], image.shape[0])
+                                    for box in semantics:
+                                        semantic_thick = int((semantic_size[1] + semantic_size[0]) // 300)
+                                        semantic_label = box['label']
+                                        semantic_confidence = box['confidence']
+                                        semantic_topleft_x = box['topleft_x']
+                                        semantic_topleft_y = box['topleft_y']
+                                        semantic_bottomright_x = box['bottomright_x']
+                                        semantic_bottomright_y = box['bottomright_y']
+                                        if semantic_label == 'Adult':
+                                            semantic_box_colors = (254, 0, 254)
+                                        else:
+                                            semantic_box_colors = (254, 254, 254)
 
-                                    cv2.rectangle(image, (semantic_topleft_x, semantic_topleft_y),
-                                                  (semantic_bottomright_x, semantic_bottomright_y),
-                                                  semantic_box_colors, semantic_thick)
-                                    cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
-                                                (semantic_topleft_x, semantic_topleft_y - 12), 0,
-                                                1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
+                                        cv2.rectangle(image, (semantic_topleft_x, semantic_topleft_y),
+                                                      (semantic_bottomright_x, semantic_bottomright_y),
+                                                      semantic_box_colors, semantic_thick)
+                                        cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
+                                                    (semantic_topleft_x, semantic_topleft_y - 12), 0,
+                                                    1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
 
 
                                 flow_x = cv2.resize(cv2.imread(view_frames[frame_index]['flows'][0],cv2.IMREAD_GRAYSCALE),
