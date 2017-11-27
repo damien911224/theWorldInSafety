@@ -192,7 +192,6 @@ class StreamingServer():
                     while True:
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
-                            print 'wait!'
                             self.sendMessage(b'wait')
                             try:
                                 model_return = str(self.client_socket.recv(90456))
@@ -204,7 +203,6 @@ class StreamingServer():
                             if model_return == 'Model is waiting':
                                 time.sleep(0.3)
                             else:
-                                print 'exit'
                                 self.client_socket.close()
                                 socket_closed = True
                                 break
