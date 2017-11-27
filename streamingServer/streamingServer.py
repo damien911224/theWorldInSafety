@@ -193,19 +193,7 @@ class StreamingServer():
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
                             self.sendMessage(b'wait')
-                            try:
-                                model_return = str(self.client_socket.recv(90456))
-                            except:
-                                self.client_socket.close()
-                                socket_closed = True
-                                break
-
-                            if model_return == 'Model is waiting':
-                                time.sleep(0.3)
-                            else:
-                                self.client_socket.close()
-                                socket_closed = True
-                                break
+                            time.sleep(0.3)
                         else:
                             break
 
@@ -259,19 +247,7 @@ class StreamingServer():
                                     break
                                 else:
                                     self.sendMessage(b'wait')
-                                    try:
-                                        model_return = str(self.client_socket.recv(90456))
-                                    except:
-                                        self.client_socket.close()
-                                        socket_closed = True
-                                        break
-
-                                    if model_return == 'Model is waiting':
-                                        time.sleep(0.3)
-                                    else:
-                                        self.client_socket.close()
-                                        socket_closed = True
-                                        break
+                                    time.sleep(0.3)
 
                             if socket_closed:
                                 break
@@ -302,9 +278,7 @@ class StreamingServer():
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
-
-                    if not socket_closed:
-                        self.client_socket.close()
+                    self.client_socket.close()
 
 
         def send(self, frame):
