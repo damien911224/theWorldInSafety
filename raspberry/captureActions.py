@@ -146,7 +146,7 @@ class Raspberry():
 
         def send(self, frame):
             header = b'raspberry{:15s}{:07d}{:16s}'.format(self.session_name, self.session_index,
-                                                           datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+                                                           datetime.datetime.now().strftime('%H%M%S%s'))
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
             frame_data_length = len(frame_data)
             send_data = header + b'{:07d}{}{}'.format(frame_data_length, frame_data, self.jpg_boundary)
