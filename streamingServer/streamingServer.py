@@ -221,7 +221,7 @@ class StreamingServer():
                     while True:
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
-                            self.sendMessage(b'wait')
+                            self.sendMessage(b'!-!wait!-!')
                             time.sleep(0.1)
                         else:
                             break
@@ -276,7 +276,7 @@ class StreamingServer():
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
                                 else:
-                                    self.sendMessage(b'wait')
+                                    self.sendMessage(b'!-!wait!-!')
                                     time.sleep(0.1)
 
                             if socket_closed:
@@ -322,8 +322,12 @@ class StreamingServer():
                 except socket.error:
                     return False
                     pass
+
+                print self.session_index
             except:
                 pass
+
+
 
             return True
 
