@@ -163,7 +163,7 @@ class StreamingServer():
                                     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
                                     if frame is not None:
-                                        self.dumpFrames([frame], frame_index)
+                                        self.dumpFrames([frame], frame_index, frame_moment)
 
                                 self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
                                 self.delay_count += 1
@@ -184,10 +184,10 @@ class StreamingServer():
                 self.raspberry_socket.close()
 
 
-        def dumpFrames(self, frames, start_index):
+        def dumpFrames(self, frames, start_index, frame_moment):
             frame_index = start_index
             for frame in frames:
-                frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
+                frame_path = os.path.join(self.session_folder, 'img_{:014d}_{:07d}.jpg'.format(frame_moment, frame_index))
                 cv2.imwrite(frame_path, frame)
                 frame_index += 1
 
@@ -291,6 +291,7 @@ class StreamingServer():
                                     frame_paths.sort()
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                                    self.frame_moment = int(frame_path.split('_')[-2])
                                     frame = cv2.imread(frame_path)
                                     ok = self.send(frame)
                                     if not ok:
@@ -310,7 +311,7 @@ class StreamingServer():
 
 
         def send(self, frame):
-            header = b'model{:15s}{:07d}'.format(self.session_name, self.session_index)
+            header = b'model{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary
