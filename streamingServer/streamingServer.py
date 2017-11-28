@@ -170,7 +170,7 @@ class StreamingServer():
                                 if frame_index % self.delay_display_term == 0:
                                     with self.streaming_server.print_lock:
                                         average_delay = self.session_delay / self.delay_count / 10000000000.0
-                                        print '{:10s}|{:15s}|{:.2f}'.format('Raspberry', 'Session Delay', average_delay)
+                                        print '{:10s}|{:15s}|{:.2f} Seconds'.format('Raspberry', 'Session Delay', average_delay)
 
                         client_socket.close()
 
