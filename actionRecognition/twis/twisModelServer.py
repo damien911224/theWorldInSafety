@@ -795,6 +795,12 @@ class Scanner():
         self.num_using_gpu = num_using_gpu
         self.use_spatial_net = use_spatial_net
 
+        self.rate_of_whole = 5.0
+        self.rate_of_time = 3.5
+        self.rate_of_space = self.rate_of_whole - self.rate_of_time
+
+        self.score_bound = 30.0
+
 
     def scan(self, start_index, end_index, actual_extracted_index):
         manager = Manager()
@@ -881,9 +887,14 @@ class Scanner():
                                                    frame_size=None)[0].tolist()
 
         if self.use_spatial_net:
-            scan_scores[index - start_index] = [rgb_score[i] * 1.0 + flow_score[i] * 1.5 for i in xrange(len(flow_score))]
+            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
+                                                                     + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
         else:
-            scan_scores[index - start_index] = [flow_score[i] * 5.0 for i in xrange(len(flow_score))]
+            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
 
 
 class Analyzer():
@@ -901,11 +912,11 @@ class Analyzer():
         self.violence_index = 0
         self.normal_index = 1
         self.lower_bound = 0.0
-        self.max_lower_bound = 2.0
+        self.max_lower_bound = 0.3
         self.variance_factor = 2.0
         self.max_falling_count = 5
         self.falling_counter = 0
-        self.median_kernal_size = 7
+        self.median_kernal_size = 5
 
         self.real_base = 2
         self.not_yet = False
@@ -1443,8 +1454,8 @@ class Secretary():
                                     frame_label = 'Normal'
                                     label_background_color = (255, 0, 0)
 
-                                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:05.02f}'.format(index, frame_label,
-                                                                                                       max(score))
+                                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:06.02f}%'.format(index, frame_label,
+                                                                                                       max(score) * 100.0)
                                 flow_head_text = '{}'.format('Optical Flow | Between {:07d} And {:07d}'.format(index-1, index))
 
                                 box_size, dummy = cv2.getTextSize(label_text, font, scale, thickness)
@@ -1806,7 +1817,8 @@ class Closer():
                     frame_label = 'Normal'
                     label_background_color = (255, 0, 0)
 
-                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:05.02f}'.format(index, frame_label, max(score))
+                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:06.02f}%'.format(index, frame_label,
+                                                                                          max(score) * 100.0)
 
                 flow_head_text = '{}'.format('Optical Flow | Between {:07d} And {:07d}'.format(index - 1, index))
 
@@ -1961,14 +1973,8 @@ class Closer():
             c.setopt(c.HTTPPOST,
                         [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
                          # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
-            bodyOutput = StringIO()
-            headersOutput = StringIO()
-            c.setopt(c.WRITEFUNCTION, bodyOutput.write)
-            c.setopt(c.HEADERFUNCTION, headersOutput.write)
             c.perform()
             c.close()
-
-            output = bodyOutput.getvalue()
         except:
             pass
 
