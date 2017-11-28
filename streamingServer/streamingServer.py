@@ -68,6 +68,8 @@ class StreamingServer():
             self.streaming_server = streaming_server
 
             self.in_progress = True
+            self.delay_display_term = 20
+            self.delay_count = 0
 
 
         def run(self):
@@ -133,11 +135,17 @@ class StreamingServer():
                                 header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_moment = int(header[23:37])
-                                frame_data = frame_data[37:]
+                                frame_length = int(header[23:30])
+                                frame_moment = int(header[30:44])
+                                frame_data = frame_data[45:]
+
+                                if len(frame_data) != frame_length:
+                                    continue
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
+                                    self.session_delay = 0.0
+                                    self.delay_count = 0
                                     self.session_folder = os.path.join(self.streaming_server.save_folder,
                                                                        session_name)
                                     try:
@@ -157,6 +165,13 @@ class StreamingServer():
 
                                     if frame is not None:
                                         self.dumpFrames([frame], frame_index)
+
+                                self.session_delay += float(int(datetime.datetime.now().strftime('%Y%m%d%H%M%S')) - frame_moment)
+                                self.delay_count += 1
+                                if frame_index % self.delay_display_term == 0:
+                                    with self.streaming_server.print_lock:
+                                        average_delay = self.session_delay / self.delay_count
+                                        print '{:10s}|{:15s}|{:.2f}'.format('Raspberry', 'Session Delay', average_delay)
 
                         client_socket.close()
 
