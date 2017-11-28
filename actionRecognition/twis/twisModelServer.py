@@ -26,6 +26,7 @@ sys.path.append("../../semanticPostProcessing")
 sys.path.append('../../semanticPostProcessing/darkflow')
 from post_process import SemanticPostProcessor
 import pycurl
+import imutils
 from cStringIO import StringIO
 
 
@@ -162,19 +163,22 @@ class Session():
         self.fps = 25.0
         self.wait_time = 1.0 / self.fps
         self.wait_please = False
+        self.is_rotated = False
+        self.rotating_angle = -90
 
         self.start_index = 1
         self.dumped_index = 0
 
 
-        self.src_from_out = True
+        self.src_from_out = False
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
         else:
             self.test_video_name = 'test_1.mp4'
         self.model_version = 4
-        self.build_temporal_net(self.model_version)
+        self.use_spatial_net = True
+        self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
 
@@ -355,17 +359,23 @@ class Session():
                 self.finalize()
 
 
-    def build_temporal_net(self, version=3):
+    def build_net(self, version=4, use_spatial_net=False):
+        global spatial_net_gpu
+        global spatial_net_cpu
         global temporal_net_gpu
         global temporal_net_cpu
 
-
+        self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
+        self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
+            version)
         self.temporal_net_proto = "../models/twis/tsn_bn_inception_flow_deploy.prototxt"
         self.temporal_net_weights = "../models/twis_caffemodels/v{0}/twis_temporal_net_v{0}.caffemodel".format(
             version)
 
         device_id = 0
 
+        spatial_net_gpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, device_id)
+        spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
         temporal_net_gpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, device_id)
         temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
 
@@ -380,10 +390,14 @@ class Session():
         for frame in frames:
             file_name = os.path.join(self.image_folder, 'show_{:07d}.jpg'.format(index))
             new_frame = cv2.resize(frame, self.show_size, interpolation=cv2.INTER_AREA)
+            if self.is_rotated:
+                new_frame = imutils.rotate(new_frame, self.rotating_angle)
             cv2.imwrite(file_name, new_frame)
 
             file_name = os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index))
             new_frame = cv2.resize(frame, self.new_size, interpolation=cv2.INTER_AREA)
+            if self.is_rotated:
+                new_frame = imutils.rotate(new_frame, self.rotating_angle)
             cv2.imwrite(file_name, new_frame)
             index += 1
 
@@ -642,7 +656,8 @@ class Evaluator():
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
-        self.scanner = Scanner(self.session.flow_folder, self.num_workers, self.num_using_gpu)
+        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder,
+                               self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
 
         self.analyzer = Analyzer(self.session, self.extractor, self)
         self.analyzer_thread = threading.Thread(target=self.analyzer.run, name='Analyzer')
@@ -773,10 +788,12 @@ class Evaluator():
 
 class Scanner():
 
-    def __init__(self, flow_folder, num_workers, num_using_gpu):
+    def __init__(self, image_folder, flow_folder, num_workers, num_using_gpu, use_spatial_net):
+        self.image_folder = image_folder
         self.flow_folder = flow_folder
         self.num_workers = num_workers
         self.num_using_gpu = num_using_gpu
+        self.use_spatial_net = use_spatial_net
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
@@ -788,11 +805,8 @@ class Scanner():
         for i in xrange(len(indices)):
             scan_scores.append([0.0, 0.0])
 
-        scanning_pool.map(self.temporalScanVideo,
-                          zip([self.flow_folder] * len(indices),
-                              [self.num_workers] * len(indices),
-                              [self.num_using_gpu] * len(indices),
-                              [start_index] * len(indices),
+        scanning_pool.map(self.scanVideo,
+                          zip([start_index] * len(indices),
                               [actual_extracted_index] * len(indices),
                               [scan_scores] * len(indices),
                               indices))
@@ -802,51 +816,62 @@ class Scanner():
         return return_scores
 
 
-    def temporalScanVideo(self, scan_items):
-        input_path = scan_items[0]
-        num_workers = scan_items[1]
-        num_using_gpu = scan_items[2]
-        start_index = scan_items[3]
-        frame_count = scan_items[4]
-        scan_scores = scan_items[5]
-        index = scan_items[6]
+    def scanVideo(self, scan_items):
+        global spatial_net_gpu
+        global spatial_net_cpu
+        global temporal_net_gpu
+        global temporal_net_cpu
+
+        start_index = scan_items[0]
+        frame_count = scan_items[1]
+        scan_scores = scan_items[2]
+        index = scan_items[3]
 
         current = current_process()
         current_id = current._identity[0] - 1
 
-        if current_id % num_workers < num_using_gpu:
+        if current_id % self.num_workers < self.num_using_gpu:
+            spatial_net = spatial_net_gpu
             temporal_net = temporal_net_gpu
         else:
+            spatial_net = spatial_net_cpu
             temporal_net = temporal_net_cpu
 
         score_layer_name = 'fc-twis'
+
+        if self.use_spatial_net:
+            image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
+
+            rgb_score = \
+                spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
+                                                 frame_size=None)[0].tolist()
 
         flow_stack = []
         for i in range(-2, 3, 1):
             if index + i >= 2 and index + i <= frame_count:
                 x_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_x_{:07d}.jpg').format(index + i),
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
                     cv2.IMREAD_GRAYSCALE)
                 y_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_y_{:07d}.jpg').format(index + i),
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
                     cv2.IMREAD_GRAYSCALE)
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
             elif index + i < 2:
                 x_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_x_{:07d}.jpg').format(2),
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
                     cv2.IMREAD_GRAYSCALE)
                 y_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_y_{:07d}.jpg').format(2),
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
                     cv2.IMREAD_GRAYSCALE)
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
             else:
                 x_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_x_{:07d}.jpg').format(frame_count),
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
                     cv2.IMREAD_GRAYSCALE)
                 y_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_y_{:07d}.jpg').format(frame_count),
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
                     cv2.IMREAD_GRAYSCALE)
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
@@ -855,7 +880,10 @@ class Scanner():
             temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
                                                    frame_size=None)[0].tolist()
 
-        scan_scores[index - start_index] = [flow_score[i] * 5.0 for i in xrange(len(flow_score))]
+        if self.use_spatial_net:
+            scan_scores[index - start_index] = [rgb_score[i] * 1.0 + flow_score[i] * 1.5 for i in xrange(len(flow_score))]
+        else:
+            scan_scores[index - start_index] = [flow_score[i] * 5.0 for i in xrange(len(flow_score))]
 
 
 class Analyzer():
