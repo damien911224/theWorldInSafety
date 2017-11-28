@@ -131,13 +131,12 @@ class StreamingServer():
                                     print '{:10s}|{:15s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
                                 break
                             else:
-                                header = frame_data[:43]
+                                header = frame_data[:45]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_moment = int(header[22:36])
-                                frame_length = int(header[36:43])
-                                frame_data = frame_data[43:]
-                                print frame_moment
+                                frame_moment = int(header[22:38])
+                                frame_length = int(header[38:45])
+                                frame_data = frame_data[45:]
 
                                 if len(frame_data) != frame_length:
                                     continue
@@ -170,7 +169,7 @@ class StreamingServer():
                                 self.delay_count += 1
                                 if frame_index % self.delay_display_term == 0:
                                     with self.streaming_server.print_lock:
-                                        average_delay = self.session_delay / self.delay_count
+                                        average_delay = self.session_delay / self.delay_count / 10000000000.0
                                         print '{:10s}|{:15s}|{:.2f}'.format('Raspberry', 'Session Delay', average_delay)
 
                         client_socket.close()
