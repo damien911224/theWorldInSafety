@@ -13,7 +13,7 @@ from shutil import rmtree
 class StreamingServer():
 
     def __init__(self):
-        self.streaming_server_host_name = '172.31.0.152'
+        self.streaming_server_host_name = self.getAWSIpAddress()
 
         self.home_folder = os.path.abspath('../..')
         self.save_folder = os.path.join(self.home_folder, 'streaming_data')
@@ -48,6 +48,19 @@ class StreamingServer():
 
         while True:
             time.sleep(0.7)
+
+
+    def getAWSIpAddress(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect(("8.8.8.8", 80))
+
+        raspberry_ip_address = sock.getsockname()[0]
+        sock.close()
+
+        with self.print_lock:
+            print '{:10s}|{:12s}|{}'.format('AWS', 'Connection', 'With IP {}'.format(raspberry_ip_address))
+
+        return raspberry_ip_address
 
 
     class Raspberry():
@@ -120,7 +133,8 @@ class StreamingServer():
                                 header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_data = frame_data[22:]
+                                frame_moment = int(header[23:37])
+                                frame_data = frame_data[37:]
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
