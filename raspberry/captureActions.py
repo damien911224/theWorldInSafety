@@ -57,7 +57,7 @@ class Raspberry():
             self.original_size = ( 640, 480 )
 
             self.camera_socket = None
-            self.server_ip_address = '13.125.52.6'
+            self.server_ip_address = '13.228.168.156'
             self.server_port_number = 7777
 
             self.client_name = self.raspberry.client_name
@@ -71,7 +71,7 @@ class Raspberry():
             self.window_position = (0, 0)
 
             self.visualization = True
-            self.display_term = 20
+            self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
 
 
@@ -93,6 +93,7 @@ class Raspberry():
                         print  '{:10s}|{:12s}|{}'.format('Camera', 'Resizing Camera', 
                                 '( {}, {} )'.format(int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 
                                     int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+
 
                 if video_cap.isOpened():
                     while self.in_progress:
@@ -144,9 +145,11 @@ class Raspberry():
 
 
         def send(self, frame):
-            header = b'raspberry{:15s}{:07d}'.format(self.session_name, self.session_index)
+            header = b'raspberry{:15s}{:07d}{:14s}'.format(self.session_name, self.session_index,
+                                                           datetime.datetime.now().strftime('%M%S%s'))
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
-            send_data = header + frame_data + self.jpg_boundary
+            frame_data_length = len(frame_data)
+            send_data = header + b'{:07d}{}{}'.format(frame_data_length, frame_data, self.jpg_boundary)
             try:
                 self.camera_socket.send(send_data)
             except socket.error:
@@ -251,7 +254,7 @@ class Raspberry():
             self.raspberry = raspberry
 
             self.controller_socket = None
-            self.server_ip_address = '13.125.52.6'
+            self.server_ip_address = '13.228.168.156'
             self.server_port_number = 9999
 
             self.client_name = self.raspberry.client_name
