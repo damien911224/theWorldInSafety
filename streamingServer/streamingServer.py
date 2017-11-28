@@ -139,6 +139,7 @@ class StreamingServer():
                                 frame_data = frame_data[43:]
 
                                 if len(frame_data) != frame_length:
+                                    print 'ERROR'
                                     continue
 
                                 if not self.session_is_opened:
