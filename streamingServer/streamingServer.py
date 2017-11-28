@@ -137,6 +137,7 @@ class StreamingServer():
                                 frame_moment = int(header[22:36])
                                 frame_length = int(header[36:43])
                                 frame_data = frame_data[43:]
+                                print frame_moment
 
                                 if len(frame_data) != frame_length:
                                     continue
