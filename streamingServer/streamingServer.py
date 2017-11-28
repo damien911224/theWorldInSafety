@@ -139,7 +139,6 @@ class StreamingServer():
                                 frame_data = frame_data[43:]
 
                                 if len(frame_data) != frame_length:
-                                    print 'ERROR'
                                     continue
 
                                 if not self.session_is_opened:
@@ -322,6 +321,13 @@ class StreamingServer():
                 except socket.error:
                     return False
                     pass
+
+                try:
+                    self.client_socket.send(send_data)
+                except socket.error:
+                    return False
+                    pass
+
                 try:
                     self.client_socket.send(send_data)
                 except socket.error:
