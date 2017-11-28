@@ -193,7 +193,7 @@ class StreamingServer():
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
                             self.sendMessage(b'wait')
-                            time.sleep(0.3)
+                            time.sleep(0.1)
                         else:
                             break
 
@@ -247,7 +247,7 @@ class StreamingServer():
                                     break
                                 else:
                                     self.sendMessage(b'wait')
-                                    time.sleep(0.3)
+                                    time.sleep(0.1)
 
                             if socket_closed:
                                 break
@@ -370,7 +370,7 @@ class StreamingServer():
                                 self.streaming_server.raspberry.ready = False
                                 self.streaming_server.raspberry.in_progress = True
                                 while self.streaming_server.raspberry.ready:
-                                    time.sleep(0.1)
+                                    time.sleep(0.3)
 
                                 time.sleep(0.5)
 
@@ -387,7 +387,6 @@ class StreamingServer():
                 except KeyboardInterrupt:
                     self.controller_socket.close()
                     break
-
 
 
 if __name__ == '__main__':
