@@ -131,12 +131,12 @@ class StreamingServer():
                                     print '{:10s}|{:15s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
                                 break
                             else:
-                                header = frame_data[:45]
+                                header = frame_data[:43]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_moment = int(header[22:38])
-                                frame_length = int(header[38:45])
-                                frame_data = frame_data[45:]
+                                frame_moment = int(header[22:36])
+                                frame_length = int(header[36:43])
+                                frame_data = frame_data[43:]
 
                                 if len(frame_data) != frame_length:
                                     continue
@@ -165,9 +165,7 @@ class StreamingServer():
                                     if frame is not None:
                                         self.dumpFrames([frame], frame_index)
 
-                                print frame_moment
-                                print int(datetime.datetime.now().strftime('%H%M%S%s'))
-                                self.session_delay += float(int(datetime.datetime.now().strftime('%H%M%S%s')) - frame_moment)
+                                self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
                                 self.delay_count += 1
                                 if frame_index % self.delay_display_term == 0:
                                     with self.streaming_server.print_lock:
