@@ -13,6 +13,7 @@ from shutil import rmtree
 class StreamingServer():
 
     def __init__(self):
+        self.print_lock = Lock()
         self.streaming_server_host_name = self.getAWSIpAddress()
 
         self.home_folder = os.path.abspath('../..')
@@ -22,8 +23,6 @@ class StreamingServer():
                 os.makedirs(self.save_folder)
             except OSError:
                 pass
-
-        self.print_lock = Lock()
 
         self.raspberry_port_number = 7777
         self.model_port_number = 8888
