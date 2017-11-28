@@ -248,7 +248,7 @@ class Session():
                                             frame_data += r
 
                                     if frame_data.find(b'wait') != -1:
-                                        time.sleep(1.3)
+                                        time.sleep(0.3)
 
                                         if not socket_closed:
                                             continue
@@ -257,8 +257,6 @@ class Session():
                                 continue
 
                             if frame_data.find(b'wait') != -1:
-                                time.sleep(1.3)
-
                                 continue
 
                             if self.in_progress and not socket_closed:
@@ -316,7 +314,7 @@ class Session():
                     self.finalize()
 
                     while not self.session_closed:
-                        time.sleep(0.5)
+                        time.sleep(0.3)
 
                     self.resume()
 
@@ -1928,20 +1926,23 @@ class Closer():
                                                   user_clip_send_path.split('/')[-1],
                                                   admin_clip_send_path.split('/')[-1])
 
-        # c = pycurl.Curl()
-        # c.setopt(c.POST, 1)
-        # c.setopt(c.URL, 'http://13.228.101.253:8000/management/receive/')
-        # c.setopt(c.HTTPPOST,
-        #             [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
-        #              # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
-        # bodyOutput = StringIO()
-        # headersOutput = StringIO()
-        # c.setopt(c.WRITEFUNCTION, bodyOutput.write)
-        # c.setopt(c.HEADERFUNCTION, headersOutput.write)
-        # c.perform()
-        # c.close()
+        try:
+            c = pycurl.Curl()
+            c.setopt(c.POST, 1)
+            c.setopt(c.URL, 'http://13.228.101.253:8000/management/receive/')
+            c.setopt(c.HTTPPOST,
+                        [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
+                         # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
+            bodyOutput = StringIO()
+            headersOutput = StringIO()
+            c.setopt(c.WRITEFUNCTION, bodyOutput.write)
+            c.setopt(c.HEADERFUNCTION, headersOutput.write)
+            c.perform()
+            c.close()
 
-        # output = bodyOutput.getvalue()
+            output = bodyOutput.getvalue()
+        except:
+            pass
 
         for send_clip_path in clip_send_paths:
             try:
@@ -1966,7 +1967,7 @@ if __name__ == '__main__':
     session = Session()
 
     while True:
-        time.sleep(3.1451)
+        time.sleep(13.1451)
         with session.print_lock:
             print '------------------------------ Memory Checking ---------------------------------'
             cmd = 'free -h'
