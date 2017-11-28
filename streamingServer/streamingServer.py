@@ -165,7 +165,9 @@ class StreamingServer():
                                     if frame is not None:
                                         self.dumpFrames([frame], frame_index)
 
-                                self.session_delay += float(int(datetime.datetime.now().strftime('%Y%m%d%H%M%S')) - frame_moment)
+                                print frame_moment
+                                print int(datetime.datetime.now().strftime('%H%M%S%s'))
+                                self.session_delay += float(int(datetime.datetime.now().strftime('%H%M%S%s')) - frame_moment)
                                 self.delay_count += 1
                                 if frame_index % self.delay_display_term == 0:
                                     with self.streaming_server.print_lock:
