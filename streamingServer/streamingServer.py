@@ -319,9 +319,12 @@ class StreamingServer():
                 send_data = header + frame_data + self.jpg_boundary
                 try:
                     self.client_socket.send(send_data)
+                    self.client_socket.send(send_data)
+                    self.client_socket.send(send_data)
                 except socket.error:
                     return False
                     pass
+
 
                 print self.session_index
             except:
