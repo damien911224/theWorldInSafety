@@ -328,11 +328,6 @@ class StreamingServer():
                     return False
                     pass
 
-                try:
-                    self.client_socket.send(send_data)
-                except socket.error:
-                    return False
-                    pass
 
             except:
                 pass
