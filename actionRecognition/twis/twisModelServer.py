@@ -2,7 +2,6 @@ import cv2
 import sys
 sys.path.append("../lib/caffe-action/python")
 import caffe
-import tensorflow as tf
 import os
 import numpy as np
 import time
@@ -14,7 +13,6 @@ from pipes import quote
 from caffe.io import oversample
 from utils.io import flow_stack_oversample, fast_list2arr
 from multiprocessing import Pool, Value, Lock, current_process, Manager
-from ctypes import c_int
 import copy_reg, types
 import gc
 import socket
@@ -27,7 +25,6 @@ sys.path.append('../../semanticPostProcessing/darkflow')
 from post_process import SemanticPostProcessor
 import pycurl
 import imutils
-from cStringIO import StringIO
 
 
 
@@ -160,7 +157,7 @@ class Session():
         self.new_size = (224, 224)
         self.temporal_width = 1
         self.print_term = 50
-        self.fps = 25.0
+        self.fps = 30.0
         self.wait_time = 1.0 / self.fps
         self.wait_please = False
         self.is_rotated = False
@@ -170,19 +167,20 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = False
+        self.src_from_out = True
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
         else:
             self.test_video_name = 'test_1.mp4'
         self.model_version = 4
-        self.use_spatial_net = True
+        self.use_spatial_net = False
         self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
+        self.average_delay = 0.0
 
-        self.server_ip_address = '13.125.52.6'
+        self.server_ip_address = '13.228.168.156'
         self.server_port_number = 8888
 
         self.client_host_name = '192.168.1.101'
@@ -210,6 +208,7 @@ class Session():
                 if not self.child_thread_started:
                     self.extractor_thread.start()
                     self.child_thread_started = True
+
 
                 while self.in_progress:
                     try:
@@ -251,26 +250,25 @@ class Session():
                                         else:
                                             frame_data += r
 
-                                    if frame_data.find(b'wait') != -1:
+                                    if frame_data.find(b'!-!wait!-!') != -1:
                                         time.sleep(0.3)
-
-                                        if not socket_closed:
-                                            continue
-
                             except:
                                 continue
 
-                            if frame_data.find(b'wait') != -1:
+                            if frame_data.find(b'!-!wait!-!') != -1:
                                 continue
 
                             if self.in_progress and not socket_closed:
-                                header = frame_data[:22]
+                                header = frame_data[:36]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_data = frame_data[22:]
+                                frame_moment = int(header[22:36])
+                                frame_data = frame_data[36:]
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
+                                    self.session_delay = 0.0
+                                    self.delay_count = 0
                                     folders = [self.session_folder, self.image_folder,
                                                self.flow_folder, self.clip_folder, self.clip_view_folder,
                                                self.clip_send_folder, self.keep_folder]
@@ -301,6 +299,10 @@ class Session():
                                         self.dumpFrames([frame])
                                         self.start_index += 1
                                         self.dumped_index = max(self.start_index - 1, 1)
+
+                                self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
+                                self.delay_count += 1
+                                self.average_delay = self.session_delay / self.delay_count / 10000000000.0
                             else:
                                 break
 
@@ -384,7 +386,7 @@ class Session():
         end_index = self.start_index + len(frames) - 1
         if end_index % self.print_term == 0:
             with self.print_lock:
-                print '{:10s}|{:12s}| Until {:07d}'.format('Session', 'Dumping', end_index)
+                print '{:10s}|{:12s}| Until {:07d}|Delay {:.6f} Seconds'.format('Session', 'Dumping', end_index, self.average_delay)
 
         index = self.start_index
         for frame in frames:
@@ -772,7 +774,8 @@ class Evaluator():
         global scanning_pool
         scanning_pool = Pool(processes=self.num_workers)
 
-        self.scanner = Scanner(self.session.flow_folder, self.num_workers, self.num_using_gpu)
+        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
+                               self.num_using_gpu, self.session.use_spatial_net)
 
         self.in_progress = True
 
