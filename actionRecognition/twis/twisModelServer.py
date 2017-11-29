@@ -916,7 +916,7 @@ class Analyzer():
         self.violence_index = 0
         self.normal_index = 1
         self.lower_bound = 0.0
-        self.max_lower_bound = 0.3
+        self.max_lower_bound = 0.0
         self.variance_factor = 2.0
         self.max_falling_count = 5
         self.falling_counter = 0
