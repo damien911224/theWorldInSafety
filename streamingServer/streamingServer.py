@@ -316,7 +316,6 @@ class StreamingServer():
                     self.client_socket.close()
 
                 self.client_socket.close()
-                print 'READY'
                 self.ready = True
 
 
@@ -414,7 +413,7 @@ class StreamingServer():
                             elif message_data == 'resume' or message_data == 'start':
                                 self.streaming_server.raspberry.ready = False
                                 self.streaming_server.raspberry.in_progress = True
-                                while self.streaming_server.raspberry.ready:
+                                while not self.streaming_server.raspberry.ready:
                                     time.sleep(0.3)
 
                                 time.sleep(0.5)
@@ -427,7 +426,7 @@ class StreamingServer():
                             elif message_data == 'reset':
                                 self.streaming_server.model.ready = False
                                 self.streaming_server.model.in_progress = False
-                                while self.streaming_server.model.ready:
+                                while not self.streaming_server.model.ready:
                                     time.sleep(0.2)
                                 session_folders = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                                 for session_folder in session_folders:
