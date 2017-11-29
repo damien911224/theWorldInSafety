@@ -344,9 +344,11 @@ class StreamingServer():
                         return False
                         pass
 
-
             except:
                 pass
+
+
+            print self.session_index
 
 
 
