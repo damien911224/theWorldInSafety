@@ -227,11 +227,15 @@ class StreamingServer():
                         else:
                             break
 
+                        print '111'
+
                     if not self.in_progress:
                         break
 
                     if socket_closed:
                         continue
+
+                        print '222'
 
                     if len(session_list) >= 2:
                         session_list.sort()
@@ -239,6 +243,8 @@ class StreamingServer():
                     self.session_index = 1
                     self.session_folder = session_list[0]
                     self.session_name = self.session_folder.split('/')[-1]
+
+                    print '333'
 
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
@@ -263,6 +269,14 @@ class StreamingServer():
                             except OSError:
                                 pass
 
+                            if not self.in_progress:
+                                break
+
+                            print '4444'
+
+                    if not self.in_progress:
+                        break
+
 
                     if first_not_ok:
                         self.client_socket.close()
@@ -276,6 +290,8 @@ class StreamingServer():
                             while self.in_progress:
                                 check_frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
                                 check_session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+
+                                print '555'
 
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
@@ -308,6 +324,11 @@ class StreamingServer():
                                         os.remove(frame_path)
                                     except OSError:
                                         pass
+
+                                    print '666'
+
+                                    if not self.in_progress:
+                                        break
                     else:
                         rmtree(self.session_folder, ignore_errors=True)
                         with self.streaming_server.print_lock:
@@ -321,6 +342,7 @@ class StreamingServer():
 
         def send(self, frame):
             header = b'model{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
+            print '777'
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary
