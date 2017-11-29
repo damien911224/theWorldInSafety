@@ -38,6 +38,7 @@
 .card{
 	margin: auto;
 	height: 60%;
+	border-style: none;
 }
 
 
@@ -46,7 +47,8 @@
 table.scroll {
 	margin-top: 20px;
 	margin-left: 20px;
-	width: 97%;
+	margin-right: 20px;
+	width: 96%;
 	border-spacing: 1;
 }
 
@@ -68,7 +70,7 @@ table.scroll thead tr {
 table.scroll tr:after {
 	content: ' ';
 	display: block;
-	visibility: hidden;
+	//visibility: hidden;
 	clear: both;
 }
 
@@ -80,7 +82,7 @@ table.scroll tbody {
 
 table.scroll tbody td,
 table.scroll thead th {
-	width: 33%;
+	width: 50%;
 	float: left;
 }
 

@@ -9,32 +9,33 @@
 	<div class="container">
 		<div class="outer">
 			<div class="inner">
+				<h4>{{ object.Facility_name }}</h4>
 				<div class="contents">
-					<h4>Overall</h4>
-					<div>
-						<img src="{% static 'img/camera.jpg' %}" alt="Smiley face" height="42" width="42">
-					
+					<div class="row cards">
+						<div class="col-3 card" style="border-style: none;">
+							<img src="{% static 'img/camera.jpg'%}" alt="Smiley face" height="100" width="150">	
+						</div>
+						<div class="col-9 card">
+							<table class="table table-fixed table-striped scroll">
+								<thead>
+									<tr>
+										<th>Video ID</th>
+										<th>Video snapshot</th>
+										<th>Checked</th>
+									</tr>
+								</thead>
+								<tbody id="search-prescription-results">	
+									{% for video in object_list %}
+									<tr>
+										<td>{{ video.id }}</td>
+										<td><a href="{{ video.get_absolute_url }}">{{ video.get_absolute_url }}</a></td>
+										<td>{{ video.Video_checked }}</td>
+									</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
 					</div>
-					<table class="table table-striped scroll">
-						<thead>
-							<tr>
-								<th>Video ID</th>
-								<th>Video snapshot</th>
-								<th>Checked</th>
-							</tr>
-						</thead>
-						{% if object_list %}
-						<tbody id="search-prescription-results">	
-							{% for video in object_list %}
-							<tr>
-								<td>{{ video.id }}</td>
-								<td><a href="{{ video.get_absolute_url }}">{{ video.get_absolute_url }}</a></td>
-								<td>{{ video.Video_checked }}</td>
-							</tr>
-							{% endfor %}
-						</tbody>
-						{% endif %}
-					</table>
 				</div>
 			</div>
 		</div>

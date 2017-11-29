@@ -3,20 +3,26 @@
 {% block title %}photo_detail{% endblock %}
 
 {% load staticfiles %}
-{%block extrastyle %}{% static 'css/video.css' %}{% endblock %}
+{%block extrastyle %}{% static 'css/video_detail.css' %}{% endblock %}
 
 {% block content %}
-<div>
-	<h2>{{ object.Video_name }}</h2>
-
-	<div>
-		<img style="max-width:100%" src="{{ object.Video_snapshot.url }}">
-	</div>
-{{ object.Video_snapshot.url }}
-	<div>
-		<video width="320" height="280" controls>
-			<source src="{{ object.Video_record_path }}">
-		</video>
+	<div class="container">
+		<div class="outer">
+			<div class="inner">
+				<h2>{{ object.Video_name }}</h2>
+				<div class="contents">
+					<div class="cards">
+						<div class="card">
+							<video controls>
+								<source src="{{ object.Video_record_path }}">
+							</video>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
+
 {% endblock %}
+

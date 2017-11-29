@@ -1,6 +1,6 @@
 .container{
 	width: 80%;
-	height: 50%;
+	height: 88%;
 	margin: 20px auto;
 	text-align: center;
 }
@@ -46,7 +46,8 @@
 table.scroll {
 	margin-top: 20px;
 	margin-left: 20px;
-	width: 97%;
+	margin-right: 20px;
+	width: 96%;
 	border-spacing: 1;
 }
 
@@ -68,7 +69,7 @@ table.scroll thead tr {
 table.scroll tr:after {
 	content: ' ';
 	display: block;
-	visibility: hidden;
+	//visibility: hidden;
 	clear: both;
 }
 
