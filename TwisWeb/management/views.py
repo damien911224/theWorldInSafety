@@ -87,7 +87,7 @@ def send_to_registed_users(uv):
 	for user in registered_users:
 		receivers.append(user.profile.phone_num)
 
-	content = "http://13.228.101.253:8080" + uv.get_user_absolute_url
+	content = "http://13.228.101.253:8080" + uv.get_user_absolute_url()
 
 	credential = "Basic "+base64.encodestring((appid+':'+apikey).encode()).decode().strip()
 	headers = {
