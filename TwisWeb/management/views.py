@@ -89,6 +89,7 @@ def send_to_registed_users(uv):
 
 	content = "http://13.228.101.253:8080" + uv.get_user_absolute_url()
 
+	print(content)
 	credential = "Basic "+base64.encodestring((appid+':'+apikey).encode()).decode().strip()
 	headers = {
 		"Content-type": "application/json;charset=utf-8",
