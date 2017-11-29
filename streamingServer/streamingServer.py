@@ -199,7 +199,7 @@ class StreamingServer():
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.sending_round = 1
+            self.sending_round = 2
 
 
         def run(self):
@@ -413,6 +413,15 @@ class StreamingServer():
 
                                 client_socket.send('Ready')
                                 client_socket.close()
+                                with self.streaming_server.print_lock:
+                                    print '{:10s}|{:15s}'.format('Controller', message_data.upper())
+                                break
+                            elif message_data == 'reset':
+                                session_folders = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
+                                for session_folder in session_folders:
+                                    rmtree(session_folder, ignore_errors=True)
+
+
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
                                 break

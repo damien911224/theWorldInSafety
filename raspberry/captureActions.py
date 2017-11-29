@@ -51,7 +51,9 @@ class Raspberry():
             self.raspberry = raspberry
 
             self.in_progress = True
-            self.web_cam_device_id = 0
+            self.web_cam_device_id = 1
+            self.use_webcam = True
+            self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_7.mp4'
             self.want_to_resize = False
             self.resize_size = ( 60.0, 60.0 )
             self.original_size = ( 640, 480 )
@@ -82,7 +84,10 @@ class Raspberry():
 
                 self.session_is_open = False
 
-                video_cap = cv2.VideoCapture(self.web_cam_device_id)
+                if self.use_webcam:
+                    video_cap = cv2.VideoCapture(self.web_cam_device_id)
+                else:
+                    video_cap = cv2.VideoCapture(self.test_video)
                 video_fps = int(video_cap.get(cv2.CAP_PROP_FPS)) + 1
                 self.wait_time = max(int(1000.0 / float(video_fps)), 1)
 
@@ -278,6 +283,8 @@ class Raspberry():
                 elif message == 'resume' or message == 'start':
                     self.send(message)
                     self.raspberry.camera.in_progress = True
+                elif message == 'reset':
+                    self.send(message)
 
                 self.controller_socket.close()
 

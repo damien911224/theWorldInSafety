@@ -77,7 +77,7 @@ while cap.isOpened():
             #print label, confidence
             cv2.rectangle(frame, (tl_x, tl_y), (br_x, br_y), box_colors, thick)
             cv2.putText(frame, ("{0} {1:.2f}".format(label, confidence)), (tl_x, tl_y - 12), 2, 1.0, box_colors,
-                        3)
+                        2)
     out.write(frame)
     #cv2.imshow('frame', frame)
     #if cv2.waitKey(1) & 0xFF == ord('q'):
