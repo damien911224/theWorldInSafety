@@ -227,6 +227,9 @@ class StreamingServer():
                         else:
                             break
 
+                    if not self.in_progress:
+                        break
+
                     if socket_closed:
                         continue
 
@@ -312,6 +315,8 @@ class StreamingServer():
 
                     self.client_socket.close()
 
+                self.client_socket.close()
+                print 'READY'
                 self.ready = True
 
 
