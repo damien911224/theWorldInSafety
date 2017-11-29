@@ -259,7 +259,7 @@ class Raspberry():
             self.raspberry = raspberry
 
             self.controller_socket = None
-            self.server_ip_address = '13.228.168.156'
+            self.server_ip_address = self.raspberry.camera.server_ip_address
             self.server_port_number = 9999
 
             self.client_name = self.raspberry.client_name
