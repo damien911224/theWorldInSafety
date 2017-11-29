@@ -1797,9 +1797,12 @@ class Closer():
                     cv2.rectangle(image, (semantic_topleft_x, semantic_topleft_y),
                                   (semantic_bottomright_x, semantic_bottomright_y),
                                   semantic_box_colors, semantic_thick)
-                    cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
+                    cv2.putText(image, ("{0}".format(semantic_label)),
                                 (semantic_topleft_x, semantic_topleft_y - 12), 0,
                                 1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
+                    # cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
+                    #             (semantic_topleft_x, semantic_topleft_y - 12), 0,
+                    #             1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
 
 
                 flow_bound = 20.0

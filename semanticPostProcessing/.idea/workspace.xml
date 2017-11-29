@@ -4,7 +4,6 @@
     <list default="true" id="d2be95d9-c4c9-4a28-98ed-6885b6ae9429" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../.gitignore" afterPath="$PROJECT_DIR$/../.gitignore" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../actionRecognition/twis/twisModelServer.py" afterPath="$PROJECT_DIR$/../actionRecognition/twis/twisModelServer.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/showResults.py" afterPath="$PROJECT_DIR$/showResults.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -30,8 +29,8 @@
       <file leaf-file-name="twisModelServer.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/../actionRecognition/twis/twisModelServer.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="474">
-              <caret line="1438" column="0" lean-forward="true" selection-start-line="1438" selection-start-column="0" selection-end-line="1438" selection-end-column="0" />
+            <state relative-caret-position="165">
+              <caret line="1420" column="59" lean-forward="false" selection-start-line="1420" selection-start-column="40" selection-end-line="1420" selection-end-column="59" />
               <folding />
             </state>
           </provider>
@@ -135,6 +134,7 @@
       <find>flow</find>
       <find>default</find>
       <find>puttext</find>
+      <find>semantic_confidence</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -814,8 +814,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/../actionRecognition/twis/twisModelServer.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="474">
-          <caret line="1438" column="0" lean-forward="true" selection-start-line="1438" selection-start-column="0" selection-end-line="1438" selection-end-column="0" />
+        <state relative-caret-position="165">
+          <caret line="1420" column="59" lean-forward="false" selection-start-line="1420" selection-start-column="40" selection-end-line="1420" selection-end-column="59" />
           <folding />
         </state>
       </provider>
