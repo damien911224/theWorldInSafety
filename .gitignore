@@ -5,7 +5,8 @@ __pycache__/
 
 # idea/workspace
 semanticPostProcessing/.idea/workspace.xml
-
+semanticPostProcessing/test/
+*.weights
 # tensorflow pb
 .pb
 *.pb

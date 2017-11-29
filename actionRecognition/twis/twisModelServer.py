@@ -2,7 +2,6 @@ import cv2
 import sys
 sys.path.append("../lib/caffe-action/python")
 import caffe
-import tensorflow as tf
 import os
 import numpy as np
 import time
@@ -14,7 +13,6 @@ from pipes import quote
 from caffe.io import oversample
 from utils.io import flow_stack_oversample, fast_list2arr
 from multiprocessing import Pool, Value, Lock, current_process, Manager
-from ctypes import c_int
 import copy_reg, types
 import gc
 import socket
@@ -26,7 +24,8 @@ sys.path.append("../../semanticPostProcessing")
 sys.path.append('../../semanticPostProcessing/darkflow')
 from post_process import SemanticPostProcessor
 import pycurl
-from cStringIO import StringIO
+from StringIO import StringIO
+import imutils
 
 
 
@@ -159,9 +158,11 @@ class Session():
         self.new_size = (224, 224)
         self.temporal_width = 1
         self.print_term = 50
-        self.fps = 25.0
+        self.fps = 30.0
         self.wait_time = 1.0 / self.fps
         self.wait_please = False
+        self.is_rotated = False
+        self.rotating_angle = -90
 
         self.start_index = 1
         self.dumped_index = 0
@@ -174,11 +175,13 @@ class Session():
         else:
             self.test_video_name = 'test_1.mp4'
         self.model_version = 4
-        self.build_temporal_net(self.model_version)
+        self.use_spatial_net = False
+        self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
+        self.average_delay = 0.0
 
-        self.server_ip_address = '13.125.52.6'
+        self.server_ip_address = '13.228.168.156'
         self.server_port_number = 8888
 
         self.client_host_name = '192.168.1.101'
@@ -206,6 +209,7 @@ class Session():
                 if not self.child_thread_started:
                     self.extractor_thread.start()
                     self.child_thread_started = True
+
 
                 while self.in_progress:
                     try:
@@ -247,27 +251,25 @@ class Session():
                                         else:
                                             frame_data += r
 
-                                    if frame_data.find(b'wait') != -1:
-                                        time.sleep(1.3)
-                                        try:
-                                            self.client_socket.send(b'Model is waiting')
-                                        except:
-                                            pass
-
-                                        if not socket_closed:
-                                            continue
-
+                                    if frame_data.find(b'!-!wait!-!') != -1:
+                                        time.sleep(0.3)
                             except:
                                 continue
 
+                            if frame_data.find(b'!-!wait!-!') != -1:
+                                continue
+
                             if self.in_progress and not socket_closed:
-                                header = frame_data[:22]
+                                header = frame_data[:36]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_data = frame_data[22:]
+                                frame_moment = int(header[22:36])
+                                frame_data = frame_data[36:]
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
+                                    self.session_delay = 0.0
+                                    self.delay_count = 0
                                     folders = [self.session_folder, self.image_folder,
                                                self.flow_folder, self.clip_folder, self.clip_view_folder,
                                                self.clip_send_folder, self.keep_folder]
@@ -297,7 +299,11 @@ class Session():
                                     if frame is not None:
                                         self.dumpFrames([frame])
                                         self.start_index += 1
-                                        self.dumped_index = self.start_index - 1
+                                        self.dumped_index = max(self.start_index - 1, 1)
+
+                                self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
+                                self.delay_count += 1
+                                self.average_delay = self.session_delay / self.delay_count / 10000000000.0
                             else:
                                 break
 
@@ -315,7 +321,7 @@ class Session():
                     self.finalize()
 
                     while not self.session_closed:
-                        time.sleep(0.5)
+                        time.sleep(0.3)
 
                     self.resume()
 
@@ -356,17 +362,23 @@ class Session():
                 self.finalize()
 
 
-    def build_temporal_net(self, version=3):
+    def build_net(self, version=4, use_spatial_net=False):
+        global spatial_net_gpu
+        global spatial_net_cpu
         global temporal_net_gpu
         global temporal_net_cpu
 
-
+        self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
+        self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
+            version)
         self.temporal_net_proto = "../models/twis/tsn_bn_inception_flow_deploy.prototxt"
         self.temporal_net_weights = "../models/twis_caffemodels/v{0}/twis_temporal_net_v{0}.caffemodel".format(
             version)
 
         device_id = 0
 
+        spatial_net_gpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, device_id)
+        spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
         temporal_net_gpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, device_id)
         temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
 
@@ -375,16 +387,20 @@ class Session():
         end_index = self.start_index + len(frames) - 1
         if end_index % self.print_term == 0:
             with self.print_lock:
-                print '{:10s}|{:12s}| Until {:07d}'.format('Session', 'Dumping', end_index)
+                print '{:10s}|{:12s}| Until {:07d}|Delay {:.6f} Seconds'.format('Session', 'Dumping', end_index, self.average_delay)
 
         index = self.start_index
         for frame in frames:
             file_name = os.path.join(self.image_folder, 'show_{:07d}.jpg'.format(index))
             new_frame = cv2.resize(frame, self.show_size, interpolation=cv2.INTER_AREA)
+            if self.is_rotated:
+                new_frame = imutils.rotate(new_frame, self.rotating_angle)
             cv2.imwrite(file_name, new_frame)
 
             file_name = os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index))
             new_frame = cv2.resize(frame, self.new_size, interpolation=cv2.INTER_AREA)
+            if self.is_rotated:
+                new_frame = imutils.rotate(new_frame, self.rotating_angle)
             cv2.imwrite(file_name, new_frame)
             index += 1
 
@@ -643,7 +659,8 @@ class Evaluator():
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
-        self.scanner = Scanner(self.session.flow_folder, self.num_workers, self.num_using_gpu)
+        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder,
+                               self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
 
         self.analyzer = Analyzer(self.session, self.extractor, self)
         self.analyzer_thread = threading.Thread(target=self.analyzer.run, name='Analyzer')
@@ -758,7 +775,8 @@ class Evaluator():
         global scanning_pool
         scanning_pool = Pool(processes=self.num_workers)
 
-        self.scanner = Scanner(self.session.flow_folder, self.num_workers, self.num_using_gpu)
+        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
+                               self.num_using_gpu, self.session.use_spatial_net)
 
         self.in_progress = True
 
@@ -774,10 +792,18 @@ class Evaluator():
 
 class Scanner():
 
-    def __init__(self, flow_folder, num_workers, num_using_gpu):
+    def __init__(self, image_folder, flow_folder, num_workers, num_using_gpu, use_spatial_net):
+        self.image_folder = image_folder
         self.flow_folder = flow_folder
         self.num_workers = num_workers
         self.num_using_gpu = num_using_gpu
+        self.use_spatial_net = use_spatial_net
+
+        self.rate_of_whole = 5.0
+        self.rate_of_time = 3.5
+        self.rate_of_space = self.rate_of_whole - self.rate_of_time
+
+        self.score_bound = 30.0
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
@@ -789,11 +815,8 @@ class Scanner():
         for i in xrange(len(indices)):
             scan_scores.append([0.0, 0.0])
 
-        scanning_pool.map(self.temporalScanVideo,
-                          zip([self.flow_folder] * len(indices),
-                              [self.num_workers] * len(indices),
-                              [self.num_using_gpu] * len(indices),
-                              [start_index] * len(indices),
+        scanning_pool.map(self.scanVideo,
+                          zip([start_index] * len(indices),
                               [actual_extracted_index] * len(indices),
                               [scan_scores] * len(indices),
                               indices))
@@ -803,51 +826,62 @@ class Scanner():
         return return_scores
 
 
-    def temporalScanVideo(self, scan_items):
-        input_path = scan_items[0]
-        num_workers = scan_items[1]
-        num_using_gpu = scan_items[2]
-        start_index = scan_items[3]
-        frame_count = scan_items[4]
-        scan_scores = scan_items[5]
-        index = scan_items[6]
+    def scanVideo(self, scan_items):
+        global spatial_net_gpu
+        global spatial_net_cpu
+        global temporal_net_gpu
+        global temporal_net_cpu
+
+        start_index = scan_items[0]
+        frame_count = scan_items[1]
+        scan_scores = scan_items[2]
+        index = scan_items[3]
 
         current = current_process()
         current_id = current._identity[0] - 1
 
-        if current_id % num_workers < num_using_gpu:
+        if current_id % self.num_workers < self.num_using_gpu:
+            spatial_net = spatial_net_gpu
             temporal_net = temporal_net_gpu
         else:
+            spatial_net = spatial_net_cpu
             temporal_net = temporal_net_cpu
 
         score_layer_name = 'fc-twis'
+
+        if self.use_spatial_net:
+            image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
+
+            rgb_score = \
+                spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
+                                                 frame_size=None)[0].tolist()
 
         flow_stack = []
         for i in range(-2, 3, 1):
             if index + i >= 2 and index + i <= frame_count:
                 x_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_x_{:07d}.jpg').format(index + i),
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
                     cv2.IMREAD_GRAYSCALE)
                 y_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_y_{:07d}.jpg').format(index + i),
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
                     cv2.IMREAD_GRAYSCALE)
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
             elif index + i < 2:
                 x_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_x_{:07d}.jpg').format(2),
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
                     cv2.IMREAD_GRAYSCALE)
                 y_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_y_{:07d}.jpg').format(2),
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
                     cv2.IMREAD_GRAYSCALE)
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
             else:
                 x_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_x_{:07d}.jpg').format(frame_count),
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
                     cv2.IMREAD_GRAYSCALE)
                 y_flow_field = cv2.imread(
-                    os.path.join(input_path, 'flow_y_{:07d}.jpg').format(frame_count),
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
                     cv2.IMREAD_GRAYSCALE)
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
@@ -856,7 +890,15 @@ class Scanner():
             temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
                                                    frame_size=None)[0].tolist()
 
-        scan_scores[index - start_index] = [flow_score[i] * 5.0 for i in xrange(len(flow_score))]
+        if self.use_spatial_net:
+            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
+                                                                     + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
+        else:
+            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
 
 
 class Analyzer():
@@ -874,11 +916,11 @@ class Analyzer():
         self.violence_index = 0
         self.normal_index = 1
         self.lower_bound = 0.0
-        self.max_lower_bound = 2.0
+        self.max_lower_bound = 0.3
         self.variance_factor = 2.0
         self.max_falling_count = 5
         self.falling_counter = 0
-        self.median_kernal_size = 7
+        self.median_kernal_size = 5
 
         self.real_base = 2
         self.not_yet = False
@@ -1281,7 +1323,6 @@ class Secretary():
             print '{:10s}|{} Finished'.format('Secretary', 'Progress Viewer')
 
         while not self.clip_viewer_closed:
-            print 'wait'
             time.sleep(0.3)
 
         time.sleep(0.3)
@@ -1383,17 +1424,19 @@ class Secretary():
                                         semantic_bottomright_x = box['bottomright_x']
                                         semantic_bottomright_y = box['bottomright_y']
                                         if semantic_label == 'Adult':
-                                            semantic_box_colors = (254, 0, 254)
+                                            semantic_box_colors = (189, 166, 36)
                                         else:
-                                            semantic_box_colors = (254, 254, 254)
+                                            semantic_box_colors = (128, 65, 217)
 
                                         cv2.rectangle(image, (semantic_topleft_x, semantic_topleft_y),
                                                       (semantic_bottomright_x, semantic_bottomright_y),
                                                       semantic_box_colors, semantic_thick)
-                                        cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
-                                                    (semantic_topleft_x, semantic_topleft_y - 12), 0,
-                                                    1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
-
+                                        cv2.putText(image, ("{0}".format(semantic_label)),
+                                                    (semantic_topleft_x, semantic_topleft_y - 12), 2,
+                                                    1.0, semantic_box_colors, 2)
+                                        # cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
+                                        #             (semantic_topleft_x, semantic_topleft_y - 12), 2,
+                                        #             1.0, semantic_box_colors, 2)
 
                                 flow_x = cv2.resize(cv2.imread(view_frames[frame_index]['flows'][0],cv2.IMREAD_GRAYSCALE),
                                                     self.secretary.session.show_size, interpolation=cv2.INTER_AREA)
@@ -1418,8 +1461,8 @@ class Secretary():
                                     frame_label = 'Normal'
                                     label_background_color = (255, 0, 0)
 
-                                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:05.02f}'.format(index, frame_label,
-                                                                                                       max(score))
+                                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:06.02f}%'.format(index, frame_label,
+                                                                                                       max(score) * 100.0)
                                 flow_head_text = '{}'.format('Optical Flow | Between {:07d} And {:07d}'.format(index-1, index))
 
                                 box_size, dummy = cv2.getTextSize(label_text, font, scale, thickness)
@@ -1781,7 +1824,8 @@ class Closer():
                     frame_label = 'Normal'
                     label_background_color = (255, 0, 0)
 
-                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:05.02f}'.format(index, frame_label, max(score))
+                label_text = 'Frame {:07d} | Prediction {:^8s} | Score {:06.02f}%'.format(index, frame_label,
+                                                                                          max(score) * 100.0)
 
                 flow_head_text = '{}'.format('Optical Flow | Between {:07d} And {:07d}'.format(index - 1, index))
 
@@ -1929,20 +1973,18 @@ class Closer():
                                                   user_clip_send_path.split('/')[-1],
                                                   admin_clip_send_path.split('/')[-1])
 
-        # c = pycurl.Curl()
-        # c.setopt(c.POST, 1)
-        # c.setopt(c.URL, 'http://13.228.101.253:8000/management/receive/')
-        # c.setopt(c.HTTPPOST,
-        #             [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
-        #              # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
-        # bodyOutput = StringIO()
-        # headersOutput = StringIO()
-        # c.setopt(c.WRITEFUNCTION, bodyOutput.write)
-        # c.setopt(c.HEADERFUNCTION, headersOutput.write)
-        # c.perform()
-        # c.close()
-
-        # output = bodyOutput.getvalue()
+        try:
+            c = pycurl.Curl()
+            c.setopt(c.VERBOSE, 0)
+            c.setopt(c.POST, 1)
+            c.setopt(c.URL, 'http://13.228.101.253:8000/management/receive/')
+            c.setopt(c.HTTPPOST,
+                        [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
+                         # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
+            c.perform()
+            c.close()
+        except:
+            pass
 
         for send_clip_path in clip_send_paths:
             try:
@@ -1967,7 +2009,7 @@ if __name__ == '__main__':
     session = Session()
 
     while True:
-        time.sleep(3.1451)
+        time.sleep(13.1451)
         with session.print_lock:
             print '------------------------------ Memory Checking ---------------------------------'
             cmd = 'free -h'

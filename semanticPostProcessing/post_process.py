@@ -14,7 +14,7 @@ class SemanticPostProcessor:
         root_folder =  os.path.abspath('../../semanticPostProcessing')
         options = {"pbLoad": os.path.join(root_folder, "own/my-yolo.pb"),
                    "metaLoad": os.path.join(root_folder, "own/my-yolo.meta"),
-                   "threshold": 0.1, "gpu": 0.8}
+                   "threshold": 0.1, "gpu": 0.7}
         self.tfnet = build.TFNet(options)
 
 
@@ -30,7 +30,7 @@ class SemanticPostProcessor:
                 continue
             result = self.tfnet.return_predict(img)
             for i in range(0, len(result), 1):
-                if result[i]['confidence'] > 0.15:
+                if result[i]['confidence'] > 0.3:
                     bounding_box = dict()
                     bounding_box['label'] = result[i]['label']
                     bounding_box['confidence'] = result[i]['confidence']
@@ -56,7 +56,7 @@ class SemanticPostProcessor:
             return boxes
         result = self.tfnet.return_predict(img)
         for i in range(0, len(result), 1):
-            if result[i]['confidence'] > 0.15:
+            if result[i]['confidence'] > 0.3:
                 bounding_box = dict()
                 bounding_box['label'] = result[i]['label']
                 bounding_box['confidence'] = result[i]['confidence']

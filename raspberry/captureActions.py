@@ -51,10 +51,15 @@ class Raspberry():
             self.raspberry = raspberry
 
             self.in_progress = True
-            self.web_cam_device_id = 0
+            self.web_cam_device_id = 1
+            self.use_webcam = True
+            self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_7.mp4'
+            self.want_to_resize = False
+            self.resize_size = ( 60.0, 60.0 )
+            self.original_size = ( 640, 480 )
 
             self.camera_socket = None
-            self.server_ip_address = '13.125.52.6'
+            self.server_ip_address = '13.228.168.156'
             self.server_port_number = 7777
 
             self.client_name = self.raspberry.client_name
@@ -67,6 +72,8 @@ class Raspberry():
             self.window_name = 'Raspberry'
             self.window_position = (0, 0)
 
+            self.visualization = True
+            self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
 
 
@@ -77,13 +84,27 @@ class Raspberry():
 
                 self.session_is_open = False
 
-                video_cap = cv2.VideoCapture(self.web_cam_device_id)
+                if self.use_webcam:
+                    video_cap = cv2.VideoCapture(self.web_cam_device_id)
+                else:
+                    video_cap = cv2.VideoCapture(self.test_video)
                 video_fps = int(video_cap.get(cv2.CAP_PROP_FPS)) + 1
                 self.wait_time = max(int(1000.0 / float(video_fps)), 1)
+
+                if self.want_to_resize:
+                    video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resize_size[0])
+                    video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resize_size[1])
+                    with self.raspberry.print_lock:
+                        print  '{:10s}|{:12s}|{}'.format('Camera', 'Resizing Camera', 
+                                '( {}, {} )'.format(int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 
+                                    int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+
 
                 if video_cap.isOpened():
                     while self.in_progress:
                         ok, frame = video_cap.read()
+                        if self.want_to_resize:
+                            frame = cv2.resize(frame, self.original_size, interpolation = cv2.INTER_AREA)
                         if not ok:
                             break
 
@@ -114,19 +135,26 @@ class Raspberry():
                                 self.camera_socket = None
 
                                 self.session_is_open = False
+                        
+                        if self.visualization:
+                            visualized_frame = self.visualize(frame, is_moving)
+                            cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
+                            cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
+                            cv2.waitKey(self.wait_time)
 
-                        visualized_frame = self.visualize(frame, is_moving)
-                        cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
-                        cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
-                        cv2.waitKey(self.wait_time)
+                        if self.session_index % self.display_term == 0:
+                            with self.raspberry.print_lock:
+                                print '{:10s}|{:12s}|{}'.format('Camera', 'Sending Frames', 'Unitl {:07d}'.format(self.session_index))
 
                     video_cap.release()
 
 
         def send(self, frame):
-            header = b'raspberry{:15s}{:07d}'.format(self.session_name, self.session_index)
+            header = b'raspberry{:15s}{:07d}{:14s}'.format(self.session_name, self.session_index,
+                                                           datetime.datetime.now().strftime('%M%S%s'))
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
-            send_data = header + frame_data + self.jpg_boundary
+            frame_data_length = len(frame_data)
+            send_data = header + b'{:07d}{}{}'.format(frame_data_length, frame_data, self.jpg_boundary)
             try:
                 self.camera_socket.send(send_data)
             except socket.error:
@@ -231,7 +259,7 @@ class Raspberry():
             self.raspberry = raspberry
 
             self.controller_socket = None
-            self.server_ip_address = '13.125.52.6'
+            self.server_ip_address = '13.228.168.156'
             self.server_port_number = 9999
 
             self.client_name = self.raspberry.client_name
@@ -255,6 +283,8 @@ class Raspberry():
                 elif message == 'resume' or message == 'start':
                     self.send(message)
                     self.raspberry.camera.in_progress = True
+                elif message == 'reset':
+                    self.send(message)
 
                 self.controller_socket.close()
 
