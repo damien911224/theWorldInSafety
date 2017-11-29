@@ -24,6 +24,7 @@ sys.path.append("../../semanticPostProcessing")
 sys.path.append('../../semanticPostProcessing/darkflow')
 from post_process import SemanticPostProcessor
 import pycurl
+from StringIO import StringIO
 import imutils
 
 
@@ -1974,6 +1975,7 @@ class Closer():
 
         try:
             c = pycurl.Curl()
+            c.setopt(c.VERBOSE, 0)
             c.setopt(c.POST, 1)
             c.setopt(c.URL, 'http://13.228.101.253:8000/management/receive/')
             c.setopt(c.HTTPPOST,
