@@ -175,7 +175,7 @@ class Session():
         else:
             self.test_video_name = 'test_1.mp4'
         self.model_version = 4
-        self.use_spatial_net = False
+        self.use_spatial_net = True
         self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
@@ -1612,10 +1612,10 @@ class Secretary():
                                         view_time = int(view_time / 2.0)
                                         self.view_has_next = False
 
-                                try:
-                                    os.remove(clip)
-                                except:
-                                    pass
+                                # try:
+                                #     os.remove(clip)
+                                # except:
+                                #     pass
 
                             del self.view_clips[0:len(view_clips)]
                             del view_clips
@@ -1974,7 +1974,7 @@ class Closer():
             c = pycurl.Curl()
             c.setopt(c.VERBOSE, 0)
             c.setopt(c.POST, 1)
-            c.setopt(c.URL, 'http://13.228.101.253:8000/management/receive/')
+            c.setopt(c.URL, 'http://13.228.101.253:8080/management/receive/')
             c.setopt(c.HTTPPOST,
                         [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
                          # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
