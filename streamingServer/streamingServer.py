@@ -63,12 +63,14 @@ class StreamingServer():
 
 
     class Raspberry():
+
         def __init__(self, streaming_server):
             self.streaming_server = streaming_server
 
             self.in_progress = True
             self.delay_display_term = 100
             self.delay_count = 0
+            self.delay_display = False
 
 
         def run(self):
@@ -167,7 +169,7 @@ class StreamingServer():
 
                                 self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
                                 self.delay_count += 1
-                                if frame_index % self.delay_display_term == 0:
+                                if self.delay_display and frame_index % self.delay_display_term == 0:
                                     with self.streaming_server.print_lock:
                                         average_delay = self.session_delay / self.delay_count / 10000000000.0
                                         print '{:10s}|{:15s}|{:.6f} Seconds'.format('Raspberry', 'Session Delay', average_delay)
