@@ -1,0 +1,26 @@
+<annotation>
+	<folder>img</folder>
+	<filename>kids22.jpg</filename>
+	<path>/home/najm/theWorldInSafety/semanticPostProcessing/img/kids22.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>320</width>
+		<height>240</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Child</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>4</xmin>
+			<ymin>77</ymin>
+			<xmax>253</xmax>
+			<ymax>177</ymax>
+		</bndbox>
+	</object>
+</annotation>
