@@ -417,9 +417,14 @@ class StreamingServer():
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
                                 break
                             elif message_data == 'reset':
-                                session_folders = glob.glob(os.path.join(self.streaming_server.save_folder), '*')
+                                session_folders = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                                 for session_folder in session_folders:
                                     rmtree(session_folder, ignore_errors=True)
+
+
+                                with self.streaming_server.print_lock:
+                                    print '{:10s}|{:15s}'.format('Controller', message_data.upper())
+                                break
 
 
                 except socket.timeout:
