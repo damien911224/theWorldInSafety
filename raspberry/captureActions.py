@@ -51,7 +51,7 @@ class Raspberry():
             self.raspberry = raspberry
 
             self.in_progress = True
-            self.web_cam_device_id = 1
+            self.web_cam_device_id = 0
             self.use_webcam = True
             self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_7.mp4'
             self.want_to_resize = False
@@ -59,7 +59,7 @@ class Raspberry():
             self.original_size = ( 640, 480 )
 
             self.camera_socket = None
-            self.server_ip_address = '13.228.168.156'
+            self.server_ip_address = '13.124.183.55'
             self.server_port_number = 7777
 
             self.client_name = self.raspberry.client_name
