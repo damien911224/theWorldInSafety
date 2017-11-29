@@ -199,7 +199,9 @@ class StreamingServer():
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.sending_round = 2
+            self.sending_round = 1
+            self.ready = False
+            self.session_is_open = False
 
 
         def run(self):
@@ -218,13 +220,16 @@ class StreamingServer():
                     self.client_socket, address = self.model_socket.accept()
 
                     socket_closed = False
-                    while True:
+                    while self.in_progress:
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
                             self.sendMessage(b'!-!wait!-!')
                             time.sleep(0.1)
                         else:
                             break
+
+                    if not self.in_progress:
+                        break
 
                     if socket_closed:
                         continue
@@ -238,6 +243,8 @@ class StreamingServer():
 
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
+
+                    self.session_is_open = True
 
 
                     frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
@@ -259,6 +266,12 @@ class StreamingServer():
                             except OSError:
                                 pass
 
+                            if not self.in_progress:
+                                break
+
+                    if not self.in_progress:
+                        break
+
 
                     if first_not_ok:
                         self.client_socket.close()
@@ -268,8 +281,8 @@ class StreamingServer():
 
 
                     if len(session_list) == 1:
-                        while True:
-                            while True:
+                        while self.in_progress:
+                            while self.in_progress:
                                 check_frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
                                 check_session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
 
@@ -304,12 +317,19 @@ class StreamingServer():
                                         os.remove(frame_path)
                                     except OSError:
                                         pass
+
+                                    if not self.in_progress:
+                                        break
                     else:
                         rmtree(self.session_folder, ignore_errors=True)
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
                     self.client_socket.close()
+
+                self.client_socket.close()
+                self.session_is_open = False
+                self.ready = True
 
 
         def send(self, frame):
@@ -324,8 +344,6 @@ class StreamingServer():
                     except socket.error:
                         return False
                         pass
-
-
             except:
                 pass
 
@@ -406,7 +424,7 @@ class StreamingServer():
                             elif message_data == 'resume' or message_data == 'start':
                                 self.streaming_server.raspberry.ready = False
                                 self.streaming_server.raspberry.in_progress = True
-                                while self.streaming_server.raspberry.ready:
+                                while not self.streaming_server.raspberry.ready:
                                     time.sleep(0.3)
 
                                 time.sleep(0.5)
@@ -417,10 +435,16 @@ class StreamingServer():
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
                                 break
                             elif message_data == 'reset':
+                                if self.streaming_server.model.session_is_open:
+                                    self.streaming_server.model.ready = False
+                                    self.streaming_server.model.in_progress = False
+                                    while not self.streaming_server.model.ready:
+                                        time.sleep(0.2)
                                 session_folders = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                                 for session_folder in session_folders:
                                     rmtree(session_folder, ignore_errors=True)
 
+                                self.streaming_server.model.in_progress = True
 
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
