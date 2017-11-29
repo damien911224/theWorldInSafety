@@ -1699,7 +1699,7 @@ class Closer():
                                     frame['semantics'] = clip_semantics[semantic_index]
                                 semantic_index += 1
 
-                            if True or ok:
+                            if ok:
                                 self.visualize(clip)
                             else:
                                 rmtree(clip['keep_folder'], ignore_errors=True)
