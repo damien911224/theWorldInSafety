@@ -199,6 +199,7 @@ class StreamingServer():
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.sending_round = 1
 
 
         def run(self):
@@ -316,17 +317,13 @@ class StreamingServer():
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary
-                try:
-                    self.client_socket.send(send_data)
-                except socket.error:
-                    return False
-                    pass
 
-                try:
-                    self.client_socket.send(send_data)
-                except socket.error:
-                    return False
-                    pass
+                for _ in range(self.sending_round):
+                    try:
+                        self.client_socket.send(send_data)
+                    except socket.error:
+                        return False
+                        pass
 
 
             except:
