@@ -240,8 +240,6 @@ class StreamingServer():
                     self.session_folder = session_list[0]
                     self.session_name = self.session_folder.split('/')[-1]
 
-                    print '333'
-
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
@@ -332,7 +330,6 @@ class StreamingServer():
 
         def send(self, frame):
             header = b'model{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
-            print self.session_index
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary
@@ -343,12 +340,8 @@ class StreamingServer():
                     except socket.error:
                         return False
                         pass
-
             except:
                 pass
-
-
-            print self.session_index
 
 
 
