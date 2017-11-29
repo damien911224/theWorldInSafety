@@ -28,9 +28,8 @@
 
 			<div class="submit-row">
 				<button class="btn btn-lg btn-primary btn-block" type="submit" value="Log In"/>Log in</button>
-				<input type="hidden" name="next" value="" />
+				<input type="hidden" name="next" value="{{ next }}"/>
 			</div>
-			
 			<script type="text/javascript">
 				document.getElementById('id_username').focus();
 			</script>
@@ -38,4 +37,4 @@
 		</form>
 	</div>
 
-{% endblock %}:
+{% endblock %}

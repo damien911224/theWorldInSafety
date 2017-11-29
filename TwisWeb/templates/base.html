@@ -34,6 +34,7 @@
 				<li class="nav-item"><a class="nav-link" href=#>Users</a></li>
 				{% elif user.is_active %}
 				<li class="nav-item"><a class="nav-link" href="{%url 'usersite:Facility_list' %}">My registered Facilities</a></li>
+
 				{% endif %}
 			</ul>
 			<h6 id="header" class="nav navbar-nav navbar-right">
