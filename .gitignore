@@ -11,7 +11,7 @@ __pycache__/
 
 # videos and jpgs
 #*.jpg
-*.mp4
+#*.mp4
 *.avi
 
 # caffemodel
@@ -114,3 +114,5 @@ ENV/
 
 #swp file
 *.swp
+
+db.sqlite3
