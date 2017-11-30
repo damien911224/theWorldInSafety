@@ -52,8 +52,8 @@ class Raspberry():
 
             self.in_progress = True
             self.web_cam_device_id = 0
-            self.use_webcam = True
-            self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_7.mp4'
+            self.use_webcam = False
+            self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_1.mp4'
             self.want_to_resize = False
             self.resize_size = ( 60.0, 60.0 )
             self.original_size = ( 640, 480 )

@@ -202,7 +202,7 @@ class StreamingServer():
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.sending_round = 2
+            self.sending_round = 3
             self.ready = False
             self.session_is_open = False
 
