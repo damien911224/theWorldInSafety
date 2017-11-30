@@ -3,20 +3,32 @@
 {% block title %}TWIS{% endblock %}
 {% load static %}
 {% block content %}
-	<link rel="stylesheet" href="{% static 'css/home.css' %}">
-	<div>
-		<img src="../static/img/twis.jpg" class="img-circle mx-auto d-block" alt="TWIS">
-	</div>
-	<div class="row">
-		{% if user.is_active %}
-		<div class="col-sm-5 card">
-			<p><a href=#>Welcome!!</a></p>
+	<div class="main">
+		<link rel="stylesheet" href="{% static 'css/home.css' %}">
+		<div>
+			<img src="../static/img/twis.jpg" class="img-circle mx-auto d-block" alt="TWIS">
 		</div>
-		{% else %}
-		<div class="mx-auto d-block">
-			<a class="btn btn-primary" href="{% url 'login' %}">Login</a>
-			<a class="btn btn-primary" href="{% url 'register'%}">Register</a>
+		
+		<div class="row con">
+			{% if user.is_active %}
+			<div class="col-sm-5 card">
+				<p><a href=#>Welcome!!</a></p>
+			</div>
+			{% else %}
+			<div class="row card explaination">
+				<p>
+				TWIS system is the total solution to prevent violence from children and the elderly.<br/>
+				We use Action Recognition models to detect violence in the video streaming.<br/>
+				Also we can find the time intervals in the stream which is with the violence action.<br/>
+				Child Detection with Yolo will filter false alarms and make our system perfect.<br/>
+				</p>
+				<div class="login-set">
+					<a class="btn btn-primary" href="{% url 'login' %}">Login</a>
+					<a class="btn btn-primary" href="{% url 'register'%}">Register</a>
+				</div>
+			</div>
+
+			{% endif %}
 		</div>
-		{% endif %}
 	</div>
 {% endblock %}
