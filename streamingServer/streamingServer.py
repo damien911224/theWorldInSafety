@@ -337,7 +337,7 @@ class StreamingServer():
                         return False
                         pass
             except:
-                print 'ERROR {:07d}'.format(frame_data)
+                print 'ERROR {:07d}'.format(self.session_index)
                 pass
 
 
