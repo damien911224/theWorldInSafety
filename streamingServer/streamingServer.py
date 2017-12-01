@@ -94,10 +94,10 @@ class StreamingServer():
                         client_socket, address = self.raspberry_socket.accept()
                         self.session_is_opened = False
 
+                        previous_data = b''
                         while self.in_progress:
                             socket_closed = False
-                            start_found = False
-                            frame_data = b''
+                            frame_data = previous_data + b''
                             try:
                                 while self.in_progress:
                                     r = client_socket.recv(90456)
@@ -105,24 +105,13 @@ class StreamingServer():
                                         socket_closed = True
                                         break
 
-                                    if not start_found:
-                                        a = r.find(b'raspberry')
-                                        if a != -1:
-                                            r = r[a+9:]
-                                            a = r.find(b'!TWIS_END!')
-                                            if a != -1:
-                                                frame_data += r[:a]
-                                                break
-                                            else:
-                                                frame_data += r
-                                            start_found = True
+                                    a = r.find(b'!TWIS_END!')
+                                    if a != -1:
+                                        frame_data += r[:a]
+                                        previous_data = r[a+10:]
+                                        break
                                     else:
-                                        a = r.find(b'!TWIS_END!')
-                                        if a != -1:
-                                            frame_data += r[:a]
-                                            break
-                                        else:
-                                            frame_data += r
+                                        frame_data += r
 
                             except Exception as e:
                                 continue
@@ -202,7 +191,7 @@ class StreamingServer():
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.sending_round = 2
+            self.sending_round = 1
             self.ready = False
             self.session_is_open = False
 
@@ -226,7 +215,6 @@ class StreamingServer():
                     while self.in_progress:
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
-                            self.sendMessage(b'!-!wait!-!')
                             time.sleep(0.1)
                         else:
                             break
@@ -292,7 +280,6 @@ class StreamingServer():
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
                                 else:
-                                    self.sendMessage(b'!-!wait!-!')
                                     time.sleep(0.1)
 
                             if socket_closed:
@@ -328,15 +315,13 @@ class StreamingServer():
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
-                    self.client_socket.close()
-
                 self.client_socket.close()
                 self.session_is_open = False
                 self.ready = True
 
 
         def send(self, frame):
-            header = b'model{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
+            header = b'{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary
@@ -356,7 +341,7 @@ class StreamingServer():
 
 
         def sendMessage(self, message):
-            send_message = b'model{}{}'.format(self.session_name, message, b'!TWIS_END!')
+            send_message = b'{}{}'.format(self.session_name, message, b'!TWIS_END!')
             try:
                 self.client_socket.send(send_message)
             except socket.error:
@@ -380,10 +365,11 @@ class StreamingServer():
                 try:
                     client_socket, address = self.controller_socket.accept()
 
+                    previous_data = b''
                     while True:
                         socket_closed = False
                         start_found = False
-                        message_data = b''
+                        message_data = previous_data + b''
                         try:
                             while True:
                                 r = client_socket.recv(90456)
@@ -398,6 +384,7 @@ class StreamingServer():
                                          a = r.find(b'!TWIS_END!')
                                          if a != -1:
                                              message_data += r[:a]
+                                             previous_data = r[a+10:]
                                              break
                                          else:
                                              message_data += r
@@ -406,6 +393,7 @@ class StreamingServer():
                                     a = r.find(b'!TWIS_END!')
                                     if a != -1:
                                         message_data += r[:a]
+                                        previous_data = r[a+10:]
                                         break
                                     else:
                                         message_data += r
@@ -430,9 +418,6 @@ class StreamingServer():
                                 while not self.streaming_server.raspberry.ready:
                                     time.sleep(0.3)
 
-                                time.sleep(0.5)
-
-                                client_socket.send('Ready')
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
@@ -449,8 +434,11 @@ class StreamingServer():
 
                                 self.streaming_server.model.in_progress = True
 
+                                client_socket.close()
+
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
+
                                 break
 
 

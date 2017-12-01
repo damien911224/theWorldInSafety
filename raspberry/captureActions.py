@@ -53,7 +53,7 @@ class Raspberry():
             self.in_progress = True
             self.web_cam_device_id = 0
             self.use_webcam = True
-            self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_7.mp4'
+            self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_1.mp4'
             self.want_to_resize = False
             self.resize_size = ( 60.0, 60.0 )
             self.original_size = ( 640, 480 )
@@ -75,6 +75,8 @@ class Raspberry():
             self.visualization = True
             self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
+
+            self.sending_round = 1
 
 
         def run(self):
@@ -144,21 +146,25 @@ class Raspberry():
 
                         if self.session_index % self.display_term == 0:
                             with self.raspberry.print_lock:
-                                print '{:10s}|{:12s}|{}'.format('Camera', 'Sending Frames', 'Unitl {:07d}'.format(self.session_index))
+                                print '{:10s}|{:12s}|{}'.format('Camera', 'Sending Frames', 'Until {:07d}'.format(self.session_index))
 
                     video_cap.release()
 
+                if not self.use_webcam:
+                    break
+
 
         def send(self, frame):
-            header = b'raspberry{:15s}{:07d}{:14s}'.format(self.session_name, self.session_index,
+            header = b'{:15s}{:07d}{:14s}'.format(self.session_name, self.session_index,
                                                            datetime.datetime.now().strftime('%M%S%s'))
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
             frame_data_length = len(frame_data)
             send_data = header + b'{:07d}{}{}'.format(frame_data_length, frame_data, self.jpg_boundary)
-            try:
-                self.camera_socket.send(send_data)
-            except socket.error:
-                pass
+            for _ in range(self.sending_round):
+                try:
+                    self.camera_socket.send(send_data)
+                except socket.error:
+                    pass
 
 
         def visualize(self, frame, is_moving):
@@ -299,14 +305,6 @@ class Raspberry():
             except socket.error:
                 pass
 
-            if message == 'resume' or message == 'start':
-                while True:
-                    try:
-                        r = str(self.controller_socket.recv(90456)).replace(' ', '')
-                        if r == 'Ready':
-                            break
-                    except socket.error:
-                        pass
 
 
 
