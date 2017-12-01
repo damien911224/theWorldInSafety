@@ -275,7 +275,6 @@ class Raspberry():
         def run(self):
             while True:
                 message = raw_input()
-                print message
 
                 self.client_port_number = random.sample(range(20000, 30000, 1), 1)[0]
                 self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -294,7 +293,6 @@ class Raspberry():
                     self.send(message)
 
                 self.controller_socket.close()
-                print 'closed'
 
                 with self.raspberry.print_lock:
                     print '{:10s}|{:12s}|{}'.format('Controller', 'Message', message.upper())
@@ -306,23 +304,6 @@ class Raspberry():
                 self.controller_socket.send(send_message)
             except socket.error:
                 pass
-
-            if message == 'resume' or message == 'start':
-                while True:
-                    try:
-                        r = str(self.controller_socket.recv(90456)).replace(' ', '')
-                        if r == 'Ready':
-                            break
-                    except socket.error:
-                        pass
-            elif message == 'reset':
-                while True:
-                    try:
-                        r = str(self.controller_socket.recv(90456)).replace(' ', '')
-                        if r == 'Ready':
-                            break
-                    except socket.error:
-                        pass
 
 
 

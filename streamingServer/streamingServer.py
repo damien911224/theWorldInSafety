@@ -363,6 +363,7 @@ class StreamingServer():
         def run(self):
             while True:
                 try:
+                    print 'acept'
                     client_socket, address = self.controller_socket.accept()
 
                     previous_data = b''
@@ -418,9 +419,6 @@ class StreamingServer():
                                 while not self.streaming_server.raspberry.ready:
                                     time.sleep(0.3)
 
-                                time.sleep(0.5)
-
-                                client_socket.send('Ready')
                                 client_socket.close()
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
@@ -437,11 +435,7 @@ class StreamingServer():
 
                                 self.streaming_server.model.in_progress = True
 
-                                time.sleep(0.5)
-
-                                client_socket.send('Ready')
                                 client_socket.close()
-
 
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
