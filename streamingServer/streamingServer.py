@@ -437,8 +437,12 @@ class StreamingServer():
 
                                 self.streaming_server.model.in_progress = True
 
+                                client_socket.close()
+
+
                                 with self.streaming_server.print_lock:
                                     print '{:10s}|{:15s}'.format('Controller', message_data.upper())
+
                                 break
 
 
