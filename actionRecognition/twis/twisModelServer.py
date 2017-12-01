@@ -221,10 +221,11 @@ class Session():
 
                         self.session_is_opened = False
 
+                        previous_data = b''
+                        previous_index = 0
+                        socket_closed = False
                         while self.in_progress:
-                            socket_closed = False
-                            start_found = False
-                            frame_data = b''
+                            frame_data = previous_data + b''
                             try:
                                 while self.in_progress:
                                     r = self.client_socket.recv(90456)
@@ -232,39 +233,31 @@ class Session():
                                         socket_closed = True
                                         break
 
-                                    if not start_found:
-                                        a = r.find(b'model')
-                                        if a != -1:
-                                            r = r[a + 5:]
-                                            a = r.find(b'!TWIS_END!')
-                                            if a != -1:
-                                                frame_data += r[:a]
-                                                break
-                                            else:
-                                                frame_data += r
-                                            start_found = True
+                                    a = r.find(b'!TWIS_END!')
+                                    if a != -1:
+                                        frame_data += r[:a]
+                                        previous_data = r[a+10:]
+                                        break
                                     else:
-                                        a = r.find(b'!TWIS_END!')
-                                        if a != -1:
-                                            frame_data += r[:a]
-                                            break
-                                        else:
-                                            frame_data += r
-
-                                    if frame_data.find(b'!-!wait!-!') != -1:
-                                        time.sleep(0.3)
+                                        frame_data += r
                             except:
                                 continue
 
-                            if frame_data.find(b'!-!wait!-!') != -1:
-                                continue
+                            if socket_closed:
+                                break
 
-                            if self.in_progress and not socket_closed:
+                            if self.in_progress:
                                 header = frame_data[:36]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
                                 frame_moment = int(header[22:36])
                                 frame_data = frame_data[36:]
+
+                                if frame_index - previous_index >= 2:
+                                    for i in range(previous_index+1, frame_index, 1):
+                                        print 'ERROR {:07d}'.format(i)
+
+                                previous_index = frame_index
 
                                 if not self.session_is_opened:
                                     self.session_name = session_name
@@ -308,6 +301,7 @@ class Session():
                                 break
 
                     except socket.timeout:
+                        self.client_socket.close()
                         continue
 
                     except KeyboardInterrupt:
