@@ -315,10 +315,9 @@ class StreamingServer():
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
-                    self.sendMessage('done')
-                    self.client_socket.close()
 
                 self.sendMessage('done')
+                print 'DONE'
                 self.client_socket.close()
                 self.session_is_open = False
                 self.ready = True
