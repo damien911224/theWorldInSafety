@@ -143,8 +143,6 @@ class StreamingServer():
                                 frame_length = int(header[36:43])
                                 frame_data = frame_data[43:]
 
-                                print header
-
                                 if len(frame_data) != frame_length:
                                     continue
 
@@ -341,7 +339,7 @@ class StreamingServer():
 
 
         def send(self, frame):
-            header = b'model{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
+            header = b'{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary
