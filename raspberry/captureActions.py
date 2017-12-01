@@ -146,9 +146,12 @@ class Raspberry():
 
                         if self.session_index % self.display_term == 0:
                             with self.raspberry.print_lock:
-                                print '{:10s}|{:12s}|{}'.format('Camera', 'Sending Frames', 'Unitl {:07d}'.format(self.session_index))
+                                print '{:10s}|{:12s}|{}'.format('Camera', 'Sending Frames', 'Until {:07d}'.format(self.session_index))
 
                     video_cap.release()
+
+                if not self.use_webcam:
+                    break
 
 
         def send(self, frame):

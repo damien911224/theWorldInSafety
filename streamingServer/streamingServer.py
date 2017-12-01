@@ -215,7 +215,6 @@ class StreamingServer():
                     while self.in_progress:
                         session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
                         if len(session_list) <= 0:
-                            # self.sendMessage(b'!-!wait!-!')
                             time.sleep(0.1)
                         else:
                             break
@@ -281,7 +280,6 @@ class StreamingServer():
                                 if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
                                     break
                                 else:
-                                    # self.sendMessage(b'!-!wait!-!')
                                     time.sleep(0.1)
 
                             if socket_closed:
@@ -317,8 +315,10 @@ class StreamingServer():
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
+                    self.sendMessage('done')
                     self.client_socket.close()
 
+                self.sendMessage('done')
                 self.client_socket.close()
                 self.session_is_open = False
                 self.ready = True
@@ -345,7 +345,7 @@ class StreamingServer():
 
 
         def sendMessage(self, message):
-            send_message = b'model{}{}'.format(self.session_name, message, b'!TWIS_END!')
+            send_message = b'{}{}'.format(self.session_name, message, b'!TWIS_END!')
             try:
                 self.client_socket.send(send_message)
             except socket.error:
