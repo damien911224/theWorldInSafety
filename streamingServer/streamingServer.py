@@ -315,9 +315,6 @@ class StreamingServer():
                         with self.streaming_server.print_lock:
                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
-
-                self.sendMessage('done')
-                print 'DONE'
                 self.client_socket.close()
                 self.session_is_open = False
                 self.ready = True
@@ -368,10 +365,11 @@ class StreamingServer():
                 try:
                     client_socket, address = self.controller_socket.accept()
 
+                    previous_data = b''
                     while True:
                         socket_closed = False
                         start_found = False
-                        message_data = b''
+                        message_data = previous_data + b''
                         try:
                             while True:
                                 r = client_socket.recv(90456)
@@ -386,6 +384,7 @@ class StreamingServer():
                                          a = r.find(b'!TWIS_END!')
                                          if a != -1:
                                              message_data += r[:a]
+                                             previous_data = r[a+10:]
                                              break
                                          else:
                                              message_data += r
@@ -394,6 +393,7 @@ class StreamingServer():
                                     a = r.find(b'!TWIS_END!')
                                     if a != -1:
                                         message_data += r[:a]
+                                        previous_data = r[a+10:]
                                         break
                                     else:
                                         message_data += r
