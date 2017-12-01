@@ -363,7 +363,6 @@ class StreamingServer():
         def run(self):
             while True:
                 try:
-                    print 'acept'
                     client_socket, address = self.controller_socket.accept()
 
                     previous_data = b''
