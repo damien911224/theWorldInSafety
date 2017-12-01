@@ -437,6 +437,9 @@ class StreamingServer():
 
                                 self.streaming_server.model.in_progress = True
 
+                                time.sleep(0.5)
+
+                                client_socket.send('Ready')
                                 client_socket.close()
 
 
