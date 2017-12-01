@@ -94,10 +94,11 @@ class StreamingServer():
                         client_socket, address = self.raspberry_socket.accept()
                         self.session_is_opened = False
 
+                        previous_data = b''
                         while self.in_progress:
                             socket_closed = False
                             start_found = False
-                            frame_data = b''
+                            frame_data = previous_data + b''
                             try:
                                 while self.in_progress:
                                     r = client_socket.recv(90456)
@@ -112,6 +113,7 @@ class StreamingServer():
                                             a = r.find(b'!TWIS_END!')
                                             if a != -1:
                                                 frame_data += r[:a]
+                                                previous_data = r[a+10:]
                                                 break
                                             else:
                                                 frame_data += r
@@ -120,6 +122,7 @@ class StreamingServer():
                                         a = r.find(b'!TWIS_END!')
                                         if a != -1:
                                             frame_data += r[:a]
+                                            previous_data = r[a+10:]
                                             break
                                         else:
                                             frame_data += r
@@ -139,6 +142,8 @@ class StreamingServer():
                                 frame_moment = int(header[22:36])
                                 frame_length = int(header[36:43])
                                 frame_data = frame_data[43:]
+
+                                print frame_index
 
                                 if len(frame_data) != frame_length:
                                     continue
@@ -202,7 +207,7 @@ class StreamingServer():
 
             self.jpg_boundary = b'!TWIS_END!'
             self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.sending_round = 3
+            self.sending_round = 1
             self.ready = False
             self.session_is_open = False
 
