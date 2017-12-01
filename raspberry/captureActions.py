@@ -52,7 +52,7 @@ class Raspberry():
 
             self.in_progress = True
             self.web_cam_device_id = 0
-            self.use_webcam = False
+            self.use_webcam = True
             self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_1.mp4'
             self.want_to_resize = False
             self.resize_size = ( 60.0, 60.0 )
@@ -75,6 +75,8 @@ class Raspberry():
             self.visualization = True
             self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
+
+            self.sending_round = 1
 
 
         def run(self):
@@ -155,10 +157,11 @@ class Raspberry():
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
             frame_data_length = len(frame_data)
             send_data = header + b'{:07d}{}{}'.format(frame_data_length, frame_data, self.jpg_boundary)
-            try:
-                self.camera_socket.send(send_data)
-            except socket.error:
-                pass
+            for _ in range(self.sending_round):
+                try:
+                    self.camera_socket.send(send_data)
+                except socket.error:
+                    pass
 
 
         def visualize(self, frame, is_moving):
