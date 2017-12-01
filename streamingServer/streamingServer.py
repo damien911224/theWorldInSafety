@@ -97,7 +97,6 @@ class StreamingServer():
                         previous_data = b''
                         while self.in_progress:
                             socket_closed = False
-                            start_found = False
                             frame_data = previous_data + b''
                             try:
                                 while self.in_progress:
@@ -106,26 +105,13 @@ class StreamingServer():
                                         socket_closed = True
                                         break
 
-                                    if not start_found:
-                                        a = r.find(b'raspberry')
-                                        if a != -1:
-                                            r = r[a+9:]
-                                            a = r.find(b'!TWIS_END!')
-                                            if a != -1:
-                                                frame_data += r[:a]
-                                                previous_data = r[a+10:]
-                                                break
-                                            else:
-                                                frame_data += r
-                                            start_found = True
+                                    a = r.find(b'!TWIS_END!')
+                                    if a != -1:
+                                        frame_data += r[:a]
+                                        previous_data = r[a+10:]
+                                        break
                                     else:
-                                        a = r.find(b'!TWIS_END!')
-                                        if a != -1:
-                                            frame_data += r[:a]
-                                            previous_data = r[a+10:]
-                                            break
-                                        else:
-                                            frame_data += r
+                                        frame_data += r
 
                             except Exception as e:
                                 continue
