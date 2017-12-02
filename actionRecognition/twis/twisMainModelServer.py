@@ -77,6 +77,9 @@ class CaffeNet(object):
 
 
     def predict_single_flow_stack(self, frame, score_name, over_sample=True, frame_size=None):
+        if frame is None:
+            return [0.0, 0.0]
+
         if frame_size is not None:
             frame = fast_list2arr([cv2.resize(x, frame_size, interpolation=cv2.INTER_AREA) for x in frame])
         else:
@@ -712,8 +715,6 @@ class Scanner():
         frame_count = end_index - start_index + 1
         for frame_index in range(start_index, end_index+1, 1):
             return_scores.append(self.scanFrame(frame_index, frame_count))
-
-        print return_scores
 
         return return_scores
 
