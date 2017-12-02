@@ -700,15 +700,20 @@ class Scanner():
         for i in xrange(len(indices)):
             scan_scores.append([0.0, 0.0])
 
-        return_scores = \
+        ret = \
             scanning_pool.imap(self.scanVideo,
                           zip([start_index] * len(indices),
                               [actual_extracted_index] * len(indices),
                               [scan_scores] * len(indices),
                               indices))
+        scanning_pool.waitall()
 
+        return_scores = []
+        for return_element in ret:
+            return_scores.append(return_element)
 
         print return_scores
+
         return return_scores
 
 
@@ -722,8 +727,6 @@ class Scanner():
         frame_count = scan_items[1]
         scan_scores = scan_items[2]
         index = scan_items[3]
-
-        print index
 
         if index % 2 == 0:
             spatial_net = spatial_net_gpu_01
