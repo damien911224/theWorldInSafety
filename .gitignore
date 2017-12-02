@@ -7,6 +7,10 @@ __pycache__/
 semanticPostProcessing/.idea/workspace.xml
 semanticPostProcessing/test/
 *.weights
+
+# dense_flow
+dense_flow/
+
 # tensorflow pb
 .pb
 *.pb
