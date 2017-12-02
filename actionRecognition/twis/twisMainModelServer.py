@@ -818,7 +818,7 @@ class Sender():
             # self.main_model_server_socket.connect((self.sub_model_server_ip_address, self.sub_model_server_port_number))
 
             self.start_index = 2
-            self.sent_index = -1
+            self.sent_index = 1
             while self.in_progress:
                 while self.sent_index >= self.evaluator.scanned_index and self.in_progress:
                     time.sleep(0.3)
