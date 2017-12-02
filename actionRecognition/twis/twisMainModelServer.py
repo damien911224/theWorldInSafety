@@ -848,9 +848,9 @@ class Sender():
 
                     frame_score = sending_scores[frame_index - sending_start_index]
 
-                    send_data = b'{}{}{}{}{}{}{}{}{}{}'.format(image_data, self.element_boundary, flow_x_data, self.element_boundary,
-                                                                 flow_y_data, self.element_boundary, frame_score[0], self.element_boundary,
-                                                                 frame_score[1], self.entire_boundary)
+                    # send_data = b'{}{}{}{}{}{}{}{}{}{}'.format(image_data, self.element_boundary, flow_x_data, self.element_boundary,
+                    #                                              flow_y_data, self.element_boundary, frame_score[0], self.element_boundary,
+                    #                                              frame_score[1], self.entire_boundary)
 
                     # try:
                     #     self.main_model_server_socket.send(send_data)
