@@ -22,6 +22,7 @@ import random
 import datetime
 sys.path.append("../../semanticPostProcessing")
 sys.path.append('../../semanticPostProcessing/darkflow')
+sys.path.append('..')
 from post_process import SemanticPostProcessor
 import pycurl
 from StringIO import StringIO
