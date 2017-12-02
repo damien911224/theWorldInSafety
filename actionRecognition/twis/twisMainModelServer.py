@@ -19,6 +19,7 @@ from shutil import copyfile
 from shutil import rmtree
 import random
 import datetime
+from eventlet import GreenPool
 
 
 
@@ -577,7 +578,7 @@ class Evaluator():
         self.scores = []
 
         global scanning_pool
-        scanning_pool = Pool(processes=self.num_workers)
+        scanning_pool = GreenPool(self.num_workers)
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
@@ -699,7 +700,7 @@ class Scanner():
         for i in xrange(len(indices)):
             scan_scores.append([0.0, 0.0])
 
-        scanning_pool.map(self.scanVideo,
+        scanning_pool.imap(self.scanVideo,
                           zip([start_index] * len(indices),
                               [actual_extracted_index] * len(indices),
                               [scan_scores] * len(indices),
