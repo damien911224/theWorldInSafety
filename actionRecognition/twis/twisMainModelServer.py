@@ -578,7 +578,7 @@ class Evaluator():
         self.scores = []
 
         global scanning_pool
-        scanning_pool = GreenPool(size=self.num_workers)
+        scanning_pool = GreenPool()
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
@@ -723,14 +723,14 @@ class Scanner():
         scan_scores = scan_items[2]
         index = scan_items[3]
 
+        print index
+
         if index % self.num_workers < self.num_using_gpu:
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_02
         else:
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_02
-
-        print index
 
         score_layer_name = 'fc-twis'
 
