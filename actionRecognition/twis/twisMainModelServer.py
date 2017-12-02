@@ -664,7 +664,7 @@ class Evaluator():
         self.scores = []
 
         global scanning_pool
-        scanning_pool = Pool(processes=self.num_workers)
+        scanning_pool = GreenPool()
 
         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
                                self.num_using_gpu, self.session.use_spatial_net)
@@ -700,15 +700,15 @@ class Scanner():
         for i in xrange(len(indices)):
             scan_scores.append([0.0, 0.0])
 
-        scanning_pool.imap(self.scanVideo,
+        return_scores = \
+            scanning_pool.imap(self.scanVideo,
                           zip([start_index] * len(indices),
                               [actual_extracted_index] * len(indices),
                               [scan_scores] * len(indices),
                               indices))
-        scanning_pool.waitall()
-        return_scores = []
-        return_scores += scan_scores
 
+
+        print return_scores
         return return_scores
 
 
@@ -725,11 +725,11 @@ class Scanner():
 
         print index
 
-        if index % self.num_workers < self.num_using_gpu:
+        if index % 2 == 0:
             spatial_net = spatial_net_gpu_01
-            temporal_net = temporal_net_gpu_02
+            temporal_net = temporal_net_gpu_01
         else:
-            spatial_net = spatial_net_gpu_01
+            spatial_net = spatial_net_gpu_02
             temporal_net = temporal_net_gpu_02
 
         score_layer_name = 'fc-twis'
@@ -741,7 +741,6 @@ class Scanner():
                 spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
                                                  frame_size=None)[0].tolist()
 
-        print rgb_score
 
         flow_stack = []
         for i in range(-2, 3, 1):
@@ -777,17 +776,18 @@ class Scanner():
             temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
                                                    frame_size=None)[0].tolist()
 
-        print flow_score
 
         if self.use_spatial_net:
-            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
+            entire_scores = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
                                                                      + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
                                                                  -self.score_bound, self.score_bound),
                                                          self.score_bound).tolist()
         else:
-            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
+            entire_scores = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
                                                                  -self.score_bound, self.score_bound),
                                                          self.score_bound).tolist()
+
+        return entire_scores
 
 
 class Sender():
