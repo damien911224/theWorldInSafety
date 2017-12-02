@@ -7,9 +7,7 @@ import os
 import numpy as np
 import time
 import glob
-import math
 import threading
-from sklearn import mixture
 from pipes import quote
 from caffe.io import oversample
 from utils.io import flow_stack_oversample, fast_list2arr
@@ -21,12 +19,6 @@ from shutil import copyfile
 from shutil import rmtree
 import random
 import datetime
-sys.path.append("../../semanticPostProcessing")
-sys.path.append('../../semanticPostProcessing/darkflow')
-from post_process import SemanticPostProcessor
-import pycurl
-from StringIO import StringIO
-import imutils
 
 
 
