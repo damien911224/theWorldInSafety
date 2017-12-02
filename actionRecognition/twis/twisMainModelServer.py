@@ -177,7 +177,7 @@ class Session():
         self.server_ip_address = '13.124.183.55'
         self.server_port_number = 8888
 
-        self.client_host_name = '115.145.173.160'
+        self.client_host_name = self.getMyIpAddress()
         self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
         self.extractor = Extractor(self)
@@ -384,6 +384,19 @@ class Session():
             index += 1
 
 
+    def getMyIpAddress(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect(("8.8.8.8", 80))
+
+        my_ip_address = sock.getsockname()[0]
+        sock.close()
+
+        with self.print_lock:
+            print '{:10s}|{:12s}|{}'.format('Raspberry', 'Connection', 'With IP {}'.format(raspberry_ip_address))
+
+        return my_ip_address
+
+
     def finalize(self):
         global session_closed
 
@@ -571,7 +584,7 @@ class Evaluator():
         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder,
                                self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
 
-        self.sender = Sender(self, self.session, self.extractor)
+        self.sender = Sender(self.session, self.extractor, self)
         self.sender_thread = threading.Thread(target=self.sender.run, name='Sender')
 
 
