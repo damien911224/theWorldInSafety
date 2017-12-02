@@ -697,24 +697,96 @@ class Scanner():
 
         indices = range(start_index, end_index + 1, 1)
 
-        for i in xrange(len(indices)):
-            scan_scores.append([0.0, 0.0])
+        # for i in xrange(len(indices)):
+        #     scan_scores.append([0.0, 0.0])
 
-        ret = \
-            scanning_pool.imap(self.scanVideo,
-                          zip([start_index] * len(indices),
-                              [actual_extracted_index] * len(indices),
-                              [scan_scores] * len(indices),
-                              indices))
-        scanning_pool.waitall()
+        # ret = \
+        #     scanning_pool.imap(self.scanVideo,
+        #                   zip([start_index] * len(indices),
+        #                       [actual_extracted_index] * len(indices),
+        #                       [scan_scores] * len(indices),
+        #                       indices))
+        # scanning_pool.waitall()
 
         return_scores = []
-        for return_element in ret:
-            return_scores.append(return_element)
+        frame_count = end_index - start_index + 1
+        for frame_index in range(start_index, end_index+1, 1):
+            return_scores.append(self.scanFrame(frame_index, frame_count))
 
         print return_scores
 
         return return_scores
+
+
+    def scanFrame(self, index, frame_count):
+        global spatial_net_gpu_01
+        global spatial_net_gpu_02
+        global temporal_net_gpu_01
+        global temporal_net_gpu_02
+
+        if index % 2 == 0:
+            spatial_net = spatial_net_gpu_01
+            temporal_net = temporal_net_gpu_01
+        else:
+            spatial_net = spatial_net_gpu_02
+            temporal_net = temporal_net_gpu_02
+
+        score_layer_name = 'fc-twis'
+
+        if self.use_spatial_net:
+            image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
+
+            rgb_score = \
+                spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
+                                                 frame_size=None)[0].tolist()
+
+
+        flow_stack = []
+        for i in range(-2, 3, 1):
+            if index + i >= 2 and index + i <= frame_count:
+                x_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
+                    cv2.IMREAD_GRAYSCALE)
+                y_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
+                    cv2.IMREAD_GRAYSCALE)
+                flow_stack.append(x_flow_field)
+                flow_stack.append(y_flow_field)
+            elif index + i < 2:
+                x_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
+                    cv2.IMREAD_GRAYSCALE)
+                y_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
+                    cv2.IMREAD_GRAYSCALE)
+                flow_stack.append(x_flow_field)
+                flow_stack.append(y_flow_field)
+            else:
+                x_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
+                    cv2.IMREAD_GRAYSCALE)
+                y_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
+                    cv2.IMREAD_GRAYSCALE)
+                flow_stack.append(x_flow_field)
+                flow_stack.append(y_flow_field)
+
+        flow_score = \
+            temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
+                                                   frame_size=None)[0].tolist()
+
+
+        if self.use_spatial_net:
+            entire_scores = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
+                                                                     + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
+        else:
+            entire_scores = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
+
+        return entire_scores
 
 
     def scanVideo(self, scan_items):
