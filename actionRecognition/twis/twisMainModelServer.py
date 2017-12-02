@@ -171,8 +171,6 @@ class Session():
         self.use_spatial_net = True
         self.build_net(self.model_version, self.use_spatial_net)
 
-        print 'Build Net Done!'
-
         self.print_lock = Lock()
         self.average_delay = 0.0
 
