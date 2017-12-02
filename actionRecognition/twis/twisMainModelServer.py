@@ -177,7 +177,7 @@ class Session():
         self.server_ip_address = '13.124.183.55'
         self.server_port_number = 8888
 
-        self.client_host_name = '192.168.1.101'
+        self.client_host_name = '115.145.173.160'
         self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
         self.extractor = Extractor(self)
