@@ -521,8 +521,8 @@ class Extractor():
         optical_flow_y_path = '{}/flow_y'.format(flow_dst_folder)
 
         cmd = os.path.join(
-            df_path + '/build/extract_cpu') + ' -v {} -f {} -p {} -e {} -x {} -y {} -i {} -c {} -b 20 -o {}'.format(
-            quote(video_file_path), quote(frame_prefix), start_index, end_index, quote(optical_flow_x_path),
+            df_path + '/build/extract_cpu') + ' -f {} -p {} -e {} -x {} -y {} -i {} -c {} -b 20 -o {}'.format(
+            quote(frame_prefix), start_index, end_index, quote(optical_flow_x_path),
             quote(optical_flow_y_path), quote(image_path), frame_count, out_format)
 
         with self.cmd_lock:
