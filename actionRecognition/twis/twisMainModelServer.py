@@ -392,7 +392,7 @@ class Session():
         sock.close()
 
         with self.print_lock:
-            print '{:10s}|{:12s}|{}'.format('Raspberry', 'Connection', 'With IP {}'.format(raspberry_ip_address))
+            print '{:10s}|{:12s}|{}'.format('Session', 'Connection', 'With IP {}'.format(my_ip_address))
 
         return my_ip_address
 
