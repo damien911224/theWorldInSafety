@@ -708,8 +708,6 @@ class Scanner():
         return_scores = []
         return_scores += scan_scores
 
-        print return_scores
-
         return return_scores
 
 
