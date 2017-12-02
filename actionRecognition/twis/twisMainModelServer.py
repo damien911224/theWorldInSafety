@@ -1,7 +1,8 @@
-import cv2
 import sys
 sys.path.append("../lib/caffe-action/python")
+sys.path.append('..')
 import caffe
+import cv2
 import os
 import numpy as np
 import time
@@ -22,7 +23,6 @@ import random
 import datetime
 sys.path.append("../../semanticPostProcessing")
 sys.path.append('../../semanticPostProcessing/darkflow')
-sys.path.append('..')
 from post_process import SemanticPostProcessor
 import pycurl
 from StringIO import StringIO
