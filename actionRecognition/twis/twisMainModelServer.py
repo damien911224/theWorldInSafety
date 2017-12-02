@@ -350,10 +350,10 @@ class Session():
 
 
     def build_net(self, version=4, use_spatial_net=False):
-        global spatial_net_gpu
-        global spatial_net_cpu
-        global temporal_net_gpu
-        global temporal_net_cpu
+        global spatial_net_gpu_01
+        global spatial_net_gpu_02
+        global temporal_net_gpu_01
+        global temporal_net_gpu_02
 
         self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
         self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
@@ -362,12 +362,10 @@ class Session():
         self.temporal_net_weights = "../models/twis_caffemodels/v{0}/twis_temporal_net_v{0}.caffemodel".format(
             version)
 
-        device_id = 0
-
-        spatial_net_gpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, device_id)
-        spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
-        temporal_net_gpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, device_id)
-        temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
+        spatial_net_gpu_01 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 0)
+        spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
+        temporal_net_gpu_01 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 0)
+        temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
 
 
     def dumpFrames(self, frames):
@@ -554,7 +552,7 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 12
+        self.num_workers = 16
         self.num_using_gpu = 8
 
         self.start_index = 2
@@ -714,11 +712,11 @@ class Scanner():
         current_id = current._identity[0] - 1
 
         if current_id % self.num_workers < self.num_using_gpu:
-            spatial_net = spatial_net_gpu
-            temporal_net = temporal_net_gpu
+            spatial_net = spatial_net_gpu_01
+            temporal_net = temporal_net_gpu_01
         else:
-            spatial_net = spatial_net_cpu
-            temporal_net = temporal_net_cpu
+            spatial_net = spatial_net_gpu_02
+            temporal_net = temporal_net_gpu_02
 
         score_layer_name = 'fc-twis'
 
