@@ -52,11 +52,25 @@ void encodeFlowMap(const Mat& flow_map_x, const Mat& flow_map_y,
 void writeImages(vector<vector<uchar>> images, string name_temp){
     for (int i = 0; i < images.size(); ++i){
         char tmp[256];
-        sprintf(tmp, "_%05d.jpg", i+1);
+		sprintf(tmp, "_%07d.jpg", i+1);
         FILE* fp;
         fp = fopen((name_temp + tmp).c_str(), "wb");
         fwrite( images[i].data(), 1, images[i].size(), fp);
         fclose(fp);
     }
+}
+
+void writeImageIndex(vector<vector<uchar>> images, string name_temp, int start_index, int end_index){
+    int index = start_index;
+    for(int i=0; i < images.size(); ++i) {
+        char tmp[256];
+	    sprintf(tmp, "_%07d.jpg", index);
+        FILE* fp;
+        fp = fopen((name_temp + tmp).c_str(), "wb");
+        fwrite( images[i].data(), 1, images[i].size(), fp);
+        fclose(fp);
+		index++;
+		if(index > end_index) break;
+	}
 }
 

@@ -6,7 +6,10 @@
 #define DENSEFLOW_COMMON_H_H
 
 
+using namespace std;
 
+#include <string>
+#include <vector>
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -34,6 +37,8 @@ inline void initializeMats(const Mat& frame,
 }
 
 void writeImages(vector<vector<uchar>> images, string name_temp);
+
+void writeImageIndex(vector<vector<uchar>> images, string name_temp, int start_index, int end_index);
 
 #endif //DENSEFLOW_COMMON_H_H
 

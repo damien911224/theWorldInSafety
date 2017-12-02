@@ -1,6 +1,3 @@
-//
-// Created by yjxiong on 11/18/15.
-//
 #include "common.h"
 #include "dense_flow.h"
 
