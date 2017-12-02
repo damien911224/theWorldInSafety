@@ -724,7 +724,7 @@ class Scanner():
         global temporal_net_gpu_01
         global temporal_net_gpu_02
 
-        if index % 2 == 0:
+        if index % 1 == 0:
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_01
         else:
