@@ -743,6 +743,8 @@ class Scanner():
                 spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
                                                  frame_size=None)[0].tolist()
 
+        print rgb_score
+
         flow_stack = []
         for i in range(-2, 3, 1):
             if index + i >= 2 and index + i <= frame_count:
@@ -776,6 +778,8 @@ class Scanner():
         flow_score = \
             temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
                                                    frame_size=None)[0].tolist()
+
+        print flow_score
 
         if self.use_spatial_net:
             scan_scores[index - start_index] = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
