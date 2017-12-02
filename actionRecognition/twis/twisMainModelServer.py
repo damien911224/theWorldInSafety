@@ -67,11 +67,16 @@ class CaffeNet(object):
         else:
             os_frame = fast_list2arr(frame)
 
+        print 'init 000'
         data = fast_list2arr([self._transformer.preprocess('data', x) for x in os_frame])
 
+        print 'init 1111'
         self._net.blobs['data'].reshape(*data.shape)
+        print 'init 222'
         self._net.reshape()
+        print 'init 3333'
         out = self._net.forward(blobs=[score_name, ], data=data)
+        print 'init 4444'
         return out[score_name].copy()
 
 
@@ -587,8 +592,6 @@ class Evaluator():
         self.sender = Sender(self.session, self.extractor, self)
         self.sender_thread = threading.Thread(target=self.sender.run, name='Sender')
 
-        print 'Init'
-
 
     def run(self):
         self.child_thread_started = False
@@ -725,8 +728,6 @@ class Scanner():
 
         current = current_process()
         current_id = current._identity[0] - 1
-
-        print 'Init222'
 
         if current_id % self.num_workers < self.num_using_gpu:
             spatial_net = spatial_net_gpu_01
