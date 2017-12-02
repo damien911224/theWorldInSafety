@@ -67,16 +67,11 @@ class CaffeNet(object):
         else:
             os_frame = fast_list2arr(frame)
 
-        print 'init 000'
         data = fast_list2arr([self._transformer.preprocess('data', x) for x in os_frame])
 
-        print 'init 1111'
         self._net.blobs['data'].reshape(*data.shape)
-        print 'init 222'
         self._net.reshape()
-        print 'init 3333'
         out = self._net.forward(blobs=[score_name, ], data=data)
-        print 'init 4444'
         return out[score_name].copy()
 
 
@@ -368,9 +363,9 @@ class Session():
             version)
 
         spatial_net_gpu_01 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 0)
-        spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
+        # spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
         temporal_net_gpu_01 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 0)
-        temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
+        # temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
 
 
     def dumpFrames(self, frames):
@@ -733,8 +728,8 @@ class Scanner():
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_01
         else:
-            spatial_net = spatial_net_gpu_02
-            temporal_net = temporal_net_gpu_02
+            spatial_net = spatial_net_gpu_01
+            temporal_net = temporal_net_gpu_01
 
         score_layer_name = 'fc-twis'
 
