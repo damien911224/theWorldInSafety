@@ -1,5 +1,5 @@
 import sys
-sys.path.append("../lib/caffe-action/python")
+sys.path.insert(0, "../lib/caffe-action/python")
 sys.path.append('..')
 import caffe
 import cv2
