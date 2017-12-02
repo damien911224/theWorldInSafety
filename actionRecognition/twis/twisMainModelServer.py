@@ -587,6 +587,8 @@ class Evaluator():
         self.sender = Sender(self.session, self.extractor, self)
         self.sender_thread = threading.Thread(target=self.sender.run, name='Sender')
 
+        print 'Init'
+
 
     def run(self):
         self.child_thread_started = False
@@ -711,10 +713,10 @@ class Scanner():
 
 
     def scanVideo(self, scan_items):
-        global spatial_net_gpu
-        global spatial_net_cpu
-        global temporal_net_gpu
-        global temporal_net_cpu
+        global spatial_net_gpu_01
+        global spatial_net_gpu_02
+        global temporal_net_gpu_01
+        global temporal_net_gpu_02
 
         start_index = scan_items[0]
         frame_count = scan_items[1]
@@ -723,6 +725,8 @@ class Scanner():
 
         current = current_process()
         current_id = current._identity[0] - 1
+
+        print 'Init222'
 
         if current_id % self.num_workers < self.num_using_gpu:
             spatial_net = spatial_net_gpu_01
@@ -739,6 +743,8 @@ class Scanner():
             rgb_score = \
                 spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
                                                  frame_size=None)[0].tolist()
+
+        print 'Init3333'
 
         flow_stack = []
         for i in range(-2, 3, 1):
@@ -773,6 +779,8 @@ class Scanner():
         flow_score = \
             temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
                                                    frame_size=None)[0].tolist()
+
+        print 'Init 4444'
 
         if self.use_spatial_net:
             scan_scores[index - start_index] = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
