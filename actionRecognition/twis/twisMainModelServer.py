@@ -708,6 +708,8 @@ class Scanner():
         return_scores = []
         return_scores += scan_scores
 
+        print return_scores
+
         return return_scores
 
 
@@ -835,8 +837,8 @@ class Sender():
 
                 for frame_index in range(sending_start_index, sending_end_index+1, 1):
                     image = cv2.imread(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index)))
-                    flow_x = cv2.imread(os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(frame_index)))
-                    flow_y = cv2.imread(os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(frame_index)))
+                    flow_x = cv2.imread(os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(frame_index)), cv2.IMREAD_GRAYSCALE)
+                    flow_y = cv2.imread(os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(frame_index)), cv2.IMREAD_GRAYSCALE)
 
                     image_data = cv2.imencode('.jpg', image)[1].tostring()
                     flow_x_data = cv2.imencode('.jpg', flow_x)[1].tostring()
