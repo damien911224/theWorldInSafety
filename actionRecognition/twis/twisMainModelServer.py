@@ -574,7 +574,7 @@ class Evaluator():
                                self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
 
         self.sender = Sender(self, self.session, self.extractor)
-        self.sender_thread = threading.Thread(self.sender.run, name='Sender')
+        self.sender_thread = threading.Thread(target=self.sender.run, name='Sender')
 
 
     def run(self):
