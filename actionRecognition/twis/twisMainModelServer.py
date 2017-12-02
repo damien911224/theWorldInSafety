@@ -363,9 +363,9 @@ class Session():
             version)
 
         spatial_net_gpu_01 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 0)
-        # spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
+        spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
         temporal_net_gpu_01 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 0)
-        # temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
+        temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
 
 
     def dumpFrames(self, frames):
@@ -726,10 +726,10 @@ class Scanner():
 
         if current_id % self.num_workers < self.num_using_gpu:
             spatial_net = spatial_net_gpu_01
-            temporal_net = temporal_net_gpu_01
+            temporal_net = temporal_net_gpu_02
         else:
             spatial_net = spatial_net_gpu_01
-            temporal_net = temporal_net_gpu_01
+            temporal_net = temporal_net_gpu_02
 
         score_layer_name = 'fc-twis'
 
@@ -739,8 +739,6 @@ class Scanner():
             rgb_score = \
                 spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
                                                  frame_size=None)[0].tolist()
-
-        print 'Init3333'
 
         flow_stack = []
         for i in range(-2, 3, 1):
@@ -775,8 +773,6 @@ class Scanner():
         flow_score = \
             temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
                                                    frame_size=None)[0].tolist()
-
-        print 'Init 4444'
 
         if self.use_spatial_net:
             scan_scores[index - start_index] = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
