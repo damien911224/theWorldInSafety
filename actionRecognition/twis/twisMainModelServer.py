@@ -247,8 +247,7 @@ class Session():
                                 header = frame_data[:36]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_moment = int(header[22:36])
-                                frame_data = frame_data[36:]
+                                frame_data = frame_data[22:]
 
                                 if frame_index - previous_index >= 2:
                                     for i in range(previous_index+1, frame_index, 1):
@@ -291,9 +290,9 @@ class Session():
                                         self.start_index += 1
                                         self.dumped_index = max(self.start_index - 1, 1)
 
-                                self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
-                                self.delay_count += 1
-                                self.average_delay = self.session_delay / self.delay_count / 10000000000.0
+                                # self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
+                                # self.delay_count += 1
+                                # self.average_delay = self.session_delay / self.delay_count / 10000000000.0
                             else:
                                 break
 
@@ -376,7 +375,7 @@ class Session():
         end_index = self.start_index + len(frames) - 1
         if end_index % self.print_term == 0:
             with self.print_lock:
-                print '{:10s}|{:12s}| Until {:07d}|Delay {:.6f} Seconds'.format('Session', 'Dumping', end_index, self.average_delay)
+                print '{:10s}|{:12s}| Until {:07d}'.format('Session', 'Dumping', end_index)
 
         index = self.start_index
         for frame in frames:

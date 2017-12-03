@@ -122,12 +122,11 @@ class StreamingServer():
                                     print '{:10s}|{:15s}|{}'.format('Raspberry', 'Session Closed', self.session_name)
                                 break
                             else:
-                                header = frame_data[:43]
+                                header = frame_data[:29]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_moment = int(header[22:36])
-                                frame_length = int(header[36:43])
-                                frame_data = frame_data[43:]
+                                frame_length = int(header[22:29])
+                                frame_data = frame_data[29:]
 
                                 if len(frame_data) != frame_length:
                                     continue
