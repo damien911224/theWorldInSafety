@@ -1,8 +1,7 @@
 import sys
 sys.path.insert(0, "../lib/caffe-action/python")
 sys.path.append('..')
-import caffe as caffe_01
-import caffe as caffe_02
+import caffe
 import cv2
 import os
 import numpy as np
@@ -26,58 +25,31 @@ from eventlet import GreenPool
 class CaffeNet(object):
 
     def __init__(self, net_proto, net_weights, device_id, input_size=None):
-        if device_id == 0:
-            caffe_01.set_logging_disabled()
+        caffe.set_logging_disabled()
 
-            if device_id >= 0:
-                caffe_01.set_mode_gpu()
-                caffe_01.set_device(device_id)
-            else:
-                caffe_01.set_mode_cpu()
-            self._net = caffe_01.Net(net_proto, net_weights, caffe_01.TEST)
-
-            input_shape = self._net.blobs['data'].data.shape
-
-            if input_size is not None:
-                input_shape = input_shape[:2] + input_size
-
-            transformer = caffe_01.io.Transformer({'data': input_shape})
-
-            if self._net.blobs['data'].data.shape[1] == 3:
-                transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
-                transformer.set_mean('data',
-                                     np.array([104, 117, 123]))  # subtract the dataset-mean value in each channel
-            else:
-                pass  # non RGB data need not use transformer
-
-            self._transformer = transformer
-            self._sample_shape = self._net.blobs['data'].data.shape
+        if device_id >= 0:
+            caffe.set_mode_gpu()
+            caffe.set_device(device_id)
         else:
-            caffe_02.set_logging_disabled()
+            caffe.set_mode_cpu()
+        self._net = caffe.Net(net_proto, net_weights, caffe.TEST)
 
-            if device_id >= 0:
-                caffe_02.set_mode_gpu()
-                caffe_02.set_device(device_id)
-            else:
-                caffe_02.set_mode_cpu()
-            self._net = caffe_02.Net(net_proto, net_weights, caffe_02.TEST)
+        input_shape = self._net.blobs['data'].data.shape
 
-            input_shape = self._net.blobs['data'].data.shape
+        if input_size is not None:
+            input_shape = input_shape[:2] + input_size
 
-            if input_size is not None:
-                input_shape = input_shape[:2] + input_size
+        transformer = caffe.io.Transformer({'data': input_shape})
 
-            transformer = caffe_02.io.Transformer({'data': input_shape})
+        if self._net.blobs['data'].data.shape[1] == 3:
+            transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
+            transformer.set_mean('data',
+                                 np.array([104, 117, 123]))  # subtract the dataset-mean value in each channel
+        else:
+            pass  # non RGB data need not use transformer
 
-            if self._net.blobs['data'].data.shape[1] == 3:
-                transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
-                transformer.set_mean('data',
-                                     np.array([104, 117, 123]))  # subtract the dataset-mean value in each channel
-            else:
-                pass  # non RGB data need not use transformer
-
-            self._transformer = transformer
-            self._sample_shape = self._net.blobs['data'].data.shape
+        self._transformer = transformer
+        self._sample_shape = self._net.blobs['data'].data.shape
 
 
     def predict_single_frame(self, frame, score_name, over_sample=True, multiscale=None, frame_size=None):
@@ -705,51 +677,27 @@ class Scanner():
         device_id_first = 0
         device_id_second = 1
 
-        return_scores = [0.0] * len(indices_first + indices_second)
+        scan_scores_first = \
+            scanning_pool_first.imap(self.scanVideo,
+                                     zip([actual_extracted_index] * len(indices_first),
+                                         indices_first, [device_id_first] * len(indices_first)))
 
+        scan_scores_second = \
+            scanning_pool_second.imap(self.scanVideo,
+                                     zip([actual_extracted_index] * len(indices_second),
+                                         indices_second, [device_id_second] * len(indices_second)))
 
-        process_first = threading.Thread(target=self.scanFrames,
-                                         args=(indices_first, start_index, actual_extracted_index, device_id_first, return_scores))
+        scanning_pool_first.waitall()
+        scanning_pool_second.waitall()
 
+        return_scores = []
+        for score in scan_scores_first:
+            return_scores.append(score)
 
-        process_first.start()
-        process_first.join()
-
-
-        process_second = threading.Thread(target=self.scanFrames,
-                                          args=(indices_second, start_index, actual_extracted_index, device_id_second, return_scores))
-
-
-        process_second.start()
-        process_second.join()
+        for score in scan_scores_second:
+            return_scores.append(score)
 
         print return_scores
-
-
-        # scan_scores_first = \
-        #     scanning_pool_first.imap(self.scanVideo,
-        #                              zip([actual_extracted_index] * len(indices_first),
-        #                                  indices_first, [device_id_first] * len(indices_first)))
-
-        # scan_scores_second = \
-        #     scanning_pool_first.imap(self.scanVideo,
-        #                              zip([actual_extracted_index] * len(indices_second),
-        #                                  indices_second, [device_id_second] * len(indices_second)))
-
-        # scanning_pool_first.waitall()
-        # # scanning_pool_second.waitall()
-        #
-        # return_scores = []
-        # for score in scan_scores_first:
-        #     return_scores.append(score)
-
-        # for score in scan_scores_second:
-        #     return_scores.append(score)
-
-        # return_scores = []
-        # frame_count = end_index - start_index + 1
-        # for frame_index in range(start_index, end_index+1, 1):
-        #     return_scores.append(self.scanFrame(frame_index, frame_count)
 
         return return_scores
 
