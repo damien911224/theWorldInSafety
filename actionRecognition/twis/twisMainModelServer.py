@@ -18,7 +18,6 @@ from shutil import copyfile
 from shutil import rmtree
 import random
 import datetime
-from eventlet import GreenPool
 
 
 
@@ -258,10 +257,6 @@ class Session():
                                         self.dumpFrames([frame])
                                         self.start_index += 1
                                         self.dumped_index = max(self.start_index - 1, 1)
-
-                                # self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
-                                # self.delay_count += 1
-                                # self.average_delay = self.session_delay / self.delay_count / 10000000000.0
                             else:
                                 break
 
@@ -1004,14 +999,14 @@ class Sender():
                     flow_y = cv2.imread(os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(frame_index)), cv2.IMREAD_GRAYSCALE)
 
                     image_data = cv2.imencode('.jpg', image)[1].tostring()
-                    # flow_x_data = cv2.imencode('.jpg', flow_x)[1].tostring()
-                    # flow_y_data = cv2.imencode('.jpg', flow_y)[1].tostring()
+                    flow_x_data = cv2.imencode('.jpg', flow_x)[1].tostring()
+                    flow_y_data = cv2.imencode('.jpg', flow_y)[1].tostring()
 
                     frame_score = sending_scores[frame_index - sending_start_index]
 
-                    # send_data = b'{}{}{}{}{}{}{}{}{}{}'.format(image_data, self.element_boundary, flow_x_data, self.element_boundary,
-                    #                                              flow_y_data, self.element_boundary, frame_score[0], self.element_boundary,
-                    #                                              frame_score[1], self.entire_boundary)
+                    send_data = b'{}{}{}{}{}{}{}{}{}{}'.format(image_data, self.element_boundary, flow_x_data, self.element_boundary,
+                                                                 flow_y_data, self.element_boundary, frame_score[0], self.element_boundary,
+                                                                 frame_score[1], self.entire_boundary)
 
                     # try:
                     #     self.main_model_server_socket.send(send_data)
@@ -1068,10 +1063,3 @@ if __name__ == '__main__':
 
     while True:
         time.sleep(13.1451)
-        # with session.print_lock:
-        #     print '------------------------------ Memory Checking ---------------------------------'
-        #     cmd = 'free -h'
-        #     with session.extractor.cmd_lock:
-        #         os.system(cmd)
-        #         sys.stdout.flush()
-        #     print '--------------------------------------------------------------------------------'
