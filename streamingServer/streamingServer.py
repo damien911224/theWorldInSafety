@@ -127,8 +127,6 @@ class StreamingServer():
                                 frame_index = int(header[15:22])
                                 frame_data = frame_data[22:]
 
-                                print len(frame_data)
-
                                 if not self.session_is_opened:
                                     self.session_name = session_name
                                     self.session_delay = 0.0
@@ -170,6 +168,7 @@ class StreamingServer():
             for frame in frames:
                 frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
+                new_frame = cv2.imread(frame_path)
                 frame_index += 1
 
 

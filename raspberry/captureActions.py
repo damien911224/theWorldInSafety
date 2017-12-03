@@ -162,7 +162,6 @@ class Raspberry():
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
             send_data = header + b'{}{}'.format(frame_data, self.jpg_boundary)
 
-            print len(frame_data)
             for _ in range(self.sending_round):
                 try:
                     self.camera_socket.send(send_data)
