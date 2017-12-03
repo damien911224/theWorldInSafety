@@ -690,6 +690,9 @@ class Scanner():
         manager = Manager()
         return_scores = manager.list()
 
+        for _ in range(len(indices_first)):
+            return_scores.append([0.0, 0.0])
+
         scanning_pool_first.map(self.scanVideo,
                                      zip([actual_extracted_index] * len(indices_first),
                                          indices_first, [device_id_first] * len(indices_first),
