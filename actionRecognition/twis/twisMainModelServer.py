@@ -580,8 +580,10 @@ class Evaluator():
 
         self.scores = []
 
-        global scanning_pool
-        scanning_pool = GreenPool()
+        global scanning_pool_first
+        global scanning_pool_second
+        scanning_pool_first = GreenPool()
+        scanning_pool_second = GreenPool()
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
@@ -640,13 +642,19 @@ class Evaluator():
 
 
     def finalize(self):
-        global scanning_pool
+        global scanning_pool_first
+        global scanning_pool_second
 
         self.sender.in_progress = False
 
-        scanning_pool.close()
-        scanning_pool.join()
-        del scanning_pool
+        scanning_pool_first.close()
+        scanning_pool_first.join()
+        del scanning_pool_first
+
+        scanning_pool_second.close()
+        scanning_pool_second.join()
+        del scanning_pool_second
+
         del self.scanner
 
         while not self.sender_closed:
@@ -666,8 +674,10 @@ class Evaluator():
 
         self.scores = []
 
-        global scanning_pool
-        scanning_pool = GreenPool()
+        global scanning_pool_first
+        global scanning_pool_second
+        scanning_pool_first = GreenPool()
+        scanning_pool_second = GreenPool()
 
         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
                                self.num_using_gpu, self.session.use_spatial_net)
@@ -695,24 +705,39 @@ class Scanner():
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
-        indices = range(start_index, end_index + 1, 1)
-        device_id = 0
+        indices_first = range(start_index, end_index / 2 + 1, 1)
+        indices_second = range(end_index / 2 + 1, end_index + 1, 1)
+        device_id_first = 0
+        device_id_second = 1
 
-        scan_scores = \
-            scanning_pool.imap(self.scanVideo,
-                          zip([actual_extracted_index] * len(indices),
-                              indices,
-                              [device_id] * len(indices)))
-        scanning_pool.waitall()
+        scan_scores_first = \
+            scanning_pool_first.imap(self.scanVideo,
+                                     zip([actual_extracted_index] * len(indices_first),
+                                         indices_first, [device_id_first] * len(indices_first)))
 
-        print scan_scores
+        scan_scores_second = \
+            scanning_pool_first.imap(self.scanVideo,
+                                     zip([actual_extracted_index] * len(indices_second),
+                                         indices_second, [device_id_second] * len(indices_second)))
+
+        scanning_pool_first.waitall()
+        scanning_pool_second.waitall()
+
+        return_scores = []
+        for score in scan_scores_first:
+            return_scores.append(score)
+
+        for score in scan_scores_second:
+            return_scores.append(score)
+
+        print return_scores
 
         # return_scores = []
         # frame_count = end_index - start_index + 1
         # for frame_index in range(start_index, end_index+1, 1):
         #     return_scores.append(self.scanFrame(frame_index, frame_count)
 
-        return scan_scores
+        return return_scores
 
 
     def scanFrame(self, index, frame_count, device_id):
