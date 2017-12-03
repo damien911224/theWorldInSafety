@@ -111,7 +111,7 @@ class CaffeNet(object):
         self._net.reshape()
         out = self._net.forward(blobs=[score_name, ], data=data)
         return out[score_name].copy()
-    
+
 
 class Session():
 
@@ -710,14 +710,17 @@ class Scanner():
 
         process_first = threading.Thread(target=self.scanFrames,
                                          args=(indices_first, start_index, actual_extracted_index, device_id_first, return_scores))
+
+
+        process_first.start()
+        process_first.join()
+
+
         process_second = threading.Thread(target=self.scanFrames,
                                           args=(indices_second, start_index, actual_extracted_index, device_id_second, return_scores))
 
 
-        process_first.start()
         process_second.start()
-
-        process_first.join()
         process_second.join()
 
         print return_scores
