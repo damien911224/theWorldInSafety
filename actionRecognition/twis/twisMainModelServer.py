@@ -1,7 +1,8 @@
 import sys
 sys.path.insert(0, "../lib/caffe-action/python")
 sys.path.append('..')
-import caffe
+import caffe as caffe_01
+import caffe as caffe_02
 import cv2
 import os
 import numpy as np
@@ -9,7 +10,7 @@ import time
 import glob
 import threading
 from pipes import quote
-from caffe.io import oversample
+from caffe_01.io import oversample
 from utils.io import flow_stack_oversample, fast_list2arr
 from multiprocessing import Pool, Value, Lock, current_process, Manager, Process
 import copy_reg, types
@@ -26,31 +27,58 @@ from eventlet import GreenPool
 class CaffeNet(object):
 
     def __init__(self, net_proto, net_weights, device_id, input_size=None):
-        caffe.set_logging_disabled()
+        if device_id == 0:
+            caffe_01.set_logging_disabled()
 
-        if device_id >= 0:
-            caffe.set_mode_gpu()
-            caffe.set_device(device_id)
+            if device_id >= 0:
+                caffe_01.set_mode_gpu()
+                caffe_01.set_device(device_id)
+            else:
+                caffe_01.set_mode_cpu()
+            self._net = caffe_01.Net(net_proto, net_weights, caffe_01.TEST)
+
+            input_shape = self._net.blobs['data'].data.shape
+
+            if input_size is not None:
+                input_shape = input_shape[:2] + input_size
+
+            transformer = caffe_01.io.Transformer({'data': input_shape})
+
+            if self._net.blobs['data'].data.shape[1] == 3:
+                transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
+                transformer.set_mean('data',
+                                     np.array([104, 117, 123]))  # subtract the dataset-mean value in each channel
+            else:
+                pass  # non RGB data need not use transformer
+
+            self._transformer = transformer
+            self._sample_shape = self._net.blobs['data'].data.shape
         else:
-            caffe.set_mode_cpu()
-        self._net = caffe.Net(net_proto, net_weights, caffe.TEST)
+            caffe_02.set_logging_disabled()
 
-        input_shape = self._net.blobs['data'].data.shape
+            if device_id >= 0:
+                caffe_02.set_mode_gpu()
+                caffe_02.set_device(device_id)
+            else:
+                caffe_02.set_mode_cpu()
+            self._net = caffe_02.Net(net_proto, net_weights, caffe_02.TEST)
 
-        if input_size is not None:
-            input_shape = input_shape[:2] + input_size
+            input_shape = self._net.blobs['data'].data.shape
 
-        transformer = caffe.io.Transformer({'data': input_shape})
+            if input_size is not None:
+                input_shape = input_shape[:2] + input_size
 
-        if self._net.blobs['data'].data.shape[1] == 3:
-            transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
-            transformer.set_mean('data',
-                                 np.array([104, 117, 123]))  # subtract the dataset-mean value in each channel
-        else:
-            pass  # non RGB data need not use transformer
+            transformer = caffe_02.io.Transformer({'data': input_shape})
 
-        self._transformer = transformer
-        self._sample_shape = self._net.blobs['data'].data.shape
+            if self._net.blobs['data'].data.shape[1] == 3:
+                transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
+                transformer.set_mean('data',
+                                     np.array([104, 117, 123]))  # subtract the dataset-mean value in each channel
+            else:
+                pass  # non RGB data need not use transformer
+
+            self._transformer = transformer
+            self._sample_shape = self._net.blobs['data'].data.shape
 
 
     def predict_single_frame(self, frame, score_name, over_sample=True, multiscale=None, frame_size=None):
