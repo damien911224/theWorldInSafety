@@ -153,14 +153,7 @@ class StreamingServer():
                                     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
                                     if frame is not None:
-                                        self.dumpFrames([frame], frame_index, frame_moment)
-
-                                self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
-                                self.delay_count += 1
-                                if self.delay_display and frame_index % self.delay_display_term == 0:
-                                    with self.streaming_server.print_lock:
-                                        average_delay = self.session_delay / self.delay_count / 10000000000.0
-                                        print '{:10s}|{:15s}|{:.6f} Seconds'.format('Raspberry', 'Session Delay', average_delay)
+                                        self.dumpFrames([frame], frame_index)
 
                         client_socket.close()
 
@@ -174,10 +167,10 @@ class StreamingServer():
                 self.raspberry_socket.close()
 
 
-        def dumpFrames(self, frames, start_index, frame_moment):
+        def dumpFrames(self, frames, start_index):
             frame_index = start_index
             for frame in frames:
-                frame_path = os.path.join(self.session_folder, 'img_{:014d}_{:07d}.jpg'.format(frame_moment, frame_index))
+                frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
                 frame_index += 1
 
