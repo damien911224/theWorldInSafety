@@ -105,6 +105,7 @@ class Raspberry():
                 if video_cap.isOpened():
                     while self.in_progress:
                         ok, frame = video_cap.read()
+                        time.sleep(0.01)
                         if self.want_to_resize:
                             frame = cv2.resize(frame, self.original_size, interpolation = cv2.INTER_AREA)
                         if not ok:
