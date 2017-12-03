@@ -702,7 +702,7 @@ class Scanner():
             scanning_pool.imap(self.scanVideo,
                           zip([actual_extracted_index] * len(indices),
                               indices,
-                              device_id))
+                              [device_id] * len(indices)))
         scanning_pool.waitall()
 
         print scan_scores
