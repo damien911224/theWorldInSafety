@@ -678,32 +678,31 @@ class Scanner():
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
-        indices_first = range(start_index, end_index / 3 + 1, 1)
-        indices_second = range(end_index / 3 + 1, end_index + 1, 1)
-        device_id_first = -1
-        device_id_second = 0
+        indices_first = range(start_index, end_index + 1, 1)
+        # indices_second = range(end_index / 3 + 1, end_index + 1, 1)
+        device_id_first = 0
+        # device_id_second = 0
 
         scan_scores_first = \
             scanning_pool_first.imap(self.scanVideo,
                                      zip([actual_extracted_index] * len(indices_first),
                                          indices_first, [device_id_first] * len(indices_first)))
 
-        scan_scores_second = \
-            scanning_pool_second.imap(self.scanVideo,
-                                      zip([actual_extracted_index] * len(indices_second),
-                                          indices_second, [device_id_second] * len(indices_second)))
+        # scan_scores_second = \
+        #     scanning_pool_second.imap(self.scanVideo,
+        #                               zip([actual_extracted_index] * len(indices_second),
+        #                                   indices_second, [device_id_second] * len(indices_second)))
 
         scanning_pool_first.waitall()
-        scanning_pool_second.waitall()
+        # scanning_pool_second.waitall()
 
         return_scores = []
         for score in scan_scores_first:
             return_scores.append(score)
 
-        for score in scan_scores_second:
-            return_scores.append(score)
-
-        print return_scores
+        #
+        # for score in scan_scores_second:
+        #     return_scores.append(score)
 
         return return_scores
 
