@@ -556,7 +556,7 @@ class Evaluator():
         global scanning_pool_first
         global scanning_pool_second
         scanning_pool_first = GreenPool()
-        scanning_pool_second = Pool(processes = self.num_workers)
+        scanning_pool_second = GreenPool()
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
@@ -678,34 +678,30 @@ class Scanner():
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
-        indices_first = range(start_index, end_index / 2 + 1, 1)
-        indices_second = range(end_index / 2 + 1, end_index + 1, 1)
-        device_id_first = 0
-        device_id_second = -1
+        indices_first = range(start_index, end_index / 3 + 1, 1)
+        indices_second = range(end_index / 3 + 1, end_index + 1, 1)
+        device_id_first = -1
+        device_id_second = 0
 
         scan_scores_first = \
             scanning_pool_first.imap(self.scanVideo,
                                      zip([actual_extracted_index] * len(indices_first),
                                          indices_first, [device_id_first] * len(indices_first)))
 
-        manager = Manager()
-        scan_scores_second = manager.list()
-        for _ in range(len(indices_second)):
-            scan_scores_second.append([0.0, 0.0])
-
-
-        scanning_pool_second.map(self.scanVideoCPU,
-                                zip([actual_extracted_index] * len(indices_second),
-                                    indices_second, [device_id_second] * len(indices_second),
-                                    [end_index / 2 + 1] * len(indices_second), [scan_scores_second] * len(indices_second)))
+        scan_scores_second = \
+            scanning_pool_second.imap(self.scanVideo,
+                                      zip([actual_extracted_index] * len(indices_second),
+                                          indices_second, [device_id_second] * len(indices_second)))
 
         scanning_pool_first.waitall()
+        scanning_pool_second.waitall()
 
         return_scores = []
         for score in scan_scores_first:
             return_scores.append(score)
 
-        return_scores += scan_scores_second
+        for score in scan_scores_second:
+            return_scores.append(score)
 
         print return_scores
 
