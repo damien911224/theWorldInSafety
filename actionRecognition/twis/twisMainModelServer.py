@@ -556,7 +556,7 @@ class Evaluator():
         global scanning_pool_first
         global scanning_pool_second
         scanning_pool_first = GreenPool()
-        scanning_pool_second = GreenPool()
+        scanning_pool_second = Pool()
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
@@ -650,7 +650,7 @@ class Evaluator():
         global scanning_pool_first
         global scanning_pool_second
         scanning_pool_first = GreenPool()
-        scanning_pool_second = GreenPool()
+        scanning_pool_second = Pool()
 
         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
                                self.num_using_gpu, self.session.use_spatial_net)
@@ -688,20 +688,22 @@ class Scanner():
                                      zip([actual_extracted_index] * len(indices_first),
                                          indices_first, [device_id_first] * len(indices_first)))
 
-        scan_scores_second = \
-            scanning_pool_second.imap(self.scanVideo,
-                                     zip([actual_extracted_index] * len(indices_second),
-                                         indices_second, [device_id_second] * len(indices_second)))
+        manager = Manager()
+        scan_scores_second = manager.list()
+
+        scanning_pool_second.map(self.scanVideoCPU,
+                                zip([actual_extracted_index] * len(indices_second),
+                                    indices_second, [device_id_second] * len(indices_second),
+                                    [end_index / 2 + 1] * len(indices_second), [scan_scores_second] * len(indices_second)))
 
         scanning_pool_first.waitall()
-        scanning_pool_second.waitall()
+        scanning_pool_second.join()
 
         return_scores = []
         for score in scan_scores_first:
             return_scores.append(score)
 
-        for score in scan_scores_second:
-            return_scores.append(score)
+        return_scores += scan_scores_second
 
         print return_scores
 
@@ -857,6 +859,87 @@ class Scanner():
                                                          self.score_bound).tolist()
 
         return entire_scores
+
+
+    def scanVideoCPU(self, scan_items):
+        global spatial_net_gpu_01
+        global spatial_net_gpu_02
+        global temporal_net_gpu_01
+        global temporal_net_gpu_02
+        global spatial_net_cpu
+        global temporal_net_cpu
+
+        frame_count = scan_items[0]
+        index = scan_items[1]
+        device_id = scan_items[2]
+        start_index = scan_items[3]
+        scan_scores = scan_items[4]
+
+        if device_id == 0:
+            spatial_net = spatial_net_gpu_01
+            temporal_net = temporal_net_gpu_01
+        elif device_id == 1:
+            spatial_net = spatial_net_gpu_02
+            temporal_net = temporal_net_gpu_02
+        else:
+            spatial_net = spatial_net_cpu
+            temporal_net = temporal_net_cpu
+
+        score_layer_name = 'fc-twis'
+
+        if self.use_spatial_net:
+            image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
+
+            rgb_score = \
+                spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
+                                                 frame_size=None)[0].tolist()
+
+        flow_stack = []
+        for i in range(-2, 3, 1):
+            if index + i >= 2 and index + i <= frame_count:
+                x_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
+                    cv2.IMREAD_GRAYSCALE)
+                y_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
+                    cv2.IMREAD_GRAYSCALE)
+                flow_stack.append(x_flow_field)
+                flow_stack.append(y_flow_field)
+            elif index + i < 2:
+                x_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
+                    cv2.IMREAD_GRAYSCALE)
+                y_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
+                    cv2.IMREAD_GRAYSCALE)
+                flow_stack.append(x_flow_field)
+                flow_stack.append(y_flow_field)
+            else:
+                x_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
+                    cv2.IMREAD_GRAYSCALE)
+                y_flow_field = cv2.imread(
+                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
+                    cv2.IMREAD_GRAYSCALE)
+                flow_stack.append(x_flow_field)
+                flow_stack.append(y_flow_field)
+
+        flow_score = \
+            temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
+                                                   frame_size=None)[0].tolist()
+
+
+        if self.use_spatial_net:
+            entire_scores = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
+                                                                     + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
+        else:
+            entire_scores = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
+                                                                 -self.score_bound, self.score_bound),
+                                                         self.score_bound).tolist()
+
+        scan_scores[index - start_index] = entire_scores
 
 
 class Sender():
