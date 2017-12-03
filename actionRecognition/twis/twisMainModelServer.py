@@ -837,10 +837,12 @@ class Scanner():
                 spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
                                                  frame_size=None)[0].tolist()
 
+        print 'INDEX {:07d}'.format(index)
 
         flow_stack = []
         for i in range(-2, 3, 1):
             if index + i >= 2 and index + i <= frame_count:
+                print os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i)
                 x_flow_field = cv2.imread(
                     os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
                     cv2.IMREAD_GRAYSCALE)
@@ -850,6 +852,7 @@ class Scanner():
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
             elif index + i < 2:
+                print os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2)
                 x_flow_field = cv2.imread(
                     os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
                     cv2.IMREAD_GRAYSCALE)
@@ -859,6 +862,7 @@ class Scanner():
                 flow_stack.append(x_flow_field)
                 flow_stack.append(y_flow_field)
             else:
+                print os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count)
                 x_flow_field = cv2.imread(
                     os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
                     cv2.IMREAD_GRAYSCALE)
