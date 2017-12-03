@@ -11,7 +11,7 @@ import threading
 from pipes import quote
 from caffe.io import oversample
 from utils.io import flow_stack_oversample, fast_list2arr
-from multiprocessing import Pool, Value, Lock, current_process, Manager
+from multiprocessing import Pool, Value, Lock, current_process, Manager, Process
 import copy_reg, types
 import gc
 import socket
@@ -704,32 +704,48 @@ class Scanner():
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
-        indices_first = range(start_index, end_index + 1, 1)
-        # indices_second = range(end_index / 2 + 1, end_index + 1, 1)
+        indices_first = range(start_index, end_index / 2 + 1, 1)
+        indices_second = range(end_index / 2 + 1, end_index + 1, 1)
         device_id_first = 0
-        # device_id_second = 1
+        device_id_second = 1
 
-        scan_scores_first = \
-            scanning_pool_first.imap(self.scanVideo,
-                                     zip([actual_extracted_index] * len(indices_first),
-                                         indices_first, [device_id_first] * len(indices_first)))
+        return_scores = [0.0] * len(indices_first + indices_second)
+
+
+        process_first = Process(target=self.scanFrames,
+                                args=(indices_first, start_index, actual_extracted_index, device_id_first, return_scores))
+        process_second = Process(target=self.scanFrames,
+                                 args=(indices_second, start_index, actual_extracted_index, device_id_second, return_scores))
+
+
+        process_first.start()
+        process_second.start()
+
+        process_first.join()
+        process_second.join()
+
+        print return_scores
+
+
+        # scan_scores_first = \
+        #     scanning_pool_first.imap(self.scanVideo,
+        #                              zip([actual_extracted_index] * len(indices_first),
+        #                                  indices_first, [device_id_first] * len(indices_first)))
 
         # scan_scores_second = \
         #     scanning_pool_first.imap(self.scanVideo,
         #                              zip([actual_extracted_index] * len(indices_second),
         #                                  indices_second, [device_id_second] * len(indices_second)))
 
-        scanning_pool_first.waitall()
-        # scanning_pool_second.waitall()
-
-        return_scores = []
-        for score in scan_scores_first:
-            return_scores.append(score)
+        # scanning_pool_first.waitall()
+        # # scanning_pool_second.waitall()
+        #
+        # return_scores = []
+        # for score in scan_scores_first:
+        #     return_scores.append(score)
 
         # for score in scan_scores_second:
         #     return_scores.append(score)
-
-        print return_scores
 
         # return_scores = []
         # frame_count = end_index - start_index + 1
@@ -739,7 +755,7 @@ class Scanner():
         return return_scores
 
 
-    def scanFrame(self, index, frame_count, device_id):
+    def scanFrames(self, indices, start_index, frame_count, device_id, return_scores):
         global spatial_net_gpu_01
         global spatial_net_gpu_02
         global temporal_net_gpu_01
@@ -754,60 +770,61 @@ class Scanner():
 
         score_layer_name = 'fc-twis'
 
-        if self.use_spatial_net:
-            image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
+        for index in indices:
+            if self.use_spatial_net:
+                image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
 
-            rgb_score = \
-                spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
-                                                 frame_size=None)[0].tolist()
+                rgb_score = \
+                    spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
+                                                     frame_size=None)[0].tolist()
 
 
-        flow_stack = []
-        for i in range(-2, 3, 1):
-            if index + i >= 2 and index + i <= frame_count:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
-            elif index + i < 2:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
+            flow_stack = []
+            for i in range(-2, 3, 1):
+                if index + i >= 2 and index + i <= frame_count:
+                    x_flow_field = cv2.imread(
+                        os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
+                        cv2.IMREAD_GRAYSCALE)
+                    y_flow_field = cv2.imread(
+                        os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
+                        cv2.IMREAD_GRAYSCALE)
+                    flow_stack.append(x_flow_field)
+                    flow_stack.append(y_flow_field)
+                elif index + i < 2:
+                    x_flow_field = cv2.imread(
+                        os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
+                        cv2.IMREAD_GRAYSCALE)
+                    y_flow_field = cv2.imread(
+                        os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
+                        cv2.IMREAD_GRAYSCALE)
+                    flow_stack.append(x_flow_field)
+                    flow_stack.append(y_flow_field)
+                else:
+                    x_flow_field = cv2.imread(
+                        os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
+                        cv2.IMREAD_GRAYSCALE)
+                    y_flow_field = cv2.imread(
+                        os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
+                        cv2.IMREAD_GRAYSCALE)
+                    flow_stack.append(x_flow_field)
+                    flow_stack.append(y_flow_field)
+
+            flow_score = \
+                temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
+                                                       frame_size=None)[0].tolist()
+
+
+            if self.use_spatial_net:
+                entire_scores = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
+                                                                         + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
+                                                                     -self.score_bound, self.score_bound),
+                                                             self.score_bound).tolist()
             else:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
+                entire_scores = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
+                                                                     -self.score_bound, self.score_bound),
+                                                             self.score_bound).tolist()
 
-        flow_score = \
-            temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
-                                                   frame_size=None)[0].tolist()
-
-
-        if self.use_spatial_net:
-            entire_scores = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
-                                                                     + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
-                                                                 -self.score_bound, self.score_bound),
-                                                         self.score_bound).tolist()
-        else:
-            entire_scores = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
-                                                                 -self.score_bound, self.score_bound),
-                                                         self.score_bound).tolist()
-
-        return entire_scores
+            return_scores[index - start_index](entire_scores)
 
 
     def scanVideo(self, scan_items):
