@@ -10,7 +10,6 @@ import time
 import glob
 import threading
 from pipes import quote
-from caffe_01.io import oversample
 from utils.io import flow_stack_oversample, fast_list2arr
 from multiprocessing import Pool, Value, Lock, current_process, Manager, Process
 import copy_reg, types
@@ -85,16 +84,7 @@ class CaffeNet(object):
         if frame_size is not None:
             frame = [cv2.resize(x, frame_size, interpolation=cv2.INTER_AREA) for x in frame]
 
-        if over_sample:
-            if multiscale is None:
-                os_frame = oversample(frame, (self._sample_shape[2], self._sample_shape[3]))
-            else:
-                os_frame = []
-                for scale in multiscale:
-                    resized_frame = [cv2.resize(x, (0, 0), fx=1.0 / scale, fy=1.0 / scale) for x in frame]
-                    os_frame.extend(oversample(resized_frame, (self._sample_shape[2], self._sample_shape[3])))
-        else:
-            os_frame = fast_list2arr(frame)
+        os_frame = fast_list2arr(frame)
 
         data = fast_list2arr([self._transformer.preprocess('data', x) for x in os_frame])
 
@@ -113,10 +103,7 @@ class CaffeNet(object):
         else:
             frame = fast_list2arr(frame)
 
-        if over_sample:
-            os_frame = flow_stack_oversample(frame, (self._sample_shape[2], self._sample_shape[3]))
-        else:
-            os_frame = fast_list2arr([frame])
+        os_frame = fast_list2arr([frame])
 
         data = os_frame - np.float32(128.0)
 
@@ -124,26 +111,7 @@ class CaffeNet(object):
         self._net.reshape()
         out = self._net.forward(blobs=[score_name, ], data=data)
         return out[score_name].copy()
-
-
-    def predict_simple_single_flow_stack(self, frame, score_name, over_sample=False, frame_size=None):
-        if frame_size is not None:
-            frame = fast_list2arr([cv2.resize(x, frame_size, interpolation=cv2.INTER_AREA) for x in frame])
-        else:
-            frame = fast_list2arr(frame)
-
-        if over_sample:
-            os_frame = flow_stack_oversample(frame, (self._sample_shape[2], self._sample_shape[3]))
-        else:
-            os_frame = fast_list2arr([frame])
-
-        data = os_frame - np.float32(128.0)
-
-        self._net.blobs['data'].reshape(*data.shape)
-        self._net.reshape()
-        out = self._net.forward(blobs=[score_name, ], data=data)
-        return out[score_name].copy()
-
+    
 
 class Session():
 

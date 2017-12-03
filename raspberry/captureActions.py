@@ -225,7 +225,7 @@ class Raspberry():
                 self.camera = camera
 
                 self.frame_diff_threshold = 0.45
-                self.minimum_capture_count = 300
+                self.minimum_capture_count = 1000000
 
                 self.countdown_to_stop = self.minimum_capture_count
                 self.no_moving = False
