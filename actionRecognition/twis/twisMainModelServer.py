@@ -140,7 +140,7 @@ class Session():
         else:
             self.test_video_name = 'test_1.mp4'
         self.model_version = 4
-        self.use_spatial_net = False
+        self.use_spatial_net = True
         self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
@@ -542,8 +542,8 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 8
-        self.num_using_gpu = 8
+        self.num_workers = 4
+        self.num_using_gpu = 4
 
         self.start_index = 2
         self.scanned_index = 1
@@ -609,8 +609,6 @@ class Evaluator():
 
                     self.odd_scanner_thread.join()
                     self.even_scanner_thread.join()
-
-                    print return_scores
 
                     self.sender.scores += return_scores
 
