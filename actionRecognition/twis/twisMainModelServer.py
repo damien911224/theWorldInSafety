@@ -542,7 +542,7 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 16
+        self.num_workers = 12
         self.num_using_gpu = 8
 
         self.start_index = 2
@@ -556,7 +556,7 @@ class Evaluator():
         global scanning_pool_first
         global scanning_pool_second
         scanning_pool_first = GreenPool()
-        scanning_pool_second = Pool()
+        scanning_pool_second = Pool(processes = self.num_workers)
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
