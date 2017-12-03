@@ -542,8 +542,8 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 8
-        self.num_using_gpu = 8
+        self.num_workers = 16
+        self.num_using_gpu = 12
 
         self.start_index = 2
         self.scanned_index = 1
@@ -809,12 +809,12 @@ class Scanner():
         start_index = scan_items[3]
         return_scores = scan_items[4]
 
-        if device_id == 0:
+        current = current_process()
+        current_id = current._identity[0] -1
+
+        if current_id % self.num_workers < self.num_using_gpu:
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_01
-        elif device_id == 1:
-            spatial_net = spatial_net_gpu_02
-            temporal_net = temporal_net_gpu_02
         else:
             spatial_net = spatial_net_cpu
             temporal_net = temporal_net_cpu
