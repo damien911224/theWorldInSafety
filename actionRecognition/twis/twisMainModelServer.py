@@ -700,7 +700,6 @@ class Scanner():
                                     [end_index / 2 + 1] * len(indices_second), [scan_scores_second] * len(indices_second)))
 
         scanning_pool_first.waitall()
-        scanning_pool_second.join()
 
         return_scores = []
         for score in scan_scores_first:
