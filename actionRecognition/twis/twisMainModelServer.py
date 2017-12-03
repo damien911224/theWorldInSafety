@@ -695,37 +695,33 @@ class Scanner():
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
-        manager = Manager()
-        scan_scores = manager.list()
-
         indices = range(start_index, end_index + 1, 1)
+        device_id = 0
 
-        # for i in xrange(len(indices)):
-        #     scan_scores.append([0.0, 0.0])
+        scan_scores = \
+            scanning_pool.imap(self.scanVideo,
+                          zip([actual_extracted_index] * len(indices),
+                              indices,
+                              device_id))
+        scanning_pool.waitall()
 
-        # ret = \
-        #     scanning_pool.imap(self.scanVideo,
-        #                   zip([start_index] * len(indices),
-        #                       [actual_extracted_index] * len(indices),
-        #                       [scan_scores] * len(indices),
-        #                       indices))
-        # scanning_pool.waitall()
+        print scan_scores
 
-        return_scores = []
-        frame_count = end_index - start_index + 1
-        for frame_index in range(start_index, end_index+1, 1):
-            return_scores.append(self.scanFrame(frame_index, frame_count))
+        # return_scores = []
+        # frame_count = end_index - start_index + 1
+        # for frame_index in range(start_index, end_index+1, 1):
+        #     return_scores.append(self.scanFrame(frame_index, frame_count)
 
-        return return_scores
+        return scan_scores
 
 
-    def scanFrame(self, index, frame_count):
+    def scanFrame(self, index, frame_count, device_id):
         global spatial_net_gpu_01
         global spatial_net_gpu_02
         global temporal_net_gpu_01
         global temporal_net_gpu_02
 
-        if index % 1 == 0:
+        if device_id  == 0:
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_01
         else:
@@ -796,12 +792,11 @@ class Scanner():
         global temporal_net_gpu_01
         global temporal_net_gpu_02
 
-        start_index = scan_items[0]
-        frame_count = scan_items[1]
-        scan_scores = scan_items[2]
-        index = scan_items[3]
+        frame_count = scan_items[0]
+        index = scan_items[1]
+        device_id = scan_items[2]
 
-        if index % 2 == 0:
+        if device_id == 0:
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_01
         else:
@@ -933,10 +928,18 @@ class Sender():
                     # except:
                     #     pass
 
-                    try:
-                        os.remove(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index)))
-                    except OSError:
-                        pass
+
+                    if frame_index == sending_start_index:
+                        try:
+                            os.remove(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index-1)))
+                        except OSError:
+                            pass
+
+                    if frame_index < sending_end_index:
+                        try:
+                            os.remove(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index)))
+                        except OSError:
+                            pass
 
                     try:
                         os.remove(os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(frame_index)))
