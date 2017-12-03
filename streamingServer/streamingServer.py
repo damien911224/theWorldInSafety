@@ -127,6 +127,8 @@ class StreamingServer():
                                 frame_index = int(header[15:22])
                                 frame_data = frame_data[22:]
 
+                                print len(frame_data)
+
                                 if not self.session_is_opened:
                                     self.session_name = session_name
                                     self.session_delay = 0.0
