@@ -77,7 +77,7 @@ class Raspberry():
             self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
 
-            self.wait_time = 0.03
+            self.wait_time = 0.05
 
             self.sending_round = 1
 
@@ -140,7 +140,7 @@ class Raspberry():
                             visualized_frame = self.visualize(frame, is_moving)
                             cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
                             cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
-                            cv2.waitKey(self.wait_time)
+                            cv2.waitKey(1)
 
                         if self.session_index % self.display_term == 0:
                             with self.raspberry.print_lock:

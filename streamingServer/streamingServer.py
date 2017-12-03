@@ -186,7 +186,7 @@ class StreamingServer():
             self.ready = False
             self.session_is_open = False
 
-            self.removing_term = 10
+            self.removing_term = 100
             self.sent_index = -1
 
 
