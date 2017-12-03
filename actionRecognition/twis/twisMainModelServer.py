@@ -542,7 +542,7 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 12
+        self.num_workers = 8
         self.num_using_gpu = 8
 
         self.start_index = 2
@@ -555,7 +555,7 @@ class Evaluator():
 
         global scanning_pool_first
         global scanning_pool_second
-        scanning_pool_first = GreenPool()
+        scanning_pool_first = Pool(self.num_workers)
         scanning_pool_second = GreenPool()
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
@@ -678,31 +678,44 @@ class Scanner():
 
 
     def scan(self, start_index, end_index, actual_extracted_index):
-        indices_first = range(start_index, end_index / 4 + 1, 1)
-        indices_second = range(end_index / 4 + 1, end_index + 1, 1)
+        global scanning_pool_first
+        global scanning_pool_second
+
+        indices_first = range(start_index, end_index + 1, 1)
+        # indices_second = range(end_index / 4 + 1, end_index + 1, 1)
         device_id_first = 0
-        device_id_second = 0
+        # device_id_second = 0
 
-        scan_scores_first = \
-            scanning_pool_first.imap(self.scanVideo,
+
+        manager = Manager()
+        return_scores = manager.list()
+
+        scanning_pool_first.map(self.scanVideo,
                                      zip([actual_extracted_index] * len(indices_first),
-                                         indices_first, [device_id_first] * len(indices_first)))
-
-        scan_scores_second = \
-            scanning_pool_second.imap(self.scanVideo,
-                                      zip([actual_extracted_index] * len(indices_second),
-                                          indices_second, [device_id_second] * len(indices_second)))
-
-        scanning_pool_first.waitall()
-        scanning_pool_second.waitall()
-
-        return_scores = []
-        for score in scan_scores_first:
-            return_scores.append(score)
+                                         indices_first, [device_id_first] * len(indices_first)
+                                         [start_index] * len(indices_first), [return_scores] * len(indices_first)))
 
 
-        for score in scan_scores_second:
-            return_scores.append(score)
+        # scan_scores_first = \
+        #     scanning_pool_first.imap(self.scanVideo,
+        #                              zip([actual_extracted_index] * len(indices_first),
+        #                                  indices_first, [device_id_first] * len(indices_first)))
+        #
+        # scan_scores_second = \
+        #     scanning_pool_second.imap(self.scanVideo,
+        #                               zip([actual_extracted_index] * len(indices_second),
+        #                                   indices_second, [device_id_second] * len(indices_second)))
+        #
+        # scanning_pool_first.waitall()
+        # scanning_pool_second.waitall()
+        #
+        # return_scores = []
+        # for score in scan_scores_first:
+        #     return_scores.append(score)
+        #
+        #
+        # for score in scan_scores_second:
+        #     return_scores.append(score)
 
         return return_scores
 
@@ -790,6 +803,8 @@ class Scanner():
         frame_count = scan_items[0]
         index = scan_items[1]
         device_id = scan_items[2]
+        start_index = scan_items[3]
+        return_scores = scan_items[4]
 
         if device_id == 0:
             spatial_net = spatial_net_gpu_01
@@ -855,7 +870,7 @@ class Scanner():
                                                                  -self.score_bound, self.score_bound),
                                                          self.score_bound).tolist()
 
-        return entire_scores
+        return_scores[index - start_index]
 
 
     def scanVideoCPU(self, scan_items):

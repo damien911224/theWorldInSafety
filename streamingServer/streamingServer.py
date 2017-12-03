@@ -311,6 +311,7 @@ class StreamingServer():
 
 
         def send(self, frame):
+            print self.session_index
             header = b'{:15s}{:07d}'.format(self.session_name, self.session_index)
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
