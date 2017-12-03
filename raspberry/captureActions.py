@@ -77,7 +77,7 @@ class Raspberry():
             self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
 
-            self.wait_time = 0.05
+            self.wait_time = 0.10
 
             self.sending_round = 1
 

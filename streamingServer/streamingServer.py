@@ -226,7 +226,7 @@ class StreamingServer():
 
                             removing_frame_index = frame_index - self.removing_term
                             if removing_frame_index >= 1:
-                                removing_frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
+                                removing_frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(removing_frame_index))
                                 try:
                                     os.remove(removing_frame_path)
                                 except OSError:
