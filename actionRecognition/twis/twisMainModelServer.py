@@ -690,6 +690,9 @@ class Scanner():
 
         manager = Manager()
         scan_scores_second = manager.list()
+        for _ in range(len(indices_second)):
+            scan_scores_second.append([0.0, 0.0])
+
 
         scanning_pool_second.map(self.scanVideoCPU,
                                 zip([actual_extracted_index] * len(indices_second),
