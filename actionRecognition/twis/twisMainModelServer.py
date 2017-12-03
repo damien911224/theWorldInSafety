@@ -326,6 +326,9 @@ class Session():
         global temporal_net_gpu_01
         global temporal_net_gpu_02
 
+        global spatial_net_cpu
+        global temporal_net_cpu
+
         self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
         self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
             version)
@@ -337,6 +340,9 @@ class Session():
         spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
         temporal_net_gpu_01 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 0)
         temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
+
+        spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
+        temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
 
 
     def dumpFrames(self, frames):
@@ -675,7 +681,7 @@ class Scanner():
         indices_first = range(start_index, end_index / 2 + 1, 1)
         indices_second = range(end_index / 2 + 1, end_index + 1, 1)
         device_id_first = 0
-        device_id_second = 1
+        device_id_second = -1
 
         scan_scores_first = \
             scanning_pool_first.imap(self.scanVideo,
@@ -779,6 +785,8 @@ class Scanner():
         global spatial_net_gpu_02
         global temporal_net_gpu_01
         global temporal_net_gpu_02
+        global spatial_net_cpu
+        global temporal_net_cpu
 
         frame_count = scan_items[0]
         index = scan_items[1]
@@ -787,9 +795,12 @@ class Scanner():
         if device_id == 0:
             spatial_net = spatial_net_gpu_01
             temporal_net = temporal_net_gpu_01
-        else:
+        elif device_id == 1:
             spatial_net = spatial_net_gpu_02
             temporal_net = temporal_net_gpu_02
+        else:
+            spatial_net = spatial_net_cpu
+            temporal_net = temporal_net_cpu
 
         score_layer_name = 'fc-twis'
 
