@@ -169,6 +169,7 @@ class StreamingServer():
                 frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
                 new_frame = cv2.imread(frame_path)
+                print new_frame.shape
                 frame_index += 1
 
 
