@@ -102,13 +102,11 @@ class Raspberry():
                                     int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
 
-                alternative_flag = 0
+                alternative_flag = -1
                 if video_cap.isOpened():
                     while self.in_progress:
+                        time.sleep(0.03)
                         ok, frame = video_cap.read()
-                        if alternative_flag >= 1:
-                            alternative_flag = (alternative_flag + 1) % 3
-                            continue
 
                         if self.want_to_resize:
                             frame = cv2.resize(frame, self.original_size, interpolation = cv2.INTER_AREA)

@@ -542,8 +542,8 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 6
-        self.num_using_gpu = 6
+        self.num_workers = 8
+        self.num_using_gpu = 8
 
         self.start_index = 2
         self.scanned_index = 1
