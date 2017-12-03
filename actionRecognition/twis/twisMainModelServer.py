@@ -692,7 +692,7 @@ class Scanner():
 
         scanning_pool_first.map(self.scanVideo,
                                      zip([actual_extracted_index] * len(indices_first),
-                                         indices_first, [device_id_first] * len(indices_first)
+                                         indices_first, [device_id_first] * len(indices_first),
                                          [start_index] * len(indices_first), [return_scores] * len(indices_first)))
 
 
