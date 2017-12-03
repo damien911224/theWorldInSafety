@@ -238,7 +238,6 @@ class StreamingServer():
                             frame_paths.sort()
                         for frame_path in frame_paths:
                             self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                            self.frame_moment = int(frame_path.split('_')[-2])
                             frame = cv2.imread(frame_path)
                             ok = self.send(frame)
                             if not ok:
@@ -288,7 +287,6 @@ class StreamingServer():
                                     frame_paths.sort()
                                 for frame_path in frame_paths:
                                     self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                                    self.frame_moment = int(frame_path.split('_')[-2])
                                     frame = cv2.imread(frame_path)
                                     ok = self.send(frame)
                                     if not ok:
@@ -313,7 +311,7 @@ class StreamingServer():
 
 
         def send(self, frame):
-            header = b'{:15s}{:07d}{:14d}'.format(self.session_name, self.session_index, self.frame_moment)
+            header = b'{:15s}{:07d}'.format(self.session_name, self.session_index)
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary
