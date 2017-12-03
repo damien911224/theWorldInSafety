@@ -103,7 +103,6 @@ class Raspberry():
                                     int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
 
-                alternative_flag = -1
                 if video_cap.isOpened():
                     while self.in_progress:
                         time.sleep(0.03)
@@ -161,8 +160,7 @@ class Raspberry():
         def send(self, frame):
             header = b'{:15s}{:07d}'.format(self.session_name, self.session_index)
             frame_data = cv2.imencode('.jpg', frame)[1].tostring()
-            frame_data_length = len(frame_data)
-            send_data = header + b'{:07d}{}{}'.format(frame_data_length, frame_data, self.jpg_boundary)
+            send_data = header + b'{}{}'.format(frame_data, self.jpg_boundary)
             for _ in range(self.sending_round):
                 try:
                     self.camera_socket.send(send_data)
