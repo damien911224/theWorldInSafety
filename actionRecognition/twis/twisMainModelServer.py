@@ -542,8 +542,8 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 16
-        self.num_using_gpu = 12
+        self.num_workers = 8
+        self.num_using_gpu = 8
 
         self.start_index = 2
         self.scanned_index = 1
@@ -553,10 +553,10 @@ class Evaluator():
 
         self.scores = []
 
-        global scanning_pool_first
-        global scanning_pool_second
-        scanning_pool_first = Pool(self.num_workers)
-        scanning_pool_second = GreenPool()
+        global scanning_pool_odd
+        global scanning_pool_even
+        scanning_pool_odd = Pool(self.num_workers)
+        scanning_pool_even =Pool(self.num_workers)
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
@@ -591,8 +591,26 @@ class Evaluator():
 
                     scan_start_time = time.time()
 
-                    return_scores = []
-                    return_scores += self.scanner.scan(self.start_index, self.end_index, self.actual_extracted_index)
+                    manager = Manager()
+                    return_scores = manager.list()
+                    len_of_scores = self.end_index - self.start_index + 1
+                    for _ in range(len_of_scores):
+                        return_scores.append([0.0, 0.0])
+
+                    self.odd_scanner_thread = threading.Thread(target=self.scanner.scan,
+                                                               args=(self.start_index, self.end_index,
+                                                                     self.actual_extracted_index, 'odd', return_scores))
+                    self.even_scanner_thread = threading.Thread(target=self.scanner.scan,
+                                                                args=(self.start_index, self.end_index,
+                                                                      self.actual_extracted_index, 'even', return_scores))
+
+                    self.odd_scanner_thread.start()
+                    self.even_scanner_thread.start()
+
+                    self.odd_scanner_thread.join()
+                    self.even_scanner_thread.join()
+
+                    print return_scores
 
                     self.sender.scores += return_scores
 
@@ -615,18 +633,18 @@ class Evaluator():
 
 
     def finalize(self):
-        global scanning_pool_first
-        global scanning_pool_second
+        global scanning_pool_odd
+        global scanning_pool_even
 
         self.sender.in_progress = False
 
-        scanning_pool_first.close()
-        scanning_pool_first.join()
-        del scanning_pool_first
+        scanning_pool_odd.close()
+        scanning_pool_odd.join()
+        del scanning_pool_odd
 
-        scanning_pool_second.close()
-        scanning_pool_second.join()
-        del scanning_pool_second
+        scanning_pool_even.close()
+        scanning_pool_even.join()
+        del scanning_pool_even
 
         del self.scanner
 
@@ -647,10 +665,10 @@ class Evaluator():
 
         self.scores = []
 
-        global scanning_pool_first
-        global scanning_pool_second
-        scanning_pool_first = GreenPool()
-        scanning_pool_second = Pool()
+        global scanning_pool_odd
+        global scanning_pool_even
+        scanning_pool_odd = Pool()
+        scanning_pool_even = Pool()
 
         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
                                self.num_using_gpu, self.session.use_spatial_net)
@@ -677,50 +695,31 @@ class Scanner():
         self.score_bound = 30.0
 
 
-    def scan(self, start_index, end_index, actual_extracted_index):
-        global scanning_pool_first
-        global scanning_pool_second
+    def scan(self, start_index, end_index, actual_extracted_index, scanner_type, return_scores):
+        global scanning_pool_odd
+        global scanning_pool_even
 
-        indices_first = range(start_index, end_index + 1, 1)
-        # indices_second = range(end_index / 4 + 1, end_index + 1, 1)
-        device_id_first = 0
-        # device_id_second = 0
-
+        if scanner_type == 'odd':
+            indices = range(start_index, end_index + 1, 2)
+            scanning_pool = scanning_pool_odd
+            device_id = 0
+        else:
+            indices = range(start_index + 1, end_index + 1, 2)
+            scanning_pool = scanning_pool_even
+            device_id = 1
 
         manager = Manager()
-        return_scores = manager.list()
+        scan_scores = manager.list()
 
-        for _ in range(len(indices_first)):
+        for _ in range(len(indices)):
             return_scores.append([0.0, 0.0])
 
-        scanning_pool_first.map(self.scanVideo,
-                                     zip([actual_extracted_index] * len(indices_first),
-                                         indices_first, [device_id_first] * len(indices_first),
-                                         [start_index] * len(indices_first), [return_scores] * len(indices_first)))
-
-
-        # scan_scores_first = \
-        #     scanning_pool_first.imap(self.scanVideo,
-        #                              zip([actual_extracted_index] * len(indices_first),
-        #                                  indices_first, [device_id_first] * len(indices_first)))
-        #
-        # scan_scores_second = \
-        #     scanning_pool_second.imap(self.scanVideo,
-        #                               zip([actual_extracted_index] * len(indices_second),
-        #                                   indices_second, [device_id_second] * len(indices_second)))
-        #
-        # scanning_pool_first.waitall()
-        # scanning_pool_second.waitall()
-        #
-        # return_scores = []
-        # for score in scan_scores_first:
-        #     return_scores.append(score)
-        #
-        #
-        # for score in scan_scores_second:
-        #     return_scores.append(score)
-
-        return return_scores
+        scanning_pool.map(self.scanVideo,
+                          zip([actual_extracted_index] * len(indices),
+                              indices, [device_id] * len(indices),
+                              [start_index] * len(indices), [scan_scores] * len(indices)))
+        for index in indices:
+            return_scores[index - start_index] = scan_scores[indices[index]]
 
 
     def scanFrames(self, indices, start_index, frame_count, device_id, return_scores):
@@ -813,8 +812,12 @@ class Scanner():
         current_id = current._identity[0] -1
 
         if current_id % self.num_workers < self.num_using_gpu:
-            spatial_net = spatial_net_gpu_01
-            temporal_net = temporal_net_gpu_01
+            if device_id == 0:
+                spatial_net = spatial_net_gpu_01
+                temporal_net = temporal_net_gpu_01
+            else:
+                spatial_net = spatial_net_gpu_02
+                temporal_net = temporal_net_gpu_02
         else:
             spatial_net = spatial_net_cpu
             temporal_net = temporal_net_cpu
