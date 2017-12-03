@@ -712,10 +712,10 @@ class Scanner():
         return_scores = [0.0] * len(indices_first + indices_second)
 
 
-        process_first = Process(target=self.scanFrames,
-                                args=(indices_first, start_index, actual_extracted_index, device_id_first, return_scores))
-        process_second = Process(target=self.scanFrames,
-                                 args=(indices_second, start_index, actual_extracted_index, device_id_second, return_scores))
+        process_first = threading.Thread(target=self.scanFrames,
+                                         args=(indices_first, start_index, actual_extracted_index, device_id_first, return_scores))
+        process_second = threading.Thread(target=self.scanFrames,
+                                          args=(indices_second, start_index, actual_extracted_index, device_id_second, return_scores))
 
 
         process_first.start()
