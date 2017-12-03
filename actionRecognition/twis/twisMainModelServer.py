@@ -929,27 +929,27 @@ class Sender():
                     #     pass
 
 
-                    if frame_index == sending_start_index:
-                        try:
-                            os.remove(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index-1)))
-                        except OSError:
-                            pass
-
-                    if frame_index < sending_end_index:
-                        try:
-                            os.remove(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index)))
-                        except OSError:
-                            pass
-
-                    try:
-                        os.remove(os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(frame_index)))
-                    except OSError:
-                        pass
-
-                    try:
-                        os.remove(os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(frame_index)))
-                    except OSError:
-                        pass
+                    # if frame_index == sending_start_index:
+                    #     try:
+                    #         os.remove(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index-1)))
+                    #     except OSError:
+                    #         pass
+                    #
+                    # if frame_index < sending_end_index:
+                    #     try:
+                    #         os.remove(os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index)))
+                    #     except OSError:
+                    #         pass
+                    #
+                    # try:
+                    #     os.remove(os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(frame_index)))
+                    # except OSError:
+                    #     pass
+                    #
+                    # try:
+                    #     os.remove(os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(frame_index)))
+                    # except OSError:
+                    #     pass
 
                 del self.scores[0:number_of_sending_scores]
                 gc.collect()
