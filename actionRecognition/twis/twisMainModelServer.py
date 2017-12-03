@@ -708,18 +708,10 @@ class Scanner():
             scanning_pool = scanning_pool_even
             device_id = 1
 
-        manager = Manager()
-        scan_scores = manager.list()
-
-        for _ in range(len(indices)):
-            scan_scores.append([0.0, 0.0])
-
         scanning_pool.map(self.scanVideo,
                           zip([actual_extracted_index] * len(indices),
                               indices, [device_id] * len(indices),
-                              [start_index] * len(indices), [scan_scores] * len(indices)))
-        for index in indices:
-            return_scores[index - start_index] = scan_scores[indices[index]]
+                              [start_index] * len(indices), [return_scores] * len(indices)))
 
 
     def scanFrames(self, indices, start_index, frame_count, device_id, return_scores):
@@ -806,7 +798,7 @@ class Scanner():
         index = scan_items[1]
         device_id = scan_items[2]
         start_index = scan_items[3]
-        scan_scores = scan_items[4]
+        return_scores = scan_items[4]
 
         current = current_process()
         current_id = current._identity[0] -1
@@ -876,7 +868,7 @@ class Scanner():
                                                                  -self.score_bound, self.score_bound),
                                                          self.score_bound).tolist()
 
-        scan_scores[index - start_index] = entire_scores
+        return_scores[index - start_index] = entire_scores
 
 
     def scanVideoCPU(self, scan_items):
