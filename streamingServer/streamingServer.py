@@ -168,8 +168,6 @@ class StreamingServer():
             for frame in frames:
                 frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                 cv2.imwrite(frame_path, frame)
-                new_frame = cv2.imread(frame_path)
-                print new_frame.shape
                 frame_index += 1
 
 
@@ -184,6 +182,8 @@ class StreamingServer():
             self.sending_round = 1
             self.ready = False
             self.session_is_open = False
+
+            self.removing_term = 10
 
 
         def run(self):
@@ -291,13 +291,18 @@ class StreamingServer():
                                         with self.streaming_server.print_lock:
                                             print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
                                         break
-                                    try:
-                                        os.remove(frame_path)
-                                    except OSError:
-                                        pass
+
+                                    removing_frame_index = self.session_index - self.removing_term
+                                    if removing_frame_index >= 1:
+                                        removing_frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(removing_frame_index))
+                                        try:
+                                            os.remove(removing_frame_path)
+                                        except OSError:
+                                            pass
 
                                     if not self.in_progress:
                                         break
+
                     else:
                         rmtree(self.session_folder, ignore_errors=True)
                         with self.streaming_server.print_lock:

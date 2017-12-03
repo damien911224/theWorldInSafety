@@ -134,12 +134,7 @@ class Raspberry():
 
                             self.send(frame)
                             self.session_index += 1
-                        else:
-                            if self.session_is_open:
-                                self.camera_socket.close()
-                                self.camera_socket = None
 
-                                self.session_is_open = False
                         
                         if self.visualization:
                             visualized_frame = self.visualize(frame, is_moving)
