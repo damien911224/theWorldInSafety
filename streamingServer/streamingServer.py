@@ -68,9 +68,9 @@ class StreamingServer():
             self.streaming_server = streaming_server
 
             self.in_progress = True
-            self.delay_display_term = 100
-            self.delay_count = 0
-            self.delay_display = False
+            self.session_is_opened = False
+
+            self.dumped_index = -1
 
 
         def run(self):
@@ -84,6 +84,7 @@ class StreamingServer():
                                             self.streaming_server.raspberry_port_number))
 
                 self.raspberry_socket.listen(5)
+                self.dumped_index = -1
 
                 while self.in_progress:
                     try:
@@ -92,7 +93,6 @@ class StreamingServer():
 
                         self.ready = True
                         client_socket, address = self.raspberry_socket.accept()
-                        self.session_is_opened = False
 
                         previous_data = b''
                         while self.in_progress:
@@ -150,6 +150,7 @@ class StreamingServer():
 
                                     if frame is not None:
                                         self.dumpFrames([frame], frame_index)
+                                        self.dumped_index = frame_index
 
                         client_socket.close()
 
@@ -158,9 +159,11 @@ class StreamingServer():
 
                     except KeyboardInterrupt:
                         self.raspberry_socket.close()
+                        self.session_is_opened = False
                         break
 
                 self.raspberry_socket.close()
+                self.session_is_opened = False
 
 
         def dumpFrames(self, frames, start_index):
@@ -184,13 +187,10 @@ class StreamingServer():
             self.session_is_open = False
 
             self.removing_term = 10
+            self.sent_index = -1
 
 
         def run(self):
-            while True:
-                while not self.in_progress:
-                    time.sleep(0.3)
-
                 self.model_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.model_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.model_socket.bind((self.streaming_server.streaming_server_host_name,
@@ -201,120 +201,51 @@ class StreamingServer():
                 while self.in_progress:
                     self.client_socket, address = self.model_socket.accept()
 
-                    socket_closed = False
-                    while self.in_progress:
-                        session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
-                        if len(session_list) <= 0:
-                            time.sleep(0.1)
-                        else:
-                            break
+                    while not self.streaming_server.raspberry.session_is_opened and self.in_progress:
+                        time.sleep(0.3)
 
-                    if not self.in_progress:
-                        break
 
-                    if socket_closed:
-                        continue
-
-                    if len(session_list) >= 2:
-                        session_list.sort()
-
-                    self.session_index = 1
-                    self.session_folder = session_list[0]
-                    self.session_name = self.session_folder.split('/')[-1]
+                    self.session_name = self.streaming_server.raspberry.session_name
+                    self.session_folder = os.path.join(self.streaming_server.save_folder, self.session_name)
+                    self.session_is_open = True
+                    self.start_index = 1
 
                     with self.streaming_server.print_lock:
                         print '{:10s}|{:15s}|{}'.format('Model', 'Session Start', self.session_name)
 
-                    self.session_is_open = True
+                    while self.in_progress:
+                        while self.sent_index >= self.streaming_server.raspberry.dumped_index and self.in_progress:
+                            time.sleep(0.3)
 
+                        self.end_index = self.streaming_server.raspberry.dumped_index
 
-                    frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
-
-                    first_not_ok = False
-                    if frame_paths is not None and len(frame_paths) >= 1:
-                        if len(frame_paths) >= 2:
-                            frame_paths.sort()
-                        for frame_path in frame_paths:
-                            self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
+                        for frame_index in range(self.start_index, self.end_index + 1, 1):
+                            frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
                             frame = cv2.imread(frame_path)
-                            ok = self.send(frame)
-                            if not ok:
-                                first_not_ok = True
-                                break
-                            try:
-                                os.remove(frame_path)
-                            except OSError:
-                                pass
+                            self.send(frame, frame_index)
 
-                            if not self.in_progress:
-                                break
+                            removing_frame_index = frame_index - self.removing_term
+                            if removing_frame_index >= 1:
+                                removing_frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(frame_index))
+                                try:
+                                    os.remove(removing_frame_path)
+                                except OSError:
+                                    pass
 
-                    if not self.in_progress:
-                        break
+                        self.sent_index = self.end_index
+                        self.start_index = self.end_index + 1
 
+                    self.client_socket.close()
+                    self.session_is_open = False
+                    self.ready = True
+                    rmtree(self.session_folder, ignore_errors=True)
 
-                    if first_not_ok:
-                        self.client_socket.close()
-                        with self.streaming_server.print_lock:
-                            print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
-                        continue
-
-
-                    if len(session_list) == 1:
-                        while self.in_progress:
-                            while self.in_progress:
-                                check_frame_paths = glob.glob(os.path.join(self.session_folder, '*.jpg'))
-                                check_session_list = glob.glob(os.path.join(self.streaming_server.save_folder, '*'))
-
-                                if (check_frame_paths is not None and len(check_frame_paths) >= 1) or (len(check_session_list) >= 2):
-                                    break
-                                else:
-                                    time.sleep(0.1)
-
-                            if socket_closed:
-                                break
-
-                            frame_paths = glob.glob(os.path.join(self.session_folder, '*'))
-                            if frame_paths is None or len(frame_paths) <= 0:
-                                rmtree(self.session_folder, ignore_errors=True)
-                                with self.streaming_server.print_lock:
-                                    print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
-                                break
-                            else:
-                                if len(frame_paths) >= 2:
-                                    frame_paths.sort()
-                                for frame_path in frame_paths:
-                                    self.session_index = int(frame_path.split('_')[-1].split('.')[-2])
-                                    frame = cv2.imread(frame_path)
-                                    ok = self.send(frame)
-                                    if not ok:
-                                        with self.streaming_server.print_lock:
-                                            print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
-                                        break
-
-                                    removing_frame_index = self.session_index - self.removing_term
-                                    if removing_frame_index >= 1:
-                                        removing_frame_path = os.path.join(self.session_folder, 'img_{:07d}.jpg'.format(removing_frame_index))
-                                        try:
-                                            os.remove(removing_frame_path)
-                                        except OSError:
-                                            pass
-
-                                    if not self.in_progress:
-                                        break
-
-                    else:
-                        rmtree(self.session_folder, ignore_errors=True)
-                        with self.streaming_server.print_lock:
-                            print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
-
-                self.client_socket.close()
-                self.session_is_open = False
-                self.ready = True
+                    with self.streaming_server.print_lock:
+                        print '{:10s}|{:15s}|{}'.format('Model', 'Session Closed', self.session_name)
 
 
-        def send(self, frame):
-            header = b'{:15s}{:07d}'.format(self.session_name, self.session_index)
+        def send(self, frame, frame_index):
+            header = b'{:15s}{:07d}'.format(self.session_name, frame_index)
             try:
                 frame_data = cv2.imencode('.jpg', frame)[1].tostring()
                 send_data = header + frame_data + self.jpg_boundary

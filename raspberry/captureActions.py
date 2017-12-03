@@ -77,6 +77,8 @@ class Raspberry():
             self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
 
+            self.wait_time = 0.03
+
             self.sending_round = 1
 
 
@@ -91,8 +93,6 @@ class Raspberry():
                     video_cap = cv2.VideoCapture(self.web_cam_device_id)
                 else:
                     video_cap = cv2.VideoCapture(self.test_video)
-                video_fps = int(video_cap.get(cv2.CAP_PROP_FPS)) + 1
-                self.wait_time = max(int(1000.0 / float(video_fps)), 1)
 
                 if self.want_to_resize:
                     video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resize_size[0])
@@ -105,7 +105,7 @@ class Raspberry():
 
                 if video_cap.isOpened():
                     while self.in_progress:
-                        time.sleep(0.03)
+                        time.sleep(self.wait_time)
                         ok, frame = video_cap.read()
 
                         if self.want_to_resize:
@@ -223,7 +223,7 @@ class Raspberry():
                 self.camera = camera
 
                 self.frame_diff_threshold = 0.45
-                self.minimum_capture_count = 1000000
+                self.minimum_capture_count = 300
 
                 self.countdown_to_stop = self.minimum_capture_count
                 self.no_moving = False
