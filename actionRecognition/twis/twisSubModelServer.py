@@ -181,7 +181,8 @@ class Session():
         self.print_lock = Lock()
         self.average_delay = 0.0
 
-        self.server_ip_address = '13.124.183.55'
+        # self.server_ip_address = '13.124.183.55'
+        self.server_ip_address = '13.125.86.217'
         self.server_port_number = 8888
 
         self.client_host_name = '192.168.1.101'
