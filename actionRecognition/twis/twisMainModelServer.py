@@ -140,7 +140,7 @@ class Session():
         else:
             self.test_video_name = 'test_1.mp4'
         self.model_version = 4
-        self.use_spatial_net = True
+        self.use_spatial_net = False
         self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
@@ -212,7 +212,7 @@ class Session():
                                 break
 
                             if self.in_progress:
-                                header = frame_data[:36]
+                                header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
                                 frame_data = frame_data[22:]
