@@ -140,7 +140,7 @@ class Session():
         else:
             self.test_video_name = 'test_1.mp4'
         self.model_version = 4
-        self.use_spatial_net = True
+        self.use_spatial_net = False
         self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
@@ -873,7 +873,7 @@ class Scanner():
                                                                  -self.score_bound, self.score_bound),
                                                          self.score_bound).tolist()
 
-        return_scores[index - start_index]
+        return_scores[index - start_index] = entire_scores
 
 
     def scanVideoCPU(self, scan_items):
@@ -1074,10 +1074,10 @@ if __name__ == '__main__':
 
     while True:
         time.sleep(13.1451)
-        with session.print_lock:
-            print '------------------------------ Memory Checking ---------------------------------'
-            cmd = 'free -h'
-            with session.extractor.cmd_lock:
-                os.system(cmd)
-                sys.stdout.flush()
-            print '--------------------------------------------------------------------------------'
+        # with session.print_lock:
+        #     print '------------------------------ Memory Checking ---------------------------------'
+        #     cmd = 'free -h'
+        #     with session.extractor.cmd_lock:
+        #         os.system(cmd)
+        #         sys.stdout.flush()
+        #     print '--------------------------------------------------------------------------------'
