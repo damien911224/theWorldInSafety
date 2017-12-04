@@ -21,9 +21,14 @@
 					{{ form.username|add_class:"input_ID" }}
 				</div>
 				<div class="form-login-register">
+					{{ form.phone_num.label_tag }}
+					{{ form.phone_num|add_class:"input_password" }}
+				</div>
+				<div class="form-login-register">
 					{{ form.password1.label_tag }}
 					{{ form.password1|add_class:"input_password" }}
 				</div>
+
 				<div class="form-login-register">
 					{{ form.password2.label_tag }} 
 					{{ form.password2|add_class:"input_password" }}

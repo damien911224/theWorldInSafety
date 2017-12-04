@@ -19,7 +19,7 @@ from django.conf import settings
 from django.contrib import admin
 
 from TwisWeb.views import HomeView
-from TwisWeb.views import UserCreateView, UserCreateDone
+from TwisWeb.views import UserCreateView, UserCreateDone, createUser
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
@@ -28,7 +28,7 @@ urlpatterns = [
 
 	url(r'^accounts/', include('django.contrib.auth.urls')),
 	url(r'^accounts/', include('userprofile.urls')),
-	url(r'^accounts/register/$', UserCreateView.as_view(), name='register'),
+	url(r'^accounts/register/$', createUser, name='register'),
 	url(r'^accounts/register/done$', UserCreateDone.as_view(), name='register_done'),
 
 	url(r'^management/', include('management.urls', namespace='management')),
