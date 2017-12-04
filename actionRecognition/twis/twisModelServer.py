@@ -168,7 +168,7 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = True
+        self.src_from_out = False
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
@@ -1693,7 +1693,7 @@ class Closer():
                                     frame['semantics'] = clip_semantics[semantic_index]
                                 semantic_index += 1
 
-                            if ok:
+                            if True or ok:
                                 self.visualize(clip)
                             else:
                                 rmtree(clip['keep_folder'], ignore_errors=True)
