@@ -730,9 +730,8 @@ class Evaluator():
 
             self.main_server_socket.listen(5)
 
+            client_socket, address = self.main_server_socket.accept()
             while self.in_progress:
-                client_socket, address = self.main_server_socket.accept()
-
                 entire_frame_data = b''
                 while True:
                     recv_data = client_socket.recv(90456)
