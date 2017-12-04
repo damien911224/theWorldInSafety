@@ -73,7 +73,7 @@ class Session():
         self.dumped_index = 0
 
 
-        self.src_from_out = False
+        self.src_from_out = True
         self.web_cam = False
         if self.web_cam:
             self.test_video_name = 'Webcam.mp4'
@@ -508,9 +508,8 @@ class Evaluator():
 
                     scan_start_time = time.time()
 
-
                     entire_send_data = b''
-                    for frame_index in range(self.start_index - 2, self.actual_extracted_index, 1):
+                    for frame_index in range(self.start_index - 2, self.actual_extracted_index + 1, 1):
                         if frame_index <= 1:
                             frame_index = 2
 
@@ -553,6 +552,7 @@ class Evaluator():
                         finder = recv_data.find(self.entire_boundary)
                         if finder != -1:
                             scores_data += recv_data[:finder]
+                            break
                         else:
                             scores_data += recv_data
 
@@ -562,7 +562,6 @@ class Evaluator():
                         normal_score = float(scores_data[segment_index+7:segment_index+14])
                         scores = [ violence_score, normal_score ]
                         return_scores.append(scores)
-
 
                     self.scan_time = (time.time() - scan_start_time) / len(return_scores)
 
