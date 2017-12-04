@@ -57,8 +57,6 @@ class VideoDV(DetailView):
 
 		return obj
 
-#	model.save()
-
 def violence(request, video_id):
 	if request.method == 'POST':
 		v = Video.objects.get(id=video_id)
@@ -73,7 +71,7 @@ def violence(request, video_id):
 		
 		send_to_registed_users(uv)
 
-	return HttpResponse('Sended Alarm\n')
+	return render(request, 'ajax/sended_sms.html')
 
 def send_to_registed_users(uv):
 	appid = 'twis'
@@ -85,7 +83,7 @@ def send_to_registed_users(uv):
 
 	receivers = []
 	for user in registered_users:
-		receivers.append(user.profile.phone_num)
+		receivers.append(user.userprofile.phone_num)
 
 	content = "http://13.228.101.253:8080" + uv.get_user_absolute_url()
 
