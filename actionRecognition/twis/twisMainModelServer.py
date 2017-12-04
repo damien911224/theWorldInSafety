@@ -693,6 +693,15 @@ class Evaluator():
         self.model_version = 4
         self.build_net(self.model_version)
 
+        self.main_server_ip_address = self.getMyIpAddress()
+        self.main_server_port_number = 7777
+
+        self.element_boundary = b'!element_boundary!'
+        self.one_boundary = b'!one_boundary!'
+        self.entire_boundary = b'!entire_boundary!'
+
+        self.save_folder = '../progress/temp'
+
         global scanning_pool_odd
         global scanning_pool_even
         scanning_pool_odd = Pool(self.num_workers)
@@ -704,14 +713,7 @@ class Evaluator():
                                self.num_workers, self.num_using_gpu, self.use_spatial_net)
 
 
-        self.main_server_ip_address = self.getMyIpAddress()
-        self.main_server_port_number = 7777
 
-        self.element_boundary = b'!element_boundary!'
-        self.one_boundary = b'!one_boundary!'
-        self.entire_boundary = b'!entire_boundary!'
-
-        self.save_folder = '../progress/temp'
 
         self.evaluator_thread = threading.Thread(target=self.run, name='Evaluator')
         self.evaluator_thread.start()
