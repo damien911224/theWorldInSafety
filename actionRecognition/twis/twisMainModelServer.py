@@ -678,8 +678,8 @@ class Evaluator():
     def __init__(self):
         self.in_progress =True
 
-        self.num_workers = 16
-        self.num_using_gpu = 12
+        self.num_workers = 25
+        self.num_using_gpu = 18
 
         self.start_index = 2
         self.scanned_index = 1
