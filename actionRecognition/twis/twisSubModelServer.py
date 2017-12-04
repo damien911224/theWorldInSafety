@@ -149,7 +149,7 @@ class Session():
                                 break
 
                             if self.in_progress:
-                                header = frame_data[:2]
+                                header = frame_data[:22]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
                                 frame_data = frame_data[22:]
