@@ -689,7 +689,9 @@ class Evaluator():
 
         self.scores = []
 
-        self.build_net(4)
+        self.use_spatial_net = False
+        self.model_version = 4
+        self.build_net(self.model_version)
 
         global scanning_pool_odd
         global scanning_pool_even
@@ -698,8 +700,8 @@ class Evaluator():
 
         copy_reg.pickle(types.MethodType, self._pickle_method)
 
-        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder,
-                               self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
+        self.scanner = Scanner(self.save_folder, self.save_folder,
+                               self.num_workers, self.num_using_gpu, self.use_spatial_net)
 
 
         self.main_server_ip_address = self.getMyIpAddress()
