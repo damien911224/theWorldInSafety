@@ -689,7 +689,7 @@ class Evaluator():
 
         self.scores = []
 
-        self.use_spatial_net = False
+        self.use_spatial_net = True
         self.model_version = 4
         self.build_net(self.model_version)
 
