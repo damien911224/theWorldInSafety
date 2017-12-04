@@ -804,6 +804,15 @@ class Evaluator():
                 self.odd_scanner_thread.join()
                 self.even_scanner_thread.join()
 
+
+                for score in return_scores:
+                    violence_score_string = b'{:07.03f}'.format(score[0])
+                    normal_score_string = b'{:07.03f}'.format(score[1])
+                    score_string = violence_score_string + normal_score_string
+
+                    client_socket.send(score)
+                client_socket.send(self.entire_boundary)
+
                 gc.collect()
 
 
