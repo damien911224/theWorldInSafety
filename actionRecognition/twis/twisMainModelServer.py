@@ -783,6 +783,8 @@ class Evaluator():
                     cv2.imwrite(os.path.join(self.save_folder, 'flow_x_{:07d}.jpg'.format(frame_index)), flow_x)
                     cv2.imwrite(os.path.join(self.save_folder, 'flow_y_{:07d}.jpg'.format(frame_index)), flow_y)
 
+                    frame_index += 1
+
 
                 end_index = len(frames_data) - 2
                 start_index = 3
