@@ -741,6 +741,7 @@ class Evaluator():
                     found = recv_data.find(self.entire_boundary)
                     if found != -1:
                         entire_frame_data += recv_data[:found]
+                        break
                     else:
                         entire_frame_data += recv_data
 
@@ -753,6 +754,8 @@ class Evaluator():
                         entire_frame_data = entire_frame_data[found + len(self.one_boundary):]
                     else:
                         break
+
+                rmtree(self.save_folder, ignore_errors=True)
 
                 try:
                     os.makedirs(self.save_folder)
