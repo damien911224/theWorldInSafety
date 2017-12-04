@@ -27,8 +27,8 @@ div .form-set {
   font-weight: normal;
 }
 .form-login-register .form-control {
-  position: relative;
   height: auto;
+  width: auto;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
   padding: 10px;
@@ -39,14 +39,13 @@ div .form-set {
 }
 .form-login-register .input_ID {
   margin-bottom: -1px;
-  width: auto;
+  width: 70%;
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
 }
 .form-login-register .input_password {
   margin-bottom: 10px;
-  margin-left: 10px;
-  width: auto;
+  width: 70%;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
