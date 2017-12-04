@@ -693,6 +693,8 @@ class Evaluator():
 
         self.scores = []
 
+        self.build_net(4)
+
         global scanning_pool_odd
         global scanning_pool_even
         scanning_pool_odd = Pool(self.num_workers)
@@ -712,6 +714,9 @@ class Evaluator():
         self.entire_boundary = b'!entire_boundary!'
 
         self.save_folder = '../progress/temp'
+
+        self.evaluator_thread = threading.Thread(target=self.run, name='Evaluator')
+        self.evaluator_thread.start()
 
 
     def run(self):
@@ -883,6 +888,31 @@ class Evaluator():
 
         self.sender.resume()
         self.sender_closed = False
+
+
+    def build_net(self, version=4, use_spatial_net=False):
+        global spatial_net_gpu_01
+        global spatial_net_gpu_02
+        global temporal_net_gpu_01
+        global temporal_net_gpu_02
+
+        global spatial_net_cpu
+        global temporal_net_cpu
+
+        self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
+        self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
+            version)
+        self.temporal_net_proto = "../models/twis/tsn_bn_inception_flow_deploy.prototxt"
+        self.temporal_net_weights = "../models/twis_caffemodels/v{0}/twis_temporal_net_v{0}.caffemodel".format(
+            version)
+
+        spatial_net_gpu_01 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 0)
+        spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
+        temporal_net_gpu_01 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 0)
+        temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
+
+        spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
+        temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
 
 
 class Scanner():
@@ -1271,7 +1301,7 @@ class Sender():
 
 
 if __name__ == '__main__':
-    session = Session()
+    evaluator = Evaluator()
 
     while True:
         time.sleep(13.1451)
