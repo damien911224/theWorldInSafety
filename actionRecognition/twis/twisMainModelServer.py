@@ -785,8 +785,7 @@ class Evaluator():
                 start_index = 3
 
 
-                with self.session.print_lock:
-                    print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', start_index, end_index)
+                print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', start_index, end_index)
 
 
 
