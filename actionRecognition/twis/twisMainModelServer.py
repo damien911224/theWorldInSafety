@@ -678,8 +678,8 @@ class Evaluator():
     def __init__(self):
         self.in_progress =True
 
-        self.num_workers = 25
-        self.num_using_gpu = 18
+        self.num_workers = 16
+        self.num_using_gpu = 12
 
         self.start_index = 2
         self.scanned_index = 1
@@ -689,7 +689,7 @@ class Evaluator():
 
         self.scores = []
 
-        self.use_spatial_net = True
+        self.use_spatial_net = False
         self.model_version = 4
         self.build_net(self.model_version)
 
