@@ -1,7 +1,5 @@
 import cv2
 import sys
-sys.path.append("../lib/caffe-action/python")
-import caffe
 import os
 import numpy as np
 import time
@@ -10,7 +8,6 @@ import math
 import threading
 from sklearn import mixture
 from pipes import quote
-from caffe.io import oversample
 from utils.io import flow_stack_oversample, fast_list2arr
 from multiprocessing import Pool, Value, Lock, current_process, Manager
 import copy_reg, types
@@ -26,98 +23,6 @@ from post_process import SemanticPostProcessor
 import pycurl
 from StringIO import StringIO
 import imutils
-
-
-
-class CaffeNet(object):
-
-    def __init__(self, net_proto, net_weights, device_id, input_size=None):
-        caffe.set_logging_disabled()
-
-        if device_id >= 0:
-            caffe.set_mode_gpu()
-            caffe.set_device(device_id)
-        else:
-            caffe.set_mode_cpu()
-        self._net = caffe.Net(net_proto, net_weights, caffe.TEST)
-
-        input_shape = self._net.blobs['data'].data.shape
-
-        if input_size is not None:
-            input_shape = input_shape[:2] + input_size
-
-        transformer = caffe.io.Transformer({'data': input_shape})
-
-        if self._net.blobs['data'].data.shape[1] == 3:
-            transformer.set_transpose('data', (2, 0, 1))  # move image channels to outermost dimension
-            transformer.set_mean('data',
-                                 np.array([104, 117, 123]))  # subtract the dataset-mean value in each channel
-        else:
-            pass  # non RGB data need not use transformer
-
-        self._transformer = transformer
-        self._sample_shape = self._net.blobs['data'].data.shape
-
-
-    def predict_single_frame(self, frame, score_name, over_sample=True, multiscale=None, frame_size=None):
-        if frame_size is not None:
-            frame = [cv2.resize(x, frame_size, interpolation=cv2.INTER_AREA) for x in frame]
-
-        if over_sample:
-            if multiscale is None:
-                os_frame = oversample(frame, (self._sample_shape[2], self._sample_shape[3]))
-            else:
-                os_frame = []
-                for scale in multiscale:
-                    resized_frame = [cv2.resize(x, (0, 0), fx=1.0 / scale, fy=1.0 / scale) for x in frame]
-                    os_frame.extend(oversample(resized_frame, (self._sample_shape[2], self._sample_shape[3])))
-        else:
-            os_frame = fast_list2arr(frame)
-
-        data = fast_list2arr([self._transformer.preprocess('data', x) for x in os_frame])
-
-        self._net.blobs['data'].reshape(*data.shape)
-        self._net.reshape()
-        out = self._net.forward(blobs=[score_name, ], data=data)
-        return out[score_name].copy()
-
-
-    def predict_single_flow_stack(self, frame, score_name, over_sample=True, frame_size=None):
-        if frame_size is not None:
-            frame = fast_list2arr([cv2.resize(x, frame_size, interpolation=cv2.INTER_AREA) for x in frame])
-        else:
-            frame = fast_list2arr(frame)
-
-        if over_sample:
-            os_frame = flow_stack_oversample(frame, (self._sample_shape[2], self._sample_shape[3]))
-        else:
-            os_frame = fast_list2arr([frame])
-
-        data = os_frame - np.float32(128.0)
-
-        self._net.blobs['data'].reshape(*data.shape)
-        self._net.reshape()
-        out = self._net.forward(blobs=[score_name, ], data=data)
-        return out[score_name].copy()
-
-
-    def predict_simple_single_flow_stack(self, frame, score_name, over_sample=False, frame_size=None):
-        if frame_size is not None:
-            frame = fast_list2arr([cv2.resize(x, frame_size, interpolation=cv2.INTER_AREA) for x in frame])
-        else:
-            frame = fast_list2arr(frame)
-
-        if over_sample:
-            os_frame = flow_stack_oversample(frame, (self._sample_shape[2], self._sample_shape[3]))
-        else:
-            os_frame = fast_list2arr([frame])
-
-        data = os_frame - np.float32(128.0)
-
-        self._net.blobs['data'].reshape(*data.shape)
-        self._net.reshape()
-        out = self._net.forward(blobs=[score_name, ], data=data)
-        return out[score_name].copy()
 
 
 class Session():
@@ -174,15 +79,11 @@ class Session():
             self.test_video_name = 'Webcam.mp4'
         else:
             self.test_video_name = 'test_1.mp4'
-        self.model_version = 4
-        self.use_spatial_net = True
-        self.build_net(self.model_version, self.use_spatial_net)
 
         self.print_lock = Lock()
         self.average_delay = 0.0
 
-        # self.server_ip_address = '13.124.183.55'
-        self.server_ip_address = '13.125.86.217'
+        self.server_ip_address = '52.78.130.42'
         self.server_port_number = 8888
 
         self.client_host_name = '192.168.1.101'
@@ -248,11 +149,10 @@ class Session():
                                 break
 
                             if self.in_progress:
-                                header = frame_data[:36]
+                                header = frame_data[:2]
                                 session_name = str(header[:15])
                                 frame_index = int(header[15:22])
-                                frame_moment = int(header[22:36])
-                                frame_data = frame_data[36:]
+                                frame_data = frame_data[22:]
 
                                 if frame_index - previous_index >= 2:
                                     for i in range(previous_index+1, frame_index, 1):
@@ -294,10 +194,6 @@ class Session():
                                         self.dumpFrames([frame])
                                         self.start_index += 1
                                         self.dumped_index = max(self.start_index - 1, 1)
-
-                                self.session_delay += float(int(datetime.datetime.now().strftime('%M%S%s')) - frame_moment)
-                                self.delay_count += 1
-                                self.average_delay = self.session_delay / self.delay_count / 10000000000.0
                             else:
                                 break
 
@@ -355,27 +251,6 @@ class Session():
 
                 video_cap.release()
                 self.finalize()
-
-
-    def build_net(self, version=4, use_spatial_net=False):
-        global spatial_net_gpu
-        global spatial_net_cpu
-        global temporal_net_gpu
-        global temporal_net_cpu
-
-        self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
-        self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
-            version)
-        self.temporal_net_proto = "../models/twis/tsn_bn_inception_flow_deploy.prototxt"
-        self.temporal_net_weights = "../models/twis_caffemodels/v{0}/twis_temporal_net_v{0}.caffemodel".format(
-            version)
-
-        device_id = 0
-
-        spatial_net_gpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, device_id)
-        spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
-        temporal_net_gpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, device_id)
-        temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
 
 
     def dumpFrames(self, frames):
@@ -461,69 +336,6 @@ class Session():
 
         self.extractor.resume()
         self.extractor_closed = False
-
-
-    class StreamingClient():
-        def __init__(self):
-            self.server_ip_address = '10.211.55.10'
-            self.server_port = 10000
-
-            self.client_host_name = '192.168.1.101'
-            self.client_port = 10001
-
-            self.save_folder = os.path.join('/home/damien/temp/streaming')
-            if not os.path.exists(self.save_folder):
-                try:
-                    os.makedirs(self.save_folder)
-                except OSError:
-                    pass
-
-            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.client_socket.bind((self.client_host_name, self.client_port))
-            self.client_socket.listen(5)
-
-            self.frame_index = 1
-
-            self.client_thread = threading.Thread(target=self.run, name='Streaming Client')
-            self.client_thread.start()
-
-
-        def run(self):
-            while True:
-                try:
-                    server_socket, address = self.client_socket.accept()
-
-                    while True:
-                        data = b''
-                        while True:
-                            try:
-                                r = server_socket.recv(90456)
-                                if len(r) == 0:
-                                    exit(0)
-                                a = r.find(b'!TWIS_END!')
-                                if a != -1:
-                                    data += r[:a]
-                                    break
-                                data += r
-                            except Exception as e:
-                                print(e)
-                                continue
-                        np_arr = np.fromstring(data, np.uint8)
-                        if np_arr is not None:
-                            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-                            if frame is not None:
-                                frame_path = os.path.join(self.save_folder, 'img_{:07d}.jpg'.format(self.frame_index))
-                                self.frame_index += 1
-                                # cv2.imwrite(frame_path, frame)
-
-                                cv2.imshow('frame', frame)
-                                cv2.waitKey(int(1000.0 / 25.0))
-
-                except socket.timeout:
-                    print 'socket timeout'
-                    continue
 
 
 class Extractor():
@@ -638,9 +450,6 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 12
-        self.num_using_gpu = 8
-
         self.start_index = 2
         self.scanned_index = 1
         self.temporal_gap = 2
@@ -648,14 +457,6 @@ class Evaluator():
         self.wait_time = 0.3
 
         self.scores = []
-
-        global scanning_pool
-        scanning_pool = Pool(processes=self.num_workers)
-
-        copy_reg.pickle(types.MethodType, self._pickle_method)
-
-        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder,
-                               self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
 
         self.analyzer = Analyzer(self.session, self.extractor, self)
         self.analyzer_thread = threading.Thread(target=self.analyzer.run, name='Analyzer')
@@ -665,6 +466,13 @@ class Evaluator():
 
         self.closer = Closer(self.session, self.extractor, self, self.analyzer, self.secretary)
         self.closer_thread = threading.Thread(target=self.closer.run, name='Closer')
+
+        self.main_model_server_ip_address = '115.145.173.160'
+        self.main_model_server_port_number = 7777
+
+        self.element_boundary = b'!element_boundary!'
+        self.one_boundary = b'!one_boundary!'
+        self.entire_boundary = b'!entire_boundary!'
 
 
     def run(self):
@@ -680,6 +488,13 @@ class Evaluator():
                 self.closer_thread.start()
                 self.child_thread_started = True
 
+            self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.client_socket.bind((self.session.client_host_name, self.client_port_number))
+            self.client_socket.connect((self.main_model_server_ip_address, self.main_model_server_port_number))
+
+            socket_closed = False
             while self.in_progress:
                 while self.extractor.extracted_index - self.temporal_gap <= self.scanned_index and self.in_progress:
                     time.sleep(self.wait_time)
@@ -693,8 +508,61 @@ class Evaluator():
 
                     scan_start_time = time.time()
 
+
+                    entire_send_data = b''
+                    for frame_index in range(self.start_index - 2, self.actual_extracted_index, 1):
+                        if frame_index <= 1:
+                            frame_index = 2
+
+                        image_path = os.path.join(self.session.image_folder, 'img_{:07d}.jpg'.format(frame_index))
+                        flow_x_path = os.path.join(self.session.flow_folder, 'flow_x_{:07d}.jpg'.format(frame_index))
+                        flow_y_path = os.path.join(self.session.flow_folder, 'flow_y_{:07d}.jpg'.format(frame_index))
+
+                        image = cv2.imread(image_path)
+                        flow_x = cv2.imread(flow_x_path, cv2.IMREAD_GRAYSCALE)
+                        flow_y = cv2.imread(flow_y_path, cv2.IMREAD_GRAYSCALE)
+
+                        image_data = cv2.imencode('.jpg', image)[1].tostring()
+                        flow_x_data = cv2.imencode('.jpg', flow_x)[1].tostring()
+                        flow_y_data = cv2.imencode('.jpg', flow_y)[1].tostring()
+
+
+                        if frame_index < self.actual_extracted_index:
+                            send_data = b'{}{}{}{}{}{}'.format(image_data, self.element_boundary,
+                                                               flow_x_data, self.element_boundary,
+                                                               flow_y_data, self.one_boundary)
+                        else:
+                            send_data = b'{}{}{}{}{}{}{}'.format(image_data, self.element_boundary,
+                                                               flow_x_data, self.element_boundary,
+                                                               flow_y_data, self.one_boundary, self.entire_boundary)
+
+                        entire_send_data += send_data
+
+                    try:
+                        self.client_socket.send(entire_send_data)
+                    except:
+                        socket_closed = True
+                        break
+
+
+                    scores_data = b''
+                    while True:
+                        recv_data = self.client_socket.recv(90456)
+                        if len(recv_data) == 0:
+                            break
+                        finder = recv_data.find(self.entire_boundary)
+                        if finder != -1:
+                            scores_data += recv_data[:finder]
+                        else:
+                            scores_data += recv_data
+
                     return_scores = []
-                    return_scores += self.scanner.scan(self.start_index, self.end_index, self.actual_extracted_index)
+                    for segment_index in range(0, len(scores_data), 14):
+                        violence_score = float(scores_data[segment_index:segment_index+7])
+                        normal_score = float(scores_data[segment_index+7:segment_index+14])
+                        scores = [ violence_score, normal_score ]
+                        return_scores.append(scores)
+
 
                     self.scan_time = (time.time() - scan_start_time) / len(return_scores)
 
@@ -708,28 +576,18 @@ class Evaluator():
 
                     gc.collect()
 
+                if socket_closed:
+                    self.client_socket.close()
+                    break
+
 
             self.finalize()
 
 
-    def _pickle_method(self,m):
-        if m.im_self is None:
-            return getattr, (m.im_class, m.im_func.func_name)
-        else:
-            return getattr, (m.im_self, m.im_func.func_name)
-
-
     def finalize(self):
-        global scanning_pool
-
         self.analyzer.in_progress = False
         self.secretary.in_progress = False
         self.closer.in_progress = False
-
-        scanning_pool.close()
-        scanning_pool.join()
-        del scanning_pool
-        del self.scanner
 
         while not self.analyzer_closed:
             time.sleep(0.3)
@@ -766,13 +624,6 @@ class Evaluator():
         self.actual_start_index = 2
 
         self.scores = []
-
-        global scanning_pool
-        scanning_pool = Pool(processes=self.num_workers)
-
-        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
-                               self.num_using_gpu, self.session.use_spatial_net)
-
         self.in_progress = True
 
         self.analyzer.resume()
@@ -1667,7 +1518,7 @@ class Closer():
     def run(self):
         while True:
             while not self.in_progress:
-                time.sleep(0.5)
+                time.sleep(0.3)
 
 
             while self.in_progress:

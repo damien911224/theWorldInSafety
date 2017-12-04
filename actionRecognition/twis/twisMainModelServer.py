@@ -84,449 +84,593 @@ class CaffeNet(object):
         return out[score_name].copy()
 
 
-class Session():
-
-    def __init__(self):
-        self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.seesion_closed = False
-
-        self.in_progress = True
-        self.please_quit = False
-        self.extractor_closed = False
-
-        self.root_folder = os.path.abspath('../progress')
-        self.session_folder = os.path.join(self.root_folder, '{}'.format(self.session_name))
-        self.image_folder = os.path.join(self.session_folder, 'images')
-        self.flow_folder = os.path.join(self.session_folder, 'flows')
-        self.clip_folder = os.path.join(self.session_folder, 'clips')
-        self.clip_view_folder = os.path.join(self.clip_folder, 'view_clips')
-        self.clip_send_folder = os.path.join(self.clip_folder, 'send_clips')
-        self.keep_folder = os.path.join(self.session_folder, 'keep')
-
-        folders = [ self.root_folder, self.session_folder, self.image_folder,
-                    self.flow_folder, self.clip_folder, self.clip_view_folder,
-                    self.clip_send_folder, self.keep_folder ]
-
-        previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
-        for folder in previous_session_folders:
-            rmtree(folder, ignore_errors=True)
-
-        for folder in folders:
-            try:
-                os.mkdir(folder)
-            except OSError:
-                pass
-
-
-        self.show_size = (600, 450)
-        self.new_size = (224, 224)
-        self.temporal_width = 1
-        self.print_term = 50
-        self.fps = 30.0
-        self.wait_time = 1.0 / self.fps
-        self.wait_please = False
-        self.is_rotated = False
-        self.rotating_angle = -90
-
-        self.start_index = 1
-        self.dumped_index = 0
-
-
-        self.src_from_out = True
-        self.web_cam = False
-        if self.web_cam:
-            self.test_video_name = 'Webcam.mp4'
-        else:
-            self.test_video_name = 'test_1.mp4'
-        self.model_version = 4
-        self.use_spatial_net = False
-        self.build_net(self.model_version, self.use_spatial_net)
-
-        self.print_lock = Lock()
-        self.average_delay = 0.0
-
-        # self.server_ip_address = '13.124.183.55'
-        self.server_ip_address = '13.125.86.217'
-        self.server_port_number = 8888
-
-        self.client_host_name = self.getMyIpAddress()
-        self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
-
-        self.extractor = Extractor(self)
-        self.extractor_thread = threading.Thread(target=self.extractor.run, name='Extractor')
-
-        self.session_thread = threading.Thread(target=self.run, name='Session')
-        self.session_thread.start()
-
-
-    def run(self):
-        self.child_thread_started = False
-
-        while not self.please_quit:
-            while not self.in_progress:
-                time.sleep(0.5)
-
-            if self.src_from_out:
-                self.video_width = self.show_size[0]
-                self.video_height = self.show_size[1]
-                self.video_fps = self.fps
-
-                if not self.child_thread_started:
-                    self.extractor_thread.start()
-                    self.child_thread_started = True
-
-
-                while self.in_progress:
-                    try:
-                        self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
-                        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                        self.client_socket.bind((self.client_host_name, self.client_port_number))
-                        self.client_socket.connect((self.server_ip_address, self.server_port_number))
-
-                        self.session_is_opened = False
-
-                        previous_data = b''
-                        previous_index = 0
-                        socket_closed = False
-                        while self.in_progress:
-                            frame_data = previous_data + b''
-                            try:
-                                while self.in_progress:
-                                    r = self.client_socket.recv(90456)
-                                    if len(r) == 0:
-                                        socket_closed = True
-                                        break
-
-                                    a = r.find(b'!TWIS_END!')
-                                    if a != -1:
-                                        frame_data += r[:a]
-                                        previous_data = r[a+10:]
-                                        break
-                                    else:
-                                        frame_data += r
-                            except:
-                                continue
-
-                            if socket_closed:
-                                break
-
-                            if self.in_progress:
-                                header = frame_data[:22]
-                                session_name = str(header[:15])
-                                frame_index = int(header[15:22])
-                                frame_data = frame_data[22:]
-
-                                if frame_index - previous_index >= 2:
-                                    for i in range(previous_index+1, frame_index, 1):
-                                        print 'ERROR {:07d}'.format(i)
-
-                                previous_index = frame_index
-
-                                if not self.session_is_opened:
-                                    self.session_name = session_name
-                                    self.session_delay = 0.0
-                                    self.delay_count = 0
-                                    folders = [self.session_folder, self.image_folder,
-                                               self.flow_folder, self.clip_folder, self.clip_view_folder,
-                                               self.clip_send_folder, self.keep_folder]
-
-                                    previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
-                                    for folder in previous_session_folders:
-                                        rmtree(folder, ignore_errors=True)
-
-                                    for folder in folders:
-                                        try:
-                                            os.mkdir(folder)
-                                        except OSError:
-                                            pass
-
-                                    with self.print_lock:
-                                        print '==============================================================================='
-                                        print '                         Session {} Start                                      '.format(
-                                            self.session_name)
-                                        print '==============================================================================='
-
-                                    self.session_is_opened = True
-
-                                np_arr = np.fromstring(frame_data, np.uint8)
-                                if np_arr is not None:
-                                    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-                                    if frame is not None:
-                                        self.dumpFrames([frame])
-                                        self.start_index += 1
-                                        self.dumped_index = max(self.start_index - 1, 1)
-                            else:
-                                break
-
-                    except socket.timeout:
-                        self.client_socket.close()
-                        continue
-
-                    except KeyboardInterrupt:
-                        if self.client_socket is not None:
-                            self.client_socket.close()
-
-                        self.finalize()
-
-                    self.client_socket.close()
-
-                    self.finalize()
-
-                    while not self.session_closed:
-                        time.sleep(0.3)
-
-                    self.resume()
-
-
-                self.finalize()
-            else:
-                if self.web_cam:
-                    video_cap = cv2.VideoCapture(0)
-                else:
-                    video_cap = cv2.VideoCapture(os.path.join(self.root_folder, 'test_videos', self.test_video_name))
-                self.video_width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                self.video_height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                self.video_fps = video_cap.get(cv2.CAP_PROP_FPS)
-
-                if not self.child_thread_started:
-                    self.extractor_thread.start()
-                    self.child_thread_started = True
-
-                while self.in_progress:
-                    frames = []
-                    while True:
-                        ok, frame = video_cap.read()
-                        if ok:
-                            frames.append(frame)
-                            time.sleep(self.wait_time)
-
-                            if len(frames) >= self.temporal_width:
-                                break
-
-                    self.dumpFrames(frames)
-                    del frames
-                    gc.collect()
-
-                    self.start_index += self.temporal_width
-                    self.dumped_index = self.start_index - 1
-
-                video_cap.release()
-                self.finalize()
-
-
-    def build_net(self, version=4, use_spatial_net=False):
-        global spatial_net_gpu_01
-        global spatial_net_gpu_02
-        global temporal_net_gpu_01
-        global temporal_net_gpu_02
-
-        global spatial_net_cpu
-        global temporal_net_cpu
-
-        self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
-        self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
-            version)
-        self.temporal_net_proto = "../models/twis/tsn_bn_inception_flow_deploy.prototxt"
-        self.temporal_net_weights = "../models/twis_caffemodels/v{0}/twis_temporal_net_v{0}.caffemodel".format(
-            version)
-
-        spatial_net_gpu_01 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 0)
-        spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
-        temporal_net_gpu_01 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 0)
-        temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
-
-        spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
-        temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
-
-
-    def dumpFrames(self, frames):
-        end_index = self.start_index + len(frames) - 1
-        if end_index % self.print_term == 0:
-            with self.print_lock:
-                print '{:10s}|{:12s}| Until {:07d}'.format('Session', 'Dumping', end_index)
-
-        index = self.start_index
-        for frame in frames:
-            file_name = os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index))
-            new_frame = cv2.resize(frame, self.new_size, interpolation=cv2.INTER_AREA)
-            if self.is_rotated:
-                new_frame = imutils.rotate(new_frame, self.rotating_angle)
-            cv2.imwrite(file_name, new_frame)
-            index += 1
-
-
-    def getMyIpAddress(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.connect(("8.8.8.8", 80))
-
-        my_ip_address = sock.getsockname()[0]
-        sock.close()
-
-        with self.print_lock:
-            print '{:10s}|{:12s}|{}'.format('Session', 'Connection', 'With IP {}'.format(my_ip_address))
-
-        return my_ip_address
-
-
-    def finalize(self):
-        global session_closed
-
-        self.extractor.in_progress = False
-
-        while not self.extractor_closed:
-            time.sleep(0.3)
-
-        time.sleep(0.3)
-
-        with self.print_lock:
-            print '{:10s}|{} Finalized'.format('Session', 'Extractor')
-
-        gc.collect()
-
-        self.session_closed = True
-
-        with self.print_lock:
-            print '==============================================================================='
-            print '                         Session {} Closed                                     '.format(
-                self.session_name)
-            print '==============================================================================='
-
-
-    def resume(self):
-        self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-
-        self.in_progress = True
-        self.please_quit = False
-        self.extractor_closed = False
-
-        self.root_folder = os.path.abspath('../progress')
-        self.session_folder = os.path.join(self.root_folder, '{}'.format(self.session_name))
-        self.image_folder = os.path.join(self.session_folder, 'images')
-        self.flow_folder = os.path.join(self.session_folder, 'flows')
-        self.clip_folder = os.path.join(self.session_folder, 'clips')
-        self.clip_view_folder = os.path.join(self.clip_folder, 'view_clips')
-        self.clip_send_folder = os.path.join(self.clip_folder, 'send_clips')
-        self.keep_folder = os.path.join(self.session_folder, 'keep')
-
-        folders = [self.root_folder, self.session_folder, self.image_folder,
-                   self.flow_folder, self.clip_folder, self.clip_view_folder,
-                   self.clip_send_folder, self.keep_folder]
-
-        previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
-        for folder in previous_session_folders:
-            rmtree(folder, ignore_errors=True)
-
-        for folder in folders:
-            try:
-                os.mkdir(folder)
-            except OSError:
-                pass
-
-        self.in_progress = True
-
-        self.start_index = 1
-        self.dumped_index = 0
-
-        self.extractor.resume()
-        self.extractor_closed = False
-
-
-class Extractor():
-
-    def __init__(self, session):
-        self.in_progress = True
-        self.evaluator_closed = False
-
-        self.session = session
-
-        self.evaluator = Evaluator(self.session, self)
-        self.evaluator_thread = threading.Thread(target=self.evaluator.run, name='Evaluator')
-
-        self.cmd_lock = Lock()
-
-        self.start_index = 2
-        self.extracted_index = 0
-        self.wait_time = 0.3
-
-
-    def run(self):
-        self.child_thread_started = False
-
-        while True:
-            while not self.in_progress:
-                time.sleep(0.5)
-
-            if not self.child_thread_started:
-                self.evaluator_thread.start()
-                self.child_thread_started = True
-
-
-            while self.in_progress:
-                while self.session.dumped_index <= self.extracted_index and self.in_progress:
-                    time.sleep(self.wait_time)
-
-                if self.in_progress:
-                    self.end_index = self.session.dumped_index
-
-                    with self.session.print_lock:
-                        print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Extractor', 'Extracting', self.start_index, self.end_index)
-
-                    self.extractOpticalFlows(self.session.image_folder, self.start_index, self.end_index, self.session.flow_folder)
-
-                    self.start_index = self.end_index + 1
-                    self.extracted_index = self.end_index
-
-            self.finalize()
-
-
-    def extractOpticalFlows(self, frame_path, start_index, end_index, flow_dst_folder):
-        out_format = 'dir'
-        root_abs_path = os.path.abspath('..')
-        df_path = os.path.join(root_abs_path, 'lib', 'dense_flow')
-
-        image_path = 'None'
-        video_file_path = 'Per Frame'
-        frame_prefix = '{}/img'.format(frame_path)
-        frame_count = end_index - start_index + 1
-        optical_flow_x_path = '{}/flow_x'.format(flow_dst_folder)
-        optical_flow_y_path = '{}/flow_y'.format(flow_dst_folder)
-
-        cmd = os.path.join(
-            df_path + '/build/extract_cpu') + ' {} {} {} {} 20 {} {} {}'.format(
-            quote(frame_prefix), quote(optical_flow_x_path), quote(optical_flow_y_path),
-            out_format,  frame_count, start_index, end_index)
-
-        with self.cmd_lock:
-            os.system(cmd)
-            sys.stdout.flush()
-
-
-    def finalize(self):
-        self.evaluator.in_progress = False
-
-        while not self.evaluator_closed:
-            time.sleep(0.3)
-
-        time.sleep(0.3)
-
-        with self.session.print_lock:
-            print '{:10s}|{} Finalized'.format('Extractor', 'Evaluator')
-
-        gc.collect()
-
-        self.session.extractor_closed = True
-
-
-    def resume(self):
-        self.start_index = 2
-        self.extracted_index = 0
-
-        self.in_progress = True
-
-        self.evaluator.resume()
-        self.evaluator_closed = False
+# class Session():
+#
+#     def __init__(self):
+#         self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+#         self.seesion_closed = False
+#
+#         self.in_progress = True
+#         self.please_quit = False
+#         self.extractor_closed = False
+#
+#         self.root_folder = os.path.abspath('../progress')
+#         self.session_folder = os.path.join(self.root_folder, '{}'.format(self.session_name))
+#         self.image_folder = os.path.join(self.session_folder, 'images')
+#         self.flow_folder = os.path.join(self.session_folder, 'flows')
+#         self.clip_folder = os.path.join(self.session_folder, 'clips')
+#         self.clip_view_folder = os.path.join(self.clip_folder, 'view_clips')
+#         self.clip_send_folder = os.path.join(self.clip_folder, 'send_clips')
+#         self.keep_folder = os.path.join(self.session_folder, 'keep')
+#
+#         folders = [ self.root_folder, self.session_folder, self.image_folder,
+#                     self.flow_folder, self.clip_folder, self.clip_view_folder,
+#                     self.clip_send_folder, self.keep_folder ]
+#
+#         previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
+#         for folder in previous_session_folders:
+#             rmtree(folder, ignore_errors=True)
+#
+#         for folder in folders:
+#             try:
+#                 os.mkdir(folder)
+#             except OSError:
+#                 pass
+#
+#
+#         self.show_size = (600, 450)
+#         self.new_size = (224, 224)
+#         self.temporal_width = 1
+#         self.print_term = 50
+#         self.fps = 30.0
+#         self.wait_time = 1.0 / self.fps
+#         self.wait_please = False
+#         self.is_rotated = False
+#         self.rotating_angle = -90
+#
+#         self.start_index = 1
+#         self.dumped_index = 0
+#
+#
+#         self.src_from_out = True
+#         self.web_cam = False
+#         if self.web_cam:
+#             self.test_video_name = 'Webcam.mp4'
+#         else:
+#             self.test_video_name = 'test_1.mp4'
+#         self.model_version = 4
+#         self.use_spatial_net = False
+#         self.build_net(self.model_version, self.use_spatial_net)
+#
+#         self.print_lock = Lock()
+#         self.average_delay = 0.0
+#
+#         # self.server_ip_address = '13.124.183.55'
+#         self.server_ip_address = '13.125.86.217'
+#         self.server_port_number = 8888
+#
+#         self.client_host_name = self.getMyIpAddress()
+#         self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
+#
+#         self.extractor = Extractor(self)
+#         self.extractor_thread = threading.Thread(target=self.extractor.run, name='Extractor')
+#
+#         self.session_thread = threading.Thread(target=self.run, name='Session')
+#         self.session_thread.start()
+#
+#
+#     def run(self):
+#         self.child_thread_started = False
+#
+#         while not self.please_quit:
+#             while not self.in_progress:
+#                 time.sleep(0.5)
+#
+#             if self.src_from_out:
+#                 self.video_width = self.show_size[0]
+#                 self.video_height = self.show_size[1]
+#                 self.video_fps = self.fps
+#
+#                 if not self.child_thread_started:
+#                     self.extractor_thread.start()
+#                     self.child_thread_started = True
+#
+#
+#                 while self.in_progress:
+#                     try:
+#                         self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
+#                         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#                         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#                         self.client_socket.bind((self.client_host_name, self.client_port_number))
+#                         self.client_socket.connect((self.server_ip_address, self.server_port_number))
+#
+#                         self.session_is_opened = False
+#
+#                         previous_data = b''
+#                         previous_index = 0
+#                         socket_closed = False
+#                         while self.in_progress:
+#                             frame_data = previous_data + b''
+#                             try:
+#                                 while self.in_progress:
+#                                     r = self.client_socket.recv(90456)
+#                                     if len(r) == 0:
+#                                         socket_closed = True
+#                                         break
+#
+#                                     a = r.find(b'!TWIS_END!')
+#                                     if a != -1:
+#                                         frame_data += r[:a]
+#                                         previous_data = r[a+10:]
+#                                         break
+#                                     else:
+#                                         frame_data += r
+#                             except:
+#                                 continue
+#
+#                             if socket_closed:
+#                                 break
+#
+#                             if self.in_progress:
+#                                 header = frame_data[:22]
+#                                 session_name = str(header[:15])
+#                                 frame_index = int(header[15:22])
+#                                 frame_data = frame_data[22:]
+#
+#                                 if frame_index - previous_index >= 2:
+#                                     for i in range(previous_index+1, frame_index, 1):
+#                                         print 'ERROR {:07d}'.format(i)
+#
+#                                 previous_index = frame_index
+#
+#                                 if not self.session_is_opened:
+#                                     self.session_name = session_name
+#                                     self.session_delay = 0.0
+#                                     self.delay_count = 0
+#                                     folders = [self.session_folder, self.image_folder,
+#                                                self.flow_folder, self.clip_folder, self.clip_view_folder,
+#                                                self.clip_send_folder, self.keep_folder]
+#
+#                                     previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
+#                                     for folder in previous_session_folders:
+#                                         rmtree(folder, ignore_errors=True)
+#
+#                                     for folder in folders:
+#                                         try:
+#                                             os.mkdir(folder)
+#                                         except OSError:
+#                                             pass
+#
+#                                     with self.print_lock:
+#                                         print '==============================================================================='
+#                                         print '                         Session {} Start                                      '.format(
+#                                             self.session_name)
+#                                         print '==============================================================================='
+#
+#                                     self.session_is_opened = True
+#
+#                                 np_arr = np.fromstring(frame_data, np.uint8)
+#                                 if np_arr is not None:
+#                                     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+#
+#                                     if frame is not None:
+#                                         self.dumpFrames([frame])
+#                                         self.start_index += 1
+#                                         self.dumped_index = max(self.start_index - 1, 1)
+#                             else:
+#                                 break
+#
+#                     except socket.timeout:
+#                         self.client_socket.close()
+#                         continue
+#
+#                     except KeyboardInterrupt:
+#                         if self.client_socket is not None:
+#                             self.client_socket.close()
+#
+#                         self.finalize()
+#
+#                     self.client_socket.close()
+#
+#                     self.finalize()
+#
+#                     while not self.session_closed:
+#                         time.sleep(0.3)
+#
+#                     self.resume()
+#
+#
+#                 self.finalize()
+#             else:
+#                 if self.web_cam:
+#                     video_cap = cv2.VideoCapture(0)
+#                 else:
+#                     video_cap = cv2.VideoCapture(os.path.join(self.root_folder, 'test_videos', self.test_video_name))
+#                 self.video_width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+#                 self.video_height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+#                 self.video_fps = video_cap.get(cv2.CAP_PROP_FPS)
+#
+#                 if not self.child_thread_started:
+#                     self.extractor_thread.start()
+#                     self.child_thread_started = True
+#
+#                 while self.in_progress:
+#                     frames = []
+#                     while True:
+#                         ok, frame = video_cap.read()
+#                         if ok:
+#                             frames.append(frame)
+#                             time.sleep(self.wait_time)
+#
+#                             if len(frames) >= self.temporal_width:
+#                                 break
+#
+#                     self.dumpFrames(frames)
+#                     del frames
+#                     gc.collect()
+#
+#                     self.start_index += self.temporal_width
+#                     self.dumped_index = self.start_index - 1
+#
+#                 video_cap.release()
+#                 self.finalize()
+#
+#
+#     def build_net(self, version=4, use_spatial_net=False):
+#         global spatial_net_gpu_01
+#         global spatial_net_gpu_02
+#         global temporal_net_gpu_01
+#         global temporal_net_gpu_02
+#
+#         global spatial_net_cpu
+#         global temporal_net_cpu
+#
+#         self.spatial_net_proto = "../models/twis/tsn_bn_inception_rgb_deploy.prototxt"
+#         self.spatial_net_weights = "../models/twis_caffemodels/v{0}/twis_spatial_net_v{0}.caffemodel".format(
+#             version)
+#         self.temporal_net_proto = "../models/twis/tsn_bn_inception_flow_deploy.prototxt"
+#         self.temporal_net_weights = "../models/twis_caffemodels/v{0}/twis_temporal_net_v{0}.caffemodel".format(
+#             version)
+#
+#         spatial_net_gpu_01 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 0)
+#         spatial_net_gpu_02 = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, 1)
+#         temporal_net_gpu_01 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 0)
+#         temporal_net_gpu_02 = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, 1)
+#
+#         spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
+#         temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
+#
+#
+#     def dumpFrames(self, frames):
+#         end_index = self.start_index + len(frames) - 1
+#         if end_index % self.print_term == 0:
+#             with self.print_lock:
+#                 print '{:10s}|{:12s}| Until {:07d}'.format('Session', 'Dumping', end_index)
+#
+#         index = self.start_index
+#         for frame in frames:
+#             file_name = os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index))
+#             new_frame = cv2.resize(frame, self.new_size, interpolation=cv2.INTER_AREA)
+#             if self.is_rotated:
+#                 new_frame = imutils.rotate(new_frame, self.rotating_angle)
+#             cv2.imwrite(file_name, new_frame)
+#             index += 1
+#
+#
+#     def getMyIpAddress(self):
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#         sock.connect(("8.8.8.8", 80))
+#
+#         my_ip_address = sock.getsockname()[0]
+#         sock.close()
+#
+#         with self.print_lock:
+#             print '{:10s}|{:12s}|{}'.format('Session', 'Connection', 'With IP {}'.format(my_ip_address))
+#
+#         return my_ip_address
+#
+#
+#     def finalize(self):
+#         global session_closed
+#
+#         self.extractor.in_progress = False
+#
+#         while not self.extractor_closed:
+#             time.sleep(0.3)
+#
+#         time.sleep(0.3)
+#
+#         with self.print_lock:
+#             print '{:10s}|{} Finalized'.format('Session', 'Extractor')
+#
+#         gc.collect()
+#
+#         self.session_closed = True
+#
+#         with self.print_lock:
+#             print '==============================================================================='
+#             print '                         Session {} Closed                                     '.format(
+#                 self.session_name)
+#             print '==============================================================================='
+#
+#
+#     def resume(self):
+#         self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+#
+#         self.in_progress = True
+#         self.please_quit = False
+#         self.extractor_closed = False
+#
+#         self.root_folder = os.path.abspath('../progress')
+#         self.session_folder = os.path.join(self.root_folder, '{}'.format(self.session_name))
+#         self.image_folder = os.path.join(self.session_folder, 'images')
+#         self.flow_folder = os.path.join(self.session_folder, 'flows')
+#         self.clip_folder = os.path.join(self.session_folder, 'clips')
+#         self.clip_view_folder = os.path.join(self.clip_folder, 'view_clips')
+#         self.clip_send_folder = os.path.join(self.clip_folder, 'send_clips')
+#         self.keep_folder = os.path.join(self.session_folder, 'keep')
+#
+#         folders = [self.root_folder, self.session_folder, self.image_folder,
+#                    self.flow_folder, self.clip_folder, self.clip_view_folder,
+#                    self.clip_send_folder, self.keep_folder]
+#
+#         previous_session_folders = glob.glob(os.path.join(self.root_folder, '20*'))
+#         for folder in previous_session_folders:
+#             rmtree(folder, ignore_errors=True)
+#
+#         for folder in folders:
+#             try:
+#                 os.mkdir(folder)
+#             except OSError:
+#                 pass
+#
+#         self.in_progress = True
+#
+#         self.start_index = 1
+#         self.dumped_index = 0
+#
+#         self.extractor.resume()
+#         self.extractor_closed = False
+#
+#
+# class Extractor():
+#
+#     def __init__(self, session):
+#         self.in_progress = True
+#         self.evaluator_closed = False
+#
+#         self.session = session
+#
+#         self.evaluator = Evaluator(self.session, self)
+#         self.evaluator_thread = threading.Thread(target=self.evaluator.run, name='Evaluator')
+#
+#         self.cmd_lock = Lock()
+#
+#         self.start_index = 2
+#         self.extracted_index = 0
+#         self.wait_time = 0.3
+#
+#
+#     def run(self):
+#         self.child_thread_started = False
+#
+#         while True:
+#             while not self.in_progress:
+#                 time.sleep(0.5)
+#
+#             if not self.child_thread_started:
+#                 self.evaluator_thread.start()
+#                 self.child_thread_started = True
+#
+#
+#             while self.in_progress:
+#                 while self.session.dumped_index <= self.extracted_index and self.in_progress:
+#                     time.sleep(self.wait_time)
+#
+#                 if self.in_progress:
+#                     self.end_index = self.session.dumped_index
+#
+#                     with self.session.print_lock:
+#                         print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Extractor', 'Extracting', self.start_index, self.end_index)
+#
+#                     self.extractOpticalFlows(self.session.image_folder, self.start_index, self.end_index, self.session.flow_folder)
+#
+#                     self.start_index = self.end_index + 1
+#                     self.extracted_index = self.end_index
+#
+#             self.finalize()
+#
+#
+#     def extractOpticalFlows(self, frame_path, start_index, end_index, flow_dst_folder):
+#         out_format = 'dir'
+#         root_abs_path = os.path.abspath('..')
+#         df_path = os.path.join(root_abs_path, 'lib', 'dense_flow')
+#
+#         image_path = 'None'
+#         video_file_path = 'Per Frame'
+#         frame_prefix = '{}/img'.format(frame_path)
+#         frame_count = end_index - start_index + 1
+#         optical_flow_x_path = '{}/flow_x'.format(flow_dst_folder)
+#         optical_flow_y_path = '{}/flow_y'.format(flow_dst_folder)
+#
+#         cmd = os.path.join(
+#             df_path + '/build/extract_cpu') + ' {} {} {} {} 20 {} {} {}'.format(
+#             quote(frame_prefix), quote(optical_flow_x_path), quote(optical_flow_y_path),
+#             out_format,  frame_count, start_index, end_index)
+#
+#         with self.cmd_lock:
+#             os.system(cmd)
+#             sys.stdout.flush()
+#
+#
+#     def finalize(self):
+#         self.evaluator.in_progress = False
+#
+#         while not self.evaluator_closed:
+#             time.sleep(0.3)
+#
+#         time.sleep(0.3)
+#
+#         with self.session.print_lock:
+#             print '{:10s}|{} Finalized'.format('Extractor', 'Evaluator')
+#
+#         gc.collect()
+#
+#         self.session.extractor_closed = True
+#
+#
+#     def resume(self):
+#         self.start_index = 2
+#         self.extracted_index = 0
+#
+#         self.in_progress = True
+#
+#         self.evaluator.resume()
+#         self.evaluator_closed = False
+#
+#
+# class Evaluator():
+#
+#     def __init__(self, session, extractor):
+#         self.in_progress =True
+#         self.sender_closed = False
+#
+#         self.session = session
+#         self.extractor = extractor
+#
+#         self.num_workers = 8
+#         self.num_using_gpu = 8
+#
+#         self.start_index = 2
+#         self.scanned_index = 1
+#         self.temporal_gap = 2
+#         self.actual_start_index = 2
+#         self.wait_time = 0.3
+#
+#         self.scores = []
+#
+#         global scanning_pool_odd
+#         global scanning_pool_even
+#         scanning_pool_odd = Pool(self.num_workers)
+#         scanning_pool_even =Pool(self.num_workers)
+#
+#         copy_reg.pickle(types.MethodType, self._pickle_method)
+#
+#         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder,
+#                                self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
+#
+#         self.sender = Sender(self.session, self.extractor, self)
+#         self.sender_thread = threading.Thread(target=self.sender.run, name='Sender')
+#
+#
+#     def run(self):
+#         self.child_thread_started = False
+#
+#         while True:
+#             while not self.in_progress:
+#                 time.sleep(0.5)
+#
+#             if not self.child_thread_started:
+#                 self.sender_thread.start()
+#                 self.child_thread_started = True
+#
+#             while self.in_progress:
+#                 while self.extractor.extracted_index - self.temporal_gap <= self.scanned_index and self.in_progress:
+#                     time.sleep(self.wait_time)
+#
+#                 if self.in_progress:
+#                     self.actual_extracted_index = self.extractor.extracted_index
+#                     self.end_index = self.actual_extracted_index - self.temporal_gap
+#
+#                     with self.session.print_lock:
+#                         print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', self.start_index, self.end_index)
+#
+#                     scan_start_time = time.time()
+#
+#                     manager = Manager()
+#                     return_scores = manager.list()
+#                     len_of_scores = self.end_index - self.start_index + 1
+#                     for _ in range(len_of_scores):
+#                         return_scores.append([0.0, 0.0])
+#
+#                     self.odd_scanner_thread = threading.Thread(target=self.scanner.scan,
+#                                                                args=(self.start_index, self.end_index,
+#                                                                      self.actual_extracted_index, 'odd', return_scores))
+#                     self.even_scanner_thread = threading.Thread(target=self.scanner.scan,
+#                                                                 args=(self.start_index, self.end_index,
+#                                                                       self.actual_extracted_index, 'even', return_scores))
+#
+#                     self.odd_scanner_thread.start()
+#                     self.even_scanner_thread.start()
+#
+#                     self.odd_scanner_thread.join()
+#                     self.even_scanner_thread.join()
+#
+#                     self.sender.scores += return_scores
+#
+#                     self.scan_time = (time.time() - scan_start_time) / len(return_scores)
+#
+#                     self.scanned_index = self.end_index
+#                     self.start_index = self.end_index + 1
+#
+#                     gc.collect()
+#
+#
+#             self.finalize()
+#
+#
+#     def _pickle_method(self,m):
+#         if m.im_self is None:
+#             return getattr, (m.im_class, m.im_func.func_name)
+#         else:
+#             return getattr, (m.im_self, m.im_func.func_name)
+#
+#
+#     def finalize(self):
+#         global scanning_pool_odd
+#         global scanning_pool_even
+#
+#         self.sender.in_progress = False
+#
+#         scanning_pool_odd.close()
+#         scanning_pool_odd.join()
+#         del scanning_pool_odd
+#
+#         scanning_pool_even.close()
+#         scanning_pool_even.join()
+#         del scanning_pool_even
+#
+#         del self.scanner
+#
+#         while not self.sender_closed:
+#             time.sleep(0.3)
+#
+#         time.sleep(0.3)
+#
+#         gc.collect()
+#
+#         self.extractor.evaluator_closed = True
+#
+#
+#     def resume(self):
+#         self.start_index = 2
+#         self.scanned_index = 1
+#         self.actual_start_index = 2
+#
+#         self.scores = []
+#
+#         global scanning_pool_odd
+#         global scanning_pool_even
+#         scanning_pool_odd = Pool()
+#         scanning_pool_even = Pool()
+#
+#         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
+#                                self.num_using_gpu, self.session.use_spatial_net)
+#
+#         self.in_progress = True
+#
+#         self.sender.resume()
+#         self.sender_closed = False
 
 
 class Evaluator():
@@ -538,8 +682,8 @@ class Evaluator():
         self.session = session
         self.extractor = extractor
 
-        self.num_workers = 8
-        self.num_using_gpu = 8
+        self.num_workers = 16
+        self.num_using_gpu = 12
 
         self.start_index = 2
         self.scanned_index = 1
@@ -559,64 +703,123 @@ class Evaluator():
         self.scanner = Scanner(self.session.image_folder, self.session.flow_folder,
                                self.num_workers, self.num_using_gpu, self.session.use_spatial_net)
 
-        self.sender = Sender(self.session, self.extractor, self)
-        self.sender_thread = threading.Thread(target=self.sender.run, name='Sender')
+
+        self.main_server_ip_address = self.getMyIpAddress()
+        self.main_server_port_number = 7777
+
+        self.element_boundary = b'!element_boundary!'
+        self.one_boundary = b'!one_boundary!'
+        self.entire_boundary = b'!entire_boundary!'
+
+        self.save_folder = '../progress/temp'
 
 
     def run(self):
-        self.child_thread_started = False
-
         while True:
             while not self.in_progress:
                 time.sleep(0.5)
 
-            if not self.child_thread_started:
-                self.sender_thread.start()
-                self.child_thread_started = True
+            self.main_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.main_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.main_server_socket.bind((self.main_server_ip_address, self.main_server_port_number))
+
+            self.main_server_socket.listen(5)
 
             while self.in_progress:
-                while self.extractor.extracted_index - self.temporal_gap <= self.scanned_index and self.in_progress:
-                    time.sleep(self.wait_time)
+                client_socket, address = self.main_server_socket.accept()
 
-                if self.in_progress:
-                    self.actual_extracted_index = self.extractor.extracted_index
-                    self.end_index = self.actual_extracted_index - self.temporal_gap
+                entire_frame_data = b''
+                while True:
+                    recv_data = client_socket.recv(90456)
+                    if len(recv_data) == 0:
+                        break
+                    found = recv_data.find(self.entire_boundary)
+                    if found != -1:
+                        entire_frame_data += recv_data[:found]
+                    else:
+                        entire_frame_data += recv_data
 
-                    with self.session.print_lock:
-                        print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', self.start_index, self.end_index)
+                frames_data = []
+                while True:
+                    found = entire_frame_data.find(self.one_boundary)
+                    if found != -1:
+                        frame_data = entire_frame_data[:found]
+                        frames_data.append(frame_data)
+                        entire_frame_data = entire_frame_data[found + len(self.one_boundary):]
+                    else:
+                        break
 
-                    scan_start_time = time.time()
+                try:
+                    os.makedirs(self.save_folder)
+                except:
+                    pass
 
-                    manager = Manager()
-                    return_scores = manager.list()
-                    len_of_scores = self.end_index - self.start_index + 1
-                    for _ in range(len_of_scores):
-                        return_scores.append([0.0, 0.0])
+                frame_index = 1
+                for frame_data in frames_data:
+                    found = frame_data.find(self.element_boundary)
+                    image_data = frame_data[:found]
+                    frame_data = frame_data[found + len(self.element_boundary):]
+                    found = frame_data.find(self.element_boundary)
+                    flow_x_data = frame_data[:found]
+                    frame_data = frame_data[found + len(self.element_boundary):]
+                    flow_y_data = frame_data
 
-                    self.odd_scanner_thread = threading.Thread(target=self.scanner.scan,
-                                                               args=(self.start_index, self.end_index,
-                                                                     self.actual_extracted_index, 'odd', return_scores))
-                    self.even_scanner_thread = threading.Thread(target=self.scanner.scan,
-                                                                args=(self.start_index, self.end_index,
-                                                                      self.actual_extracted_index, 'even', return_scores))
+                    image_np_arr = np.fromstring(image_data , np.uint8)
+                    image = cv2.imdecode(image_np_arr, cv2.IMREAD_COLOR)
+                    flow_x_arr = np.fromstring(flow_x_data, np.uint8)
+                    flow_x = cv2.imdecode(flow_x_arr, cv2.IMREAD_GRAYSCALE)
+                    flow_y_arr = np.fromstring(flow_y_data, np.uint8)
+                    flow_y = cv2.imdecode(flow_y_arr, cv2.IMREAD_GRAYSCALE)
 
-                    self.odd_scanner_thread.start()
-                    self.even_scanner_thread.start()
+                    cv2.imwrite(os.path.join(self.save_folder, 'img_{:07d}.jpg'.format(frame_index)), image)
+                    cv2.imwrite(os.path.join(self.save_folder, 'flow_x_{:07d}.jpg'.format(frame_index)), flow_x)
+                    cv2.imwrite(os.path.join(self.save_folder, 'flow_y_{:07d}.jpg'.format(frame_index)), flow_y)
 
-                    self.odd_scanner_thread.join()
-                    self.even_scanner_thread.join()
 
-                    self.sender.scores += return_scores
+                end_index = len(frames_data) - 2
+                start_index = 3
 
-                    self.scan_time = (time.time() - scan_start_time) / len(return_scores)
 
-                    self.scanned_index = self.end_index
-                    self.start_index = self.end_index + 1
+                with self.session.print_lock:
+                    print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', start_index, end_index)
 
-                    gc.collect()
+
+
+                manager = Manager()
+                return_scores = manager.list()
+                len_of_scores = end_index - start_index + 1
+                for _ in range(len_of_scores):
+                    return_scores.append([0.0, 0.0])
+
+                self.odd_scanner_thread = threading.Thread(target=self.scanner.scan,
+                                                           args=(start_index, end_index,
+                                                                 len(frames_data), 'odd', return_scores))
+                self.even_scanner_thread = threading.Thread(target=self.scanner.scan,
+                                                            args=(start_index, end_index,
+                                                                  len(frames_data), 'even', return_scores))
+
+                self.odd_scanner_thread.start()
+                self.even_scanner_thread.start()
+
+                self.odd_scanner_thread.join()
+                self.even_scanner_thread.join()
+
+                gc.collect()
 
 
             self.finalize()
+
+
+    def getMyIpAddress(self):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.connect(("8.8.8.8", 80))
+
+            my_ip_address = sock.getsockname()[0]
+            sock.close()
+
+            print '{:10s}|{:12s}|{}'.format('Evaluator', 'Connection', 'With IP {}'.format(my_ip_address))
+
+            return my_ip_address
 
 
     def _pickle_method(self,m):
