@@ -70,7 +70,7 @@ class StreamingServer():
             self.in_progress = True
             self.session_is_opened = False
 
-            self.dumped_index = -1
+            self.dumped_index = 0
 
 
         def run(self):
@@ -84,7 +84,7 @@ class StreamingServer():
                                             self.streaming_server.raspberry_port_number))
 
                 self.raspberry_socket.listen(5)
-                self.dumped_index = -1
+                self.dumped_index = 0
 
                 while self.in_progress:
                     try:
@@ -149,8 +149,8 @@ class StreamingServer():
                                     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
                                     if frame is not None:
-                                        self.dumpFrames([frame], frame_index)
-                                        self.dumped_index = frame_index
+                                        self.dumpFrames([frame], self.dumped_index + 1)
+                                        self.dumped_index += 1
 
                         client_socket.close()
 

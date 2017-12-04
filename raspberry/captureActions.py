@@ -76,7 +76,7 @@ class Raspberry():
             self.display_term = 300
             self.motionDetector = self.MotionDetector(self)
 
-            self.wait_time = 0.01
+            self.wait_time = 0.075
 
             self.sending_round = 1
 
@@ -222,7 +222,7 @@ class Raspberry():
                 self.camera = camera
 
                 self.frame_diff_threshold = 0.45
-                self.minimum_capture_count = 300
+                self.minimum_capture_count = 100
 
                 self.countdown_to_stop = self.minimum_capture_count
                 self.no_moving = False
