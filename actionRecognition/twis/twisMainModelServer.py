@@ -675,12 +675,8 @@ class CaffeNet(object):
 
 class Evaluator():
 
-    def __init__(self, session, extractor):
+    def __init__(self):
         self.in_progress =True
-        self.sender_closed = False
-
-        self.session = session
-        self.extractor = extractor
 
         self.num_workers = 16
         self.num_using_gpu = 12
