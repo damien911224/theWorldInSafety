@@ -1,13 +1,27 @@
 #!/usr/bin/env bash
-CAFFE_USE_MPI=${1:-OFF}
-CAFFE_MPI_PREFIX=${MPI_PREFIX:-""}
 
 version="2.4.13"
 
-cd lib/dense_flow
+echo "Building OpenCV" $version
+cd 3rd-party/opencv-$version
+cd build
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D WITH_TBB=ON  -D WITH_V4L=ON ..
+if make; then
+    cp lib/cv2.so ../../../
+    echo "OpenCV" $version "built."
+else
+    echo "Failed to build OpenCV. Please check the logs above."
+    exit 1
+fi
+
+cd ../../..
+
+sudo apt-get -qq install libzip-dev -y
+
+cd lib/dense_flow_cpu
 cd build
 OpenCV_DIR=../../../3rd-party/opencv-2.4.13/build/ cmake .. -DCUDA_USE_STATIC_CUDA_RUNTIME=OFF
-if make -j8 ; then
+if make; then
     echo "Dense Flow built."
 else
     echo "Failed to build Dense Flow. Please check the logs above."
