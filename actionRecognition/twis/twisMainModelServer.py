@@ -150,6 +150,8 @@ class Evaluator():
                         else:
                             entire_frame_data += recv_data
 
+                        print 'Receiving: {}'.format(len(recv_data))
+
                     print 'Recved'
 
                     frames_data = []
