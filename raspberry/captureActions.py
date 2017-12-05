@@ -29,7 +29,7 @@ class Raspberry():
         self.controller_thread.start()
 
         while True:
-            time.sleep(0.5)
+            time.sleep(33.52312)
 
 
     def getRaspberryIpAddress(self):

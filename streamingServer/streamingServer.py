@@ -46,7 +46,7 @@ class StreamingServer():
         self.controller_thread.start()
 
         while True:
-            time.sleep(0.7)
+            time.sleep(33.21324)
 
 
     def getAWSIpAddress(self):
@@ -215,7 +215,7 @@ class StreamingServer():
 
                     while self.in_progress:
                         while self.sent_index >= self.streaming_server.raspberry.dumped_index and self.in_progress:
-                            time.sleep(0.3)
+                            time.sleep(0.1)
 
                         self.end_index = self.streaming_server.raspberry.dumped_index
 

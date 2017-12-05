@@ -8,21 +8,18 @@ import math
 import threading
 from sklearn import mixture
 from pipes import quote
-from utils.io import flow_stack_oversample, fast_list2arr
-from multiprocessing import Pool, Value, Lock, current_process, Manager
-import copy_reg, types
+from multiprocessing import Lock
 import gc
 import socket
 from shutil import copyfile
 from shutil import rmtree
 import random
 import datetime
+import pycurl
+import imutils
 sys.path.append("../../semanticPostProcessing")
 sys.path.append('../../semanticPostProcessing/darkflow')
 from post_process import SemanticPostProcessor
-import pycurl
-from StringIO import StringIO
-import imutils
 
 
 class Session():
@@ -353,7 +350,7 @@ class Extractor():
 
         self.start_index = 2
         self.extracted_index = 0
-        self.wait_time = 0.3
+        self.wait_time = 0.1
 
 
     def run(self):
@@ -454,7 +451,7 @@ class Evaluator():
         self.scanned_index = 1
         self.temporal_gap = 2
         self.actual_start_index = 2
-        self.wait_time = 0.3
+        self.wait_time = 0.1
 
         self.scores = []
 
@@ -537,7 +534,7 @@ class Evaluator():
 
                         entire_send_data += send_data
 
-                    print 'send_data'
+                    print 'Send_data'
 
                     try:
                         self.client_socket.send(entire_send_data)
@@ -545,7 +542,7 @@ class Evaluator():
                         socket_closed = True
                         break
 
-                    print 'sent'
+                    print 'Sent'
 
                     scores_data = b''
                     while True:
@@ -559,7 +556,7 @@ class Evaluator():
                         else:
                             scores_data += recv_data
 
-                        print 'recv {}'.format(len(recv_data))
+                    print 'Recved'
 
                     return_scores = []
                     for segment_index in range(0, len(scores_data), 14):
@@ -640,117 +637,6 @@ class Evaluator():
         self.closer_closed = False
 
 
-class Scanner():
-
-    def __init__(self, image_folder, flow_folder, num_workers, num_using_gpu, use_spatial_net):
-        self.image_folder = image_folder
-        self.flow_folder = flow_folder
-        self.num_workers = num_workers
-        self.num_using_gpu = num_using_gpu
-        self.use_spatial_net = use_spatial_net
-
-        self.rate_of_whole = 5.0
-        self.rate_of_time = 3.5
-        self.rate_of_space = self.rate_of_whole - self.rate_of_time
-
-        self.score_bound = 30.0
-
-
-    def scan(self, start_index, end_index, actual_extracted_index):
-        manager = Manager()
-        scan_scores = manager.list()
-
-        indices = range(start_index, end_index + 1, 1)
-
-        for i in xrange(len(indices)):
-            scan_scores.append([0.0, 0.0])
-
-        scanning_pool.map(self.scanVideo,
-                          zip([start_index] * len(indices),
-                              [actual_extracted_index] * len(indices),
-                              [scan_scores] * len(indices),
-                              indices))
-        return_scores = []
-        return_scores += scan_scores
-
-        return return_scores
-
-
-    def scanVideo(self, scan_items):
-        global spatial_net_gpu
-        global spatial_net_cpu
-        global temporal_net_gpu
-        global temporal_net_cpu
-
-        start_index = scan_items[0]
-        frame_count = scan_items[1]
-        scan_scores = scan_items[2]
-        index = scan_items[3]
-
-        current = current_process()
-        current_id = current._identity[0] - 1
-
-        if current_id % self.num_workers < self.num_using_gpu:
-            spatial_net = spatial_net_gpu
-            temporal_net = temporal_net_gpu
-        else:
-            spatial_net = spatial_net_cpu
-            temporal_net = temporal_net_cpu
-
-        score_layer_name = 'fc-twis'
-
-        if self.use_spatial_net:
-            image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
-
-            rgb_score = \
-                spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
-                                                 frame_size=None)[0].tolist()
-
-        flow_stack = []
-        for i in range(-2, 3, 1):
-            if index + i >= 2 and index + i <= frame_count:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
-            elif index + i < 2:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
-            else:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
-
-        flow_score = \
-            temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
-                                                   frame_size=None)[0].tolist()
-
-        if self.use_spatial_net:
-            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
-                                                                     + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
-                                                                 -self.score_bound, self.score_bound),
-                                                         self.score_bound).tolist()
-        else:
-            scan_scores[index - start_index] = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
-                                                                 -self.score_bound, self.score_bound),
-                                                         self.score_bound).tolist()
-
-
 class Analyzer():
 
     def __init__(self, session, extractor, evaluator):
@@ -762,7 +648,7 @@ class Analyzer():
 
         self.analyzing_start_index = 0
         self.analyzed_index = 1
-        self.wait_time = 0.2
+        self.wait_time = 0.15
         self.violence_index = 0
         self.normal_index = 1
         self.lower_bound = 0.0
@@ -1064,7 +950,7 @@ class Secretary():
 
         self.start_index = 2
         self.end_index = 2
-        self.wait_time = 0.5
+        self.wait_time = 0.2
         self.make_views_index = 1
         self.removing_start_index = 1
         self.removing_end_index = 1
@@ -1221,7 +1107,7 @@ class Secretary():
             self.view_type = 'frames'
 
             self.viewed_index = -1
-            self.wait_time = 0.5
+            self.wait_time = 0.2
             self.step = 1.0
             self.time_factor = 1.0
             self.view_time = 0.0
@@ -1509,7 +1395,7 @@ class Closer():
         self.secretary = secretary
 
         self.clips = []
-        self.wait_time = 0.5
+        self.wait_time = 0.2
         self.threshold = 0.0
         self.clip_number = 1
         self.clip_round = 5
@@ -1862,7 +1748,7 @@ if __name__ == '__main__':
     session = Session()
 
     while True:
-        time.sleep(13.1451)
+        time.sleep(33.1451)
         with session.print_lock:
             print '------------------------------ Memory Checking ---------------------------------'
             cmd = 'free -h'

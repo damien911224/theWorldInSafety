@@ -92,11 +92,7 @@ class Evaluator():
         self.num_workers = 16
         self.num_using_gpu = 12
 
-        self.start_index = 2
-        self.scanned_index = 1
         self.temporal_gap = 2
-        self.actual_start_index = 2
-        self.wait_time = 0.3
 
         self.scores = []
 
@@ -138,102 +134,103 @@ class Evaluator():
 
             self.main_server_socket.listen(5)
 
-            client_socket, address = self.main_server_socket.accept()
             while self.in_progress:
-                print 'HI'
-                entire_frame_data = b''
-                while True:
-                    recv_data = client_socket.recv(90456)
-                    if len(recv_data) == 0:
-                        break
-                    found = recv_data.find(self.entire_boundary)
-                    if found != -1:
-                        entire_frame_data += recv_data[:found]
-                        break
-                    else:
-                        entire_frame_data += recv_data
+                client_socket, address = self.main_server_socket.accept()
 
-                    print 'recv: {}'.format(len(recv_data))
+                while self.in_progress:
+                    entire_frame_data = b''
+                    while True:
+                        recv_data = client_socket.recv(90456)
+                        if len(recv_data) == 0:
+                            break
+                        found = recv_data.find(self.entire_boundary)
+                        if found != -1:
+                            entire_frame_data += recv_data[:found]
+                            break
+                        else:
+                            entire_frame_data += recv_data
 
-                frames_data = []
-                while True:
-                    found = entire_frame_data.find(self.one_boundary)
-                    if found != -1:
-                        frame_data = entire_frame_data[:found]
-                        frames_data.append(frame_data)
-                        entire_frame_data = entire_frame_data[found + len(self.one_boundary):]
-                    else:
-                        break
-                    print 'frame_data {}'.format(len(entire_frame_data))
+                    print 'Recved'
 
-                rmtree(self.save_folder, ignore_errors=True)
+                    frames_data = []
+                    while True:
+                        found = entire_frame_data.find(self.one_boundary)
+                        if found != -1:
+                            frame_data = entire_frame_data[:found]
+                            frames_data.append(frame_data)
+                            entire_frame_data = entire_frame_data[found + len(self.one_boundary):]
+                        else:
+                            break
 
-                try:
-                    os.makedirs(self.save_folder)
-                except:
-                    pass
+                    print 'Frame_Data'
 
-                frame_index = 1
-                for frame_data in frames_data:
-                    found = frame_data.find(self.element_boundary)
-                    image_data = frame_data[:found]
-                    frame_data = frame_data[found + len(self.element_boundary):]
-                    found = frame_data.find(self.element_boundary)
-                    flow_x_data = frame_data[:found]
-                    frame_data = frame_data[found + len(self.element_boundary):]
-                    flow_y_data = frame_data
+                    rmtree(self.save_folder, ignore_errors=True)
 
-                    image_np_arr = np.fromstring(image_data , np.uint8)
-                    image = cv2.imdecode(image_np_arr, cv2.IMREAD_COLOR)
-                    flow_x_arr = np.fromstring(flow_x_data, np.uint8)
-                    flow_x = cv2.imdecode(flow_x_arr, cv2.IMREAD_GRAYSCALE)
-                    flow_y_arr = np.fromstring(flow_y_data, np.uint8)
-                    flow_y = cv2.imdecode(flow_y_arr, cv2.IMREAD_GRAYSCALE)
+                    try:
+                        os.makedirs(self.save_folder)
+                    except:
+                        pass
 
-                    cv2.imwrite(os.path.join(self.save_folder, 'img_{:07d}.jpg'.format(frame_index)), image)
-                    cv2.imwrite(os.path.join(self.save_folder, 'flow_x_{:07d}.jpg'.format(frame_index)), flow_x)
-                    cv2.imwrite(os.path.join(self.save_folder, 'flow_y_{:07d}.jpg'.format(frame_index)), flow_y)
+                    frame_index = 1
+                    for frame_data in frames_data:
+                        found = frame_data.find(self.element_boundary)
+                        image_data = frame_data[:found]
+                        frame_data = frame_data[found + len(self.element_boundary):]
+                        found = frame_data.find(self.element_boundary)
+                        flow_x_data = frame_data[:found]
+                        frame_data = frame_data[found + len(self.element_boundary):]
+                        flow_y_data = frame_data
 
-                    frame_index += 1
+                        image_np_arr = np.fromstring(image_data , np.uint8)
+                        image = cv2.imdecode(image_np_arr, cv2.IMREAD_COLOR)
+                        flow_x_arr = np.fromstring(flow_x_data, np.uint8)
+                        flow_x = cv2.imdecode(flow_x_arr, cv2.IMREAD_GRAYSCALE)
+                        flow_y_arr = np.fromstring(flow_y_data, np.uint8)
+                        flow_y = cv2.imdecode(flow_y_arr, cv2.IMREAD_GRAYSCALE)
 
-                    print 'frame_index : {}'.format(frame_index)
+                        cv2.imwrite(os.path.join(self.save_folder, 'img_{:07d}.jpg'.format(frame_index)), image)
+                        cv2.imwrite(os.path.join(self.save_folder, 'flow_x_{:07d}.jpg'.format(frame_index)), flow_x)
+                        cv2.imwrite(os.path.join(self.save_folder, 'flow_y_{:07d}.jpg'.format(frame_index)), flow_y)
 
+                        frame_index += 1
 
-                end_index = len(frames_data) - 2
-                start_index = 3
-
-
-                print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', start_index, end_index)
+                    print 'Imwrite Frames'
 
 
-
-                manager = Manager()
-                return_scores = manager.list()
-                len_of_scores = end_index - start_index + 1
-                for _ in range(len_of_scores):
-                    return_scores.append([0.0, 0.0])
-
-                self.odd_scanner_thread = threading.Thread(target=self.scanner.scan,
-                                                           args=(start_index, end_index,
-                                                                 len(frames_data), 'odd', return_scores))
-                self.even_scanner_thread = threading.Thread(target=self.scanner.scan,
-                                                            args=(start_index, end_index,
-                                                                  len(frames_data), 'even', return_scores))
-
-                self.odd_scanner_thread.start()
-                self.even_scanner_thread.start()
-
-                self.odd_scanner_thread.join()
-                self.even_scanner_thread.join()
+                    end_index = len(frames_data) - self.temporal_gap
+                    start_index = 1 + self.temporal_gap
 
 
-                for score in return_scores:
-                    violence_score_string = b'{:07.03f}'.format(score[0])
-                    normal_score_string = b'{:07.03f}'.format(score[1])
-                    score_string = violence_score_string + normal_score_string
+                    print '{:10s}|{:12s}| From {:07d} To {:07d}'.format('Evaluator', 'Evaluating', start_index, end_index)
 
-                    client_socket.send(score_string)
-                client_socket.send(self.entire_boundary)
+
+                    manager = Manager()
+                    return_scores = manager.list()
+                    len_of_scores = end_index - start_index + 1
+                    for _ in range(len_of_scores):
+                        return_scores.append([0.0, 0.0])
+
+                    self.odd_scanner_thread = threading.Thread(target=self.scanner.scan,
+                                                               args=(start_index, end_index,
+                                                                     len(frames_data), 'odd', return_scores))
+                    self.even_scanner_thread = threading.Thread(target=self.scanner.scan,
+                                                                args=(start_index, end_index,
+                                                                      len(frames_data), 'even', return_scores))
+
+                    self.odd_scanner_thread.start()
+                    self.even_scanner_thread.start()
+
+                    self.odd_scanner_thread.join()
+                    self.even_scanner_thread.join()
+
+
+                    for score in return_scores:
+                        violence_score_string = b'{:07.03f}'.format(score[0])
+                        normal_score_string = b'{:07.03f}'.format(score[1])
+                        score_string = violence_score_string + normal_score_string
+
+                        client_socket.send(score_string)
+                    client_socket.send(self.entire_boundary)
 
             self.finalize()
 
@@ -248,60 +245,6 @@ class Evaluator():
             print '{:10s}|{:12s}|{}'.format('Evaluator', 'Connection', 'With IP {}'.format(my_ip_address))
 
             return my_ip_address
-
-
-    def _pickle_method(self,m):
-        if m.im_self is None:
-            return getattr, (m.im_class, m.im_func.func_name)
-        else:
-            return getattr, (m.im_self, m.im_func.func_name)
-
-
-    def finalize(self):
-        global scanning_pool_odd
-        global scanning_pool_even
-
-        self.sender.in_progress = False
-
-        scanning_pool_odd.close()
-        scanning_pool_odd.join()
-        del scanning_pool_odd
-
-        scanning_pool_even.close()
-        scanning_pool_even.join()
-        del scanning_pool_even
-
-        del self.scanner
-
-        while not self.sender_closed:
-            time.sleep(0.3)
-
-        time.sleep(0.3)
-
-        gc.collect()
-
-        self.extractor.evaluator_closed = True
-
-
-    def resume(self):
-        self.start_index = 2
-        self.scanned_index = 1
-        self.actual_start_index = 2
-
-        self.scores = []
-
-        global scanning_pool_odd
-        global scanning_pool_even
-        scanning_pool_odd = Pool()
-        scanning_pool_even = Pool()
-
-        self.scanner = Scanner(self.session.image_folder, self.session.flow_folder, self.num_workers,
-                               self.num_using_gpu, self.session.use_spatial_net)
-
-        self.in_progress = True
-
-        self.sender.resume()
-        self.sender_closed = False
 
 
     def build_net(self, version=4, use_spatial_net=False):
@@ -327,6 +270,52 @@ class Evaluator():
 
         spatial_net_cpu = CaffeNet(self.spatial_net_proto, self.spatial_net_weights, -1)
         temporal_net_cpu = CaffeNet(self.temporal_net_proto, self.temporal_net_weights, -1)
+
+
+    def _pickle_method(self,m):
+        if m.im_self is None:
+            return getattr, (m.im_class, m.im_func.func_name)
+        else:
+            return getattr, (m.im_self, m.im_func.func_name)
+
+
+    def finalize(self):
+        global scanning_pool_odd
+        global scanning_pool_even
+
+        scanning_pool_odd.close()
+        scanning_pool_odd.join()
+        del scanning_pool_odd
+
+        scanning_pool_even.close()
+        scanning_pool_even.join()
+        del scanning_pool_even
+
+        del self.scanner
+
+        gc.collect()
+
+        self.main_server_socket.close()
+
+        self.resume()
+
+
+    def resume(self):
+        self.start_index = 2
+        self.scanned_index = 1
+        self.actual_start_index = 2
+
+        self.scores = []
+
+        global scanning_pool_odd
+        global scanning_pool_even
+        scanning_pool_odd = Pool()
+        scanning_pool_even = Pool()
+
+        self.scanner = Scanner(self.save_folder, self.save_folder, self.num_workers,
+                               self.num_using_gpu, self.use_spatial_net)
+
+        self.in_progress = True
 
 
 class Scanner():
@@ -362,78 +351,6 @@ class Scanner():
                           zip([actual_extracted_index] * len(indices),
                               indices, [device_id] * len(indices),
                               [start_index] * len(indices), [return_scores] * len(indices)))
-
-
-    def scanFrames(self, indices, start_index, frame_count, device_id, return_scores):
-        global spatial_net_gpu_01
-        global spatial_net_gpu_02
-        global temporal_net_gpu_01
-        global temporal_net_gpu_02
-
-        if device_id  == 0:
-            spatial_net = spatial_net_gpu_01
-            temporal_net = temporal_net_gpu_01
-        else:
-            spatial_net = spatial_net_gpu_02
-            temporal_net = temporal_net_gpu_02
-
-        score_layer_name = 'fc-twis'
-
-        for index in indices:
-            if self.use_spatial_net:
-                image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
-
-                rgb_score = \
-                    spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
-                                                     frame_size=None)[0].tolist()
-
-
-            flow_stack = []
-            for i in range(-2, 3, 1):
-                if index + i >= 2 and index + i <= frame_count:
-                    x_flow_field = cv2.imread(
-                        os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
-                        cv2.IMREAD_GRAYSCALE)
-                    y_flow_field = cv2.imread(
-                        os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
-                        cv2.IMREAD_GRAYSCALE)
-                    flow_stack.append(x_flow_field)
-                    flow_stack.append(y_flow_field)
-                elif index + i < 2:
-                    x_flow_field = cv2.imread(
-                        os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
-                        cv2.IMREAD_GRAYSCALE)
-                    y_flow_field = cv2.imread(
-                        os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
-                        cv2.IMREAD_GRAYSCALE)
-                    flow_stack.append(x_flow_field)
-                    flow_stack.append(y_flow_field)
-                else:
-                    x_flow_field = cv2.imread(
-                        os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
-                        cv2.IMREAD_GRAYSCALE)
-                    y_flow_field = cv2.imread(
-                        os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
-                        cv2.IMREAD_GRAYSCALE)
-                    flow_stack.append(x_flow_field)
-                    flow_stack.append(y_flow_field)
-
-            flow_score = \
-                temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
-                                                       frame_size=None)[0].tolist()
-
-
-            if self.use_spatial_net:
-                entire_scores = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
-                                                                         + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
-                                                                     -self.score_bound, self.score_bound),
-                                                             self.score_bound).tolist()
-            else:
-                entire_scores = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
-                                                                     -self.score_bound, self.score_bound),
-                                                             self.score_bound).tolist()
-
-            return_scores[index - start_index](entire_scores)
 
 
     def scanVideo(self, scan_items):
@@ -519,87 +436,6 @@ class Scanner():
                                                          self.score_bound).tolist()
 
         return_scores[index - start_index] = entire_scores
-
-
-    def scanVideoCPU(self, scan_items):
-        global spatial_net_gpu_01
-        global spatial_net_gpu_02
-        global temporal_net_gpu_01
-        global temporal_net_gpu_02
-        global spatial_net_cpu
-        global temporal_net_cpu
-
-        frame_count = scan_items[0]
-        index = scan_items[1]
-        device_id = scan_items[2]
-        start_index = scan_items[3]
-        scan_scores = scan_items[4]
-
-        if device_id == 0:
-            spatial_net = spatial_net_gpu_01
-            temporal_net = temporal_net_gpu_01
-        elif device_id == 1:
-            spatial_net = spatial_net_gpu_02
-            temporal_net = temporal_net_gpu_02
-        else:
-            spatial_net = spatial_net_cpu
-            temporal_net = temporal_net_cpu
-
-        score_layer_name = 'fc-twis'
-
-        if self.use_spatial_net:
-            image_frame = cv2.imread(os.path.join(self.image_folder, 'img_{:07d}.jpg'.format(index)))
-
-            rgb_score = \
-                spatial_net.predict_single_frame([image_frame, ], score_layer_name, over_sample=False,
-                                                 frame_size=None)[0].tolist()
-
-        flow_stack = []
-        for i in range(-2, 3, 1):
-            if index + i >= 2 and index + i <= frame_count:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(index + i),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(index + i),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
-            elif index + i < 2:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(2),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(2),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
-            else:
-                x_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_x_{:07d}.jpg').format(frame_count),
-                    cv2.IMREAD_GRAYSCALE)
-                y_flow_field = cv2.imread(
-                    os.path.join(self.flow_folder, 'flow_y_{:07d}.jpg').format(frame_count),
-                    cv2.IMREAD_GRAYSCALE)
-                flow_stack.append(x_flow_field)
-                flow_stack.append(y_flow_field)
-
-        flow_score = \
-            temporal_net.predict_single_flow_stack(flow_stack, score_layer_name, over_sample=False,
-                                                   frame_size=None)[0].tolist()
-
-
-        if self.use_spatial_net:
-            entire_scores = np.divide(np.clip(np.asarray([rgb_score[i] * self.rate_of_space
-                                                                     + flow_score[i] * self.rate_of_time for i in xrange(len(flow_score))]),
-                                                                 -self.score_bound, self.score_bound),
-                                                         self.score_bound).tolist()
-        else:
-            entire_scores = np.divide(np.clip(np.asarray([flow_score[i] * self.rate_of_whole for i in xrange(len(flow_score))]),
-                                                                 -self.score_bound, self.score_bound),
-                                                         self.score_bound).tolist()
-
-        scan_scores[index - start_index] = entire_scores
 
 
 
