@@ -537,12 +537,15 @@ class Evaluator():
 
                         entire_send_data += send_data
 
+                    print 'send_data'
+
                     try:
                         self.client_socket.send(entire_send_data)
                     except:
                         socket_closed = True
                         break
 
+                    print 'sent'
 
                     scores_data = b''
                     while True:
@@ -555,6 +558,8 @@ class Evaluator():
                             break
                         else:
                             scores_data += recv_data
+
+                        print 'recv {}'.format(len(recv_data))
 
                     return_scores = []
                     for segment_index in range(0, len(scores_data), 14):
@@ -1224,7 +1229,7 @@ class Secretary():
             self.view_clips = []
             self.violence_index = 0
 
-            self.semantic_display_step = 3
+            self.semantic_display_step = 5
 
 
         def run(self):
