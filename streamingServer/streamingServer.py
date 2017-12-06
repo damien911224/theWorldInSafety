@@ -93,7 +93,6 @@ class StreamingServer():
 
                         self.ready = True
                         client_socket, address = self.raspberry_socket.accept()
-                        print 'ACCEPT'
 
                         previous_data = b''
                         while self.in_progress:
@@ -102,18 +101,19 @@ class StreamingServer():
                             try:
                                 while self.in_progress:
                                     recv_data = self.client_socket.recv(90456)
+                                    print len(recv_data)
                                     if len(recv_data) == 0:
                                         socket_closed = True
                                         break
 
                                     accumulated_data += recv_data
+                                    print len(accumulated_data)
                                     found = accumulated_data.find(b'!TWIS_END!')
                                     if found != -1:
                                         previous_data = accumulated_data[found + 10:]
                                         accumulated_data = accumulated_data[:found]
                                         print 'FOUND!'
                                         break
-                                    print len(accumulated_data)
                             except Exception:
                                 continue
 
