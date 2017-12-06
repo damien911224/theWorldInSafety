@@ -98,6 +98,7 @@ class StreamingServer():
                         while self.in_progress:
                             socket_closed = False
                             accumulated_data = previous_data + b''
+                            print accumulated_data
                             try:
                                 while self.in_progress:
                                     recv_data = self.client_socket.recv(90456)
