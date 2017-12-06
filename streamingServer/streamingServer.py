@@ -110,10 +110,13 @@ class StreamingServer():
                                     if found != -1:
                                         previous_data = accumulated_data[found + 10:]
                                         accumulated_data = accumulated_data[:found]
+                                        print 'FOUND!'
                                         break
+                                    print len(accumulated_data)
                             except Exception:
                                 continue
 
+                            print 'FRAME_DATA'
                             frame_data = accumulated_data
 
                             if socket_closed or not self.in_progress:
