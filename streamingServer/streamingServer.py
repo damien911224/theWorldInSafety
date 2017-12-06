@@ -101,7 +101,6 @@ class StreamingServer():
                             try:
                                 while self.in_progress:
                                     recv_data = client_socket.recv(90456)
-                                    print len(recv_data)
                                     if len(recv_data) == 0:
                                         socket_closed = True
                                         break

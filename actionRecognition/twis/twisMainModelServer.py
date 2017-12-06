@@ -193,8 +193,6 @@ class Evaluator():
 
                         frame_index += 1
 
-                    print 'Imwrite Frames'
-
 
                     end_index = len(frames_data) - self.temporal_gap
                     start_index = 1 + self.temporal_gap

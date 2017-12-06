@@ -535,7 +535,6 @@ class Evaluator():
 
                         entire_send_data += send_data
 
-                    print 'Send_data'
 
                     try:
                         self.client_socket.send(entire_send_data)
@@ -543,7 +542,6 @@ class Evaluator():
                         socket_closed = True
                         break
 
-                    print 'Sent'
 
                     scores_data = b''
                     while True:
@@ -557,7 +555,6 @@ class Evaluator():
                         else:
                             scores_data += recv_data
 
-                    print 'Recved'
 
                     return_scores = []
                     for segment_index in range(0, len(scores_data), 14):
