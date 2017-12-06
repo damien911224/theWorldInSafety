@@ -137,22 +137,21 @@ class Evaluator():
             while self.in_progress:
                 client_socket, address = self.main_server_socket.accept()
 
+                previous_data = b''
                 while self.in_progress:
-                    entire_frame_data = b''
+                    accumulated_data = previous_data + b''
                     while True:
                         recv_data = client_socket.recv(90456)
                         if len(recv_data) == 0:
                             break
-                        found = recv_data.find(self.entire_boundary)
+                        accumulated_data += recv_data
+                        found = accumulated_data.find(self.entire_boundary)
                         if found != -1:
-                            entire_frame_data += recv_data[:found]
+                            previous_data = accumulated_data[found+len(self.entire_boundary):]
+                            accumulated_data = accumulated_data[:found]
                             break
-                        else:
-                            entire_frame_data += recv_data
 
-                        print 'Receiving: {}'.format(len(recv_data))
-
-                    print 'Recved'
+                    entire_frame_data = accumulated_data
 
                     frames_data = []
                     while True:
@@ -163,8 +162,6 @@ class Evaluator():
                             entire_frame_data = entire_frame_data[found + len(self.one_boundary):]
                         else:
                             break
-
-                    print 'Frame_Data'
 
                     rmtree(self.save_folder, ignore_errors=True)
 

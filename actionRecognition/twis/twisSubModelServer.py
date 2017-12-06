@@ -124,21 +124,22 @@ class Session():
                         previous_index = 0
                         socket_closed = False
                         while self.in_progress:
-                            frame_data = previous_data + b''
+                            accumulated_data = previous_data + b''
                             try:
                                 while self.in_progress:
-                                    r = self.client_socket.recv(90456)
-                                    if len(r) == 0:
+                                    recv_data = self.client_socket.recv(90456)
+                                    if len(recv_data) == 0:
                                         socket_closed = True
                                         break
 
-                                    a = r.find(b'!TWIS_END!')
-                                    if a != -1:
-                                        frame_data += r[:a]
-                                        previous_data = r[a+10:]
+                                    accumulated_data += recv_data
+                                    found = accumulated_data.find(b'!TWIS_END!')
+                                    if found != -1:
+                                        previous_data = accumulated_data[found+10:]
+                                        accumulated_data = accumulated_data[:found]
                                         break
-                                    else:
-                                        frame_data += r
+
+                                frame_data = accumulated_data
                             except:
                                 continue
 
