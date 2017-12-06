@@ -98,27 +98,23 @@ class StreamingServer():
                         while self.in_progress:
                             socket_closed = False
                             accumulated_data = previous_data + b''
-                            print accumulated_data
                             try:
                                 while self.in_progress:
-                                    recv_data = self.client_socket.recv(90456)
+                                    recv_data = client_socket.recv(90456)
                                     print len(recv_data)
                                     if len(recv_data) == 0:
                                         socket_closed = True
                                         break
 
                                     accumulated_data += recv_data
-                                    print len(accumulated_data)
                                     found = accumulated_data.find(b'!TWIS_END!')
                                     if found != -1:
                                         previous_data = accumulated_data[found + 10:]
                                         accumulated_data = accumulated_data[:found]
-                                        print 'FOUND!'
                                         break
                             except Exception:
                                 continue
 
-                            print 'FRAME_DATA'
                             frame_data = accumulated_data
 
                             if socket_closed or not self.in_progress:
