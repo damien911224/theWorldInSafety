@@ -138,10 +138,10 @@ class Session():
                                         previous_data = accumulated_data[found+10:]
                                         accumulated_data = accumulated_data[:found]
                                         break
-
-                                frame_data = accumulated_data
                             except:
                                 continue
+
+                            frame_data = accumulated_data
 
                             if socket_closed:
                                 break

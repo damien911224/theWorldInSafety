@@ -97,7 +97,7 @@ class StreamingServer():
                         previous_data = b''
                         while self.in_progress:
                             socket_closed = False
-                            frame_data = previous_data + b''
+                            accumulated_data = previous_data + b''
                             try:
                                 while self.in_progress:
                                     recv_data = self.client_socket.recv(90456)
@@ -111,11 +111,10 @@ class StreamingServer():
                                         previous_data = accumulated_data[found + 10:]
                                         accumulated_data = accumulated_data[:found]
                                         break
-
-                                    frame_data = accumulated_data
-
-                            except Exception as e:
+                            except Exception:
                                 continue
+
+                            frame_data = accumulated_data
 
                             if socket_closed or not self.in_progress:
                                 client_socket.close()
