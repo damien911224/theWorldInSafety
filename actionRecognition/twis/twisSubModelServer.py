@@ -80,7 +80,7 @@ class Session():
         self.print_lock = Lock()
         self.average_delay = 0.0
 
-        self.server_ip_address = '13.125.97.6'
+        self.server_ip_address = '13.125.96.72'
         self.server_port_number = 8888
 
         self.client_host_name = '192.168.1.101'
