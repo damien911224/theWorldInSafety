@@ -93,6 +93,7 @@ class StreamingServer():
 
                         self.ready = True
                         client_socket, address = self.raspberry_socket.accept()
+                        print 'ACCEPT'
 
                         previous_data = b''
                         while self.in_progress:
