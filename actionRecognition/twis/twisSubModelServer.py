@@ -1397,6 +1397,8 @@ class Closer():
         self.violence_index = 0
         self.normal_index = 1
 
+        self.semantic_step = 3
+
         self.semanticPostProcessor = SemanticPostProcessor()
 
 
@@ -1421,7 +1423,7 @@ class Closer():
                             for frame in clip['frames']:
                                 frame['score'] = filtered_scores[clip['frames'].index(frame)]
 
-                            ok, clip_semantics = self.semanticPostProcessor.semantic_post_process(clip)
+                            ok, clip_semantics = self.semanticPostProcessor.semantic_post_process(clip, self.semantic_step)
                             semantic_index = 0
                             for frame in clip['frames']:
                                 if semantic_index >= len(clip_semantics):
