@@ -1113,7 +1113,7 @@ class Secretary():
             self.view_clips = []
             self.violence_index = 0
 
-            self.semantic_display_step = 5
+            self.semantic_display_step = 3
 
 
         def run(self):
@@ -1397,7 +1397,7 @@ class Closer():
         self.violence_index = 0
         self.normal_index = 1
 
-        self.semantic_step = 3
+        self.semantic_step = 2
 
         self.semanticPostProcessor = SemanticPostProcessor()
 
