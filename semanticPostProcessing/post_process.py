@@ -32,7 +32,7 @@ class SemanticPostProcessor:
             return getattr, (m.im_self, m.im_func.func_name)
 
 
-    def multi_process(self, clip, semantic_step):
+    def semantic_post_multi_process(self, clip, semantic_step):
         global semantic_flag
 
         semantic_flag = False
@@ -127,6 +127,7 @@ class SemanticPostProcessor:
 
         boxes = []
         img = cv2.imread(frame_path)
+        print img.shape
         if img is None:
             return boxes
         result = tfnet.return_predict(img)
@@ -148,6 +149,7 @@ class SemanticPostProcessor:
                     semantic_flag = True
 
         container[index] = boxes
+
 
 
 if __name__ == "__main__":

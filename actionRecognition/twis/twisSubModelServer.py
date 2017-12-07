@@ -1113,7 +1113,7 @@ class Secretary():
             self.view_clips = []
             self.violence_index = 0
 
-            self.semantic_display_step = 3
+            self.semantic_display_step = 2
 
 
         def run(self):
@@ -1393,11 +1393,11 @@ class Closer():
         self.wait_time = 0.2
         self.threshold = 0.0
         self.clip_number = 1
-        self.clip_round = 5
+        self.clip_round = 3
         self.violence_index = 0
         self.normal_index = 1
 
-        self.semantic_step = 2
+        self.semantic_step = 1
 
         self.semanticPostProcessor = SemanticPostProcessor()
 
@@ -1423,7 +1423,7 @@ class Closer():
                             for frame in clip['frames']:
                                 frame['score'] = filtered_scores[clip['frames'].index(frame)]
 
-                            ok, clip_semantics = self.semanticPostProcessor.semantic_post_process(clip, self.semantic_step)
+                            semantic_ok, clip_semantics = self.semanticPostProcessor.semantic_post_process(clip)
                             semantic_index = 0
                             for frame in clip['frames']:
                                 if semantic_index >= len(clip_semantics):
@@ -1432,7 +1432,7 @@ class Closer():
                                     frame['semantics'] = clip_semantics[semantic_index]
                                 semantic_index += 1
 
-                            if ok:
+                            if semantic_ok or True:
                                 self.visualize(clip)
                             else:
                                 rmtree(clip['keep_folder'], ignore_errors=True)
@@ -1441,7 +1441,6 @@ class Closer():
                             rmtree(clip['keep_folder'], ignore_errors=True)
 
                     del self.clips[0:len(clips)]
-                    gc.collect()
 
 
             self.finalize()
@@ -1690,7 +1689,8 @@ class Closer():
 
         clip_send_paths = [ admin_clip_send_path, user_clip_send_path ]
 
-        self.send(clip_send_paths)
+        send_thread = threading.Thread(target=self.send, args=[clip_send_paths])
+        send_thread.start()
 
         rmtree(clip['keep_folder'])
 
@@ -1706,18 +1706,18 @@ class Closer():
                                                   user_clip_send_path.split('/')[-1],
                                                   admin_clip_send_path.split('/')[-1])
 
-        try:
-            c = pycurl.Curl()
-            c.setopt(c.VERBOSE, 0)
-            c.setopt(c.POST, 1)
-            c.setopt(c.URL, 'http://13.228.101.253:8080/management/receive/')
-            c.setopt(c.HTTPPOST,
-                        [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
-                         # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
-            c.perform()
-            c.close()
-        except:
-            pass
+        # try:
+        #     c = pycurl.Curl()
+        #     c.setopt(c.VERBOSE, 0)
+        #     c.setopt(c.POST, 1)
+        #     c.setopt(c.URL, 'http://13.228.101.253:8080/management/receive/')
+        #     c.setopt(c.HTTPPOST,
+        #                 [('admin_clip', (pycurl.FORM_FILE, admin_clip_send_path))])
+        #                  # ('user_clip', (c.FROM_FILE, user_clip_send_path))])
+        #     c.perform()
+        #     c.close()
+        # except:
+        #     pass
 
         for send_clip_path in clip_send_paths:
             try:
