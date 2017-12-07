@@ -33,19 +33,26 @@ class SemanticPostProcessor:
 
 
     def multi_process(self, clip, semantic_step):
-        sys.setrecursionlimit(10000)
-        pool = Pool(processes=2)
+        global semantic_flag
+
+        semantic_flag = False
+
+        pool = Pool(processes=4)
+
         frame_paths = []
         for frame in clip['frames']:
             frame_paths.append(frame['image'])
+
         clip_list = range(0, len(frame_paths), semantic_step)
+
         sampled_frames = []
         for index in clip_list:
             sampled_frames.append(frame_paths[index])
+
         manager = Manager()
         container = manager.list()
-        for _ in range(len(clip_list)):
-            container.append([0.0])
+        for _ in range(len(frame_paths)):
+            container.append([])
 
         pool.map(self.single_frame_multi_processing,
                  zip(sampled_frames,
@@ -53,6 +60,8 @@ class SemanticPostProcessor:
                      [container] * len(clip_list)
                      )
                  )
+
+        return semantic_flag, container
 
 
     def semantic_post_process(self, clip):
@@ -107,9 +116,14 @@ class SemanticPostProcessor:
 
 
     def single_frame_multi_processing(self, items):
+        global semantic_flag
+
         frame_path = items[0]
         index = items[1]
         container = items[2]
+
+        adult = False
+        child = False
 
         boxes = []
         img = cv2.imread(frame_path)
@@ -126,8 +140,15 @@ class SemanticPostProcessor:
                 bounding_box['bottomright_x'] = result[i]['bottomright']['x']
                 bounding_box['bottomright_y'] = result[i]['bottomright']['y']
                 boxes.append(bounding_box)
+                if result[i]['label'] == 'Adult':
+                    adult = True
+                if result[i]['label'] == 'Child':
+                    child = True
+                if adult and child:
+                    semantic_flag = True
 
         container[index] = boxes
+
 
 if __name__ == "__main__":
     print "HELLOW~"
