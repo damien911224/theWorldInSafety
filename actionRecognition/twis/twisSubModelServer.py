@@ -1168,9 +1168,6 @@ class Secretary():
                                         cv2.putText(image, ("{0}".format(semantic_label)),
                                                     (semantic_topleft_x, semantic_topleft_y - 12), 2,
                                                     1.0, semantic_box_colors, 2)
-                                        # cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
-                                        #             (semantic_topleft_x, semantic_topleft_y - 12), 2,
-                                        #             1.0, semantic_box_colors, 2)
 
                                 flow_x = cv2.resize(cv2.imread(view_frames[frame_index]['flows'][0],cv2.IMREAD_GRAYSCALE),
                                                     self.secretary.session.show_size, interpolation=cv2.INTER_AREA)
@@ -1524,19 +1521,16 @@ class Closer():
                     semantic_bottomright_x = box['bottomright_x']
                     semantic_bottomright_y = box['bottomright_y']
                     if semantic_label == 'Adult':
-                        semantic_box_colors = (254, 0, 254)
+                        semantic_box_colors = (189, 166, 36)
                     else:
-                        semantic_box_colors = (254, 254, 254)
+                        semantic_box_colors = (128, 65, 217)
 
                     cv2.rectangle(image, (semantic_topleft_x, semantic_topleft_y),
                                   (semantic_bottomright_x, semantic_bottomright_y),
                                   semantic_box_colors, semantic_thick)
                     cv2.putText(image, ("{0}".format(semantic_label)),
-                                (semantic_topleft_x, semantic_topleft_y - 12), 0,
-                                1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
-                    # cv2.putText(image, ("{0} {1:.2f}".format(semantic_label, semantic_confidence)),
-                    #             (semantic_topleft_x, semantic_topleft_y - 12), 0,
-                    #             1e-3 * semantic_size[1], semantic_box_colors, semantic_thick // 3)
+                                (semantic_topleft_x, semantic_topleft_y - 12), 2,
+                                1.0, semantic_box_colors, 2)
 
 
                 flow_bound = 20.0
