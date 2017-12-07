@@ -2,31 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d2be95d9-c4c9-4a28-98ed-6885b6ae9429" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids10.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids11.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids12.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids13.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids14.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids15.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids16.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids17.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids18.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids19.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids2.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids20.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids21.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids22.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids23.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids24.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids25.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids26.xml" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/img/kids27.xml" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../.gitignore" afterPath="$PROJECT_DIR$/../.gitignore" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../TwisWeb/TwisWeb/settings.py" afterPath="$PROJECT_DIR$/../TwisWeb/TwisWeb/settings.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/post_process.py" afterPath="$PROJECT_DIR$/post_process.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/showResults.py" afterPath="$PROJECT_DIR$/showResults.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../sendSMS/.idea/workspace.xml" afterPath="$PROJECT_DIR$/../sendSMS/.idea/workspace.xml" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -37,11 +14,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="showResults.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="showResults.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/showResults.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="327">
-              <caret line="38" column="73" lean-forward="false" selection-start-line="38" selection-start-column="73" selection-end-line="38" selection-end-column="73" />
+            <state relative-caret-position="270">
+              <caret line="63" column="27" lean-forward="true" selection-start-line="63" selection-start-column="27" selection-end-line="63" selection-end-column="27" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
               </folding>
@@ -69,20 +46,17 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="post_process.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="post_process.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/post_process.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="310">
-              <caret line="34" column="45" lean-forward="true" selection-start-line="34" selection-start-column="45" selection-end-line="34" selection-end-column="45" />
+            <state relative-caret-position="324">
+              <caret line="20" column="9" lean-forward="false" selection-start-line="20" selection-start-column="9" selection-end-line="20" selection-end-column="9" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
                 <element signature="e#198#277#0" expanded="false" />
-                <element signature="e#313#773#0" expanded="false" />
                 <element signature="e#817#975#0" expanded="false" />
                 <element signature="e#1036#1736#0" expanded="false" />
-                <element signature="e#1790#3056#0" expanded="false" />
-                <element signature="e#3112#3855#0" expanded="false" />
-                <element signature="e#3918#4770#0" expanded="false" />
+                <element signature="e#3908#4760#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -127,8 +101,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="299" />
-    <option name="y" value="402" />
+    <option name="x" value="106" />
+    <option name="y" value="160" />
     <option name="width" value="1260" />
     <option name="height" value="1020" />
   </component>
@@ -306,7 +280,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="299" y="402" width="1260" height="1020" extended-state="0" />
+    <frame x="106" y="160" width="1260" height="1020" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.19424461" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -334,7 +308,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="6" />
+      <option name="time" value="7" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -395,12 +369,9 @@
           <folding>
             <element signature="e#0#10#0" expanded="true" />
             <element signature="e#198#277#0" expanded="false" />
-            <element signature="e#313#773#0" expanded="false" />
             <element signature="e#817#975#0" expanded="false" />
             <element signature="e#1036#1736#0" expanded="false" />
-            <element signature="e#1790#3056#0" expanded="false" />
-            <element signature="e#3112#3855#0" expanded="false" />
-            <element signature="e#3918#4770#0" expanded="false" />
+            <element signature="e#3908#4760#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -479,12 +450,9 @@
           <folding>
             <element signature="e#0#10#0" expanded="true" />
             <element signature="e#198#277#0" expanded="false" />
-            <element signature="e#313#773#0" expanded="false" />
             <element signature="e#817#975#0" expanded="false" />
             <element signature="e#1036#1736#0" expanded="false" />
-            <element signature="e#1790#3056#0" expanded="false" />
-            <element signature="e#3112#3855#0" expanded="false" />
-            <element signature="e#3918#4770#0" expanded="false" />
+            <element signature="e#3908#4760#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -506,12 +474,9 @@
           <folding>
             <element signature="e#0#10#0" expanded="true" />
             <element signature="e#198#277#0" expanded="false" />
-            <element signature="e#313#773#0" expanded="false" />
             <element signature="e#817#975#0" expanded="false" />
             <element signature="e#1036#1736#0" expanded="false" />
-            <element signature="e#1790#3056#0" expanded="false" />
-            <element signature="e#3112#3855#0" expanded="false" />
-            <element signature="e#3918#4770#0" expanded="false" />
+            <element signature="e#3908#4760#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -582,12 +547,9 @@
           <folding>
             <element signature="e#0#10#0" expanded="true" />
             <element signature="e#198#277#0" expanded="false" />
-            <element signature="e#313#773#0" expanded="false" />
             <element signature="e#817#975#0" expanded="false" />
             <element signature="e#1036#1736#0" expanded="false" />
-            <element signature="e#1790#3056#0" expanded="false" />
-            <element signature="e#3112#3855#0" expanded="false" />
-            <element signature="e#3918#4770#0" expanded="false" />
+            <element signature="e#3908#4760#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -658,12 +620,9 @@
           <folding>
             <element signature="e#0#10#0" expanded="true" />
             <element signature="e#198#277#0" expanded="false" />
-            <element signature="e#313#773#0" expanded="false" />
             <element signature="e#817#975#0" expanded="false" />
             <element signature="e#1036#1736#0" expanded="false" />
-            <element signature="e#1790#3056#0" expanded="false" />
-            <element signature="e#3112#3855#0" expanded="false" />
-            <element signature="e#3918#4770#0" expanded="false" />
+            <element signature="e#3908#4760#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -781,23 +740,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/post_process.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="310">
-          <caret line="34" column="45" lean-forward="true" selection-start-line="34" selection-start-column="45" selection-end-line="34" selection-end-column="45" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-            <element signature="e#198#277#0" expanded="false" />
-            <element signature="e#313#773#0" expanded="false" />
-            <element signature="e#817#975#0" expanded="false" />
-            <element signature="e#1036#1736#0" expanded="false" />
-            <element signature="e#1790#3056#0" expanded="false" />
-            <element signature="e#3112#3855#0" expanded="false" />
-            <element signature="e#3918#4770#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/../actionRecognition/twis/twisModelServer.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="417">
@@ -808,10 +750,24 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/showResults.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="327">
-          <caret line="38" column="73" lean-forward="false" selection-start-line="38" selection-start-column="73" selection-end-line="38" selection-end-column="73" />
+        <state relative-caret-position="270">
+          <caret line="63" column="27" lean-forward="true" selection-start-line="63" selection-start-column="27" selection-end-line="63" selection-end-column="27" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/post_process.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="324">
+          <caret line="20" column="9" lean-forward="false" selection-start-line="20" selection-start-column="9" selection-end-line="20" selection-end-column="9" />
+          <folding>
+            <element signature="e#0#10#0" expanded="true" />
+            <element signature="e#198#277#0" expanded="false" />
+            <element signature="e#817#975#0" expanded="false" />
+            <element signature="e#1036#1736#0" expanded="false" />
+            <element signature="e#3908#4760#0" expanded="false" />
           </folding>
         </state>
       </provider>
