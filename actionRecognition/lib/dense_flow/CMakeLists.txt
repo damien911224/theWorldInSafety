@@ -30,20 +30,9 @@ endif()
 include_directories( ${OpenCV_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIR_ZIP} ${LIBZIP_INCLUDE_DIR_ZIPCONF} include/ include/easylogging++/src include/CLUE/include)
 include_directories(SYSTEM ${Boost_INCLUDE_DIR} ${PYTHON_INCLUDE_DIR})
 
-add_library(denseflow src/common.cpp src/dense_flow.cpp src/dense_flow_gpu.cpp src/dense_warp_flow_gpu.cpp src/zip_utils.cpp)
+add_library(denseflow src/common.cpp src/dense_flow.cpp src/dense_flow_cpu_from_frames.cpp src/zip_utils.cpp)
 target_link_libraries( denseflow ${OpenCV_LIBS} ${LIBZIP_LIBRARY})
 
-add_library(pydenseflow SHARED src/py_denseflow.cpp)
-target_link_libraries(pydenseflow
-        denseflow
-        ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${OpenCV_LIBS}
-        )
 
 add_executable( extract_cpu tools/extract_flow.cpp)
 target_link_libraries( extract_cpu ${OpenCV_LIBS} ${LIBZIP_LIBRARY} denseflow)
-
-add_executable( extract_gpu tools/extract_flow_gpu.cpp)
-target_link_libraries( extract_gpu ${OpenCV_LIBS} ${LIBZIP_LIBRARY} denseflow)
-
-add_executable( extract_warp_gpu tools/extract_warp_flow_gpu.cpp)
-target_link_libraries( extract_warp_gpu ${OpenCV_LIBS} ${LIBZIP_LIBRARY} denseflow)
