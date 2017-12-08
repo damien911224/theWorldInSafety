@@ -60,7 +60,7 @@ class Session():
         self.new_size = (224, 224)
         self.temporal_width = 1
         self.print_term = 50
-        self.fps = 30.0
+        self.fps = 15.0
         self.wait_time = 1.0 / self.fps
         self.wait_please = False
         self.is_rotated = False
