@@ -44,6 +44,6 @@ For any question, please contact
 ```python
 Jihwan Kim : damien911224@gmail.com
 Heesoo Kim : gmltnz@ajou.ac.kr
-Seunggon Jeon ftatp5901@gmail.com
 Jaemin Na : osial46@gmail.com
+Seunggon Jeon ftatp5901@gmail.com
 ```
