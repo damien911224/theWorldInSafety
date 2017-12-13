@@ -26,7 +26,7 @@ class VideoFieldFile(ImageFieldFile):
 		super(VideoFieldFile, self).save(name, content, save)
 		img = Image.open(self.path)
 
-		size = (64, 128)
+		size = (128, 64)
 
 		img.thumbnail(size, Image.ANTIALIAS)
 		background = Image.new('RGBA', size, (255, 255, 255, 0))

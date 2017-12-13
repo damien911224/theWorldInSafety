@@ -1,13 +1,13 @@
 
 from __future__ import unicode_literals
 from django.db import models
-from django.contrib.auth.models import Group
 
 from django.core.urlresolvers import reverse
 
 from management.fields import VideoField
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
+
 
 class ExtendedUser(models.Model):
 	user = models.OneToOneField(User)

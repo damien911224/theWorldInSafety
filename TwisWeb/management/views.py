@@ -87,7 +87,7 @@ def send_to_registed_users(uv):
 	for user in registered_users:
 		receivers.append(user.userprofile.phone_num)
 
-	content = "http://13.228.101.253:8080" + uv.get_user_absolute_url()
+	content = "TWIS입니다. " + uv.Video_facility + "에서 폭력이 발생하였습니다. 아래링크를 통해서 확인하십시오:\n" + "http://13.228.101.253:8080" + uv.get_user_absolute_url()
 
 	print(content)
 	credential = "Basic "+base64.encodestring((appid+':'+apikey).encode()).decode().strip()
@@ -165,4 +165,48 @@ def receive(request):
 		os.rename(request.FILES['admin_clip'].name, v_video_path[1:])
 		os.remove(snapshot_path)
 
+		send_to_manager(v)
 	return HttpResponse('Hello world\n')
+
+
+def send_to_manager(uv):
+	appid = 'twis'
+	apikey = 'cb4eb398d21a11e794990cc47a1fcfae'
+	address = 'api.bluehouselab.com'
+
+	sender = '01091261777'
+	managers = User.objects.filter(is_superuser=True)
+
+	receivers = []
+	for user in managers:
+		receivers.append(user.userprofile.phone_num)
+	#print(uv.Video_facility.Facility_name)
+
+	content = "TWIS 알림: " + "uv.Video_facility.Facility_name" + "에서 폭력이 발생\n" + "http://13.228.101.253:8080" + uv.get_user_absolute_url()
+
+	print(content)
+	credential = "Basic "+base64.encodestring((appid+':'+apikey).encode()).decode().strip()
+	headers = {
+		"Content-type": "application/json;charset=utf-8",
+		"Authorization": credential,
+	}
+
+	c = client.HTTPSConnection(address)
+	
+	path = "/smscenter/v1.0/sendsms"
+	value = {
+		'sender': sender,
+		'receivers': receivers,
+		'content': content,
+	}
+	data = json.dumps(value, ensure_ascii=False).encode('utf-8')
+
+	c.request("POST", path, data, headers)
+	r = c.getresponse()
+
+	print(r.status, r.reason)
+	print(r.read())
+
+	return
+
+

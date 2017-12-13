@@ -7,7 +7,7 @@ from django.contrib.auth import login, authenticate
 from django.shortcuts import redirect, render
 
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 
 class UserCreateForm(UserCreationForm):
 	phone_num = forms.CharField(required=True)
@@ -21,6 +21,9 @@ class UserCreateForm(UserCreationForm):
 		user.phone_num = self.cleaned_data["phone_num"]
 		if commit:
 			user.save()
+#			default_group = Group.objects.get(name='f1')
+#			default_group.user_set.add(sender)
+
 		return user
 
 
