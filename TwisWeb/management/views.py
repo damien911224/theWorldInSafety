@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView
 from django.views.generic.edit import CreateView, UpdateView, FormView
 from django.http import HttpResponse, HttpResponseRedirect
@@ -33,7 +33,7 @@ class overall(ListView):
 	template_name = 'overall.html'
 	model = Video
 	def get_queryset(self):
-		return Video.objects.all()[0:10]
+		return Video.objects.all().order_by('-upload_date')[0:10]
 
 @method_decorator(user_passes_test(lambda u: u.is_superuser), name='dispatch')
 class FacilityLV(ListView):
@@ -60,18 +60,21 @@ class VideoDV(DetailView):
 		return obj
 
 	def post(self, request, pk):
-		#if request.method == 'POST':
-		v = Video.objects.get(id=pk)
-	
-		uv = Uservideo(id=None,
-				Video_name=v.Video_name,
-				Video_facility=v.Video_facility,
-				Video_snapshot=v.Video_snapshot,
-				Video_record_path=v.Video_record_path,
-		)
-		uv.save()
-	
-		send_to_registed_users(uv)
+		if request.POST.get("check") == "checked":
+			print("checked")
+			v = Video.objects.get(id=pk)
+		
+			uv = Uservideo(id=None,
+					Video_name=v.Video_name,
+					Video_facility=v.Video_facility,
+					Video_snapshot=v.Video_snapshot,
+					Video_record_path=v.Video_record_path,
+			)
+			uv.save()
+		elif request.POST.get("send") == "sended":	
+			print("send")
+			send_to_registed_users(uv)
+		
 		t = reverse('management:Video_detail', args=(pk,))
 		return HttpResponseRedirect(t)
 

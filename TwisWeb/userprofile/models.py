@@ -27,8 +27,6 @@ post_save.connect(add_to_default_group, sender=User)
 def update_user_profile(sender, instance, created, **kwargs):
 	if created:
 		UserProfile.objects.create(user=instance)
-#		default_group = Group.objects.get(name='f1')
-#		default_group.user_set.add(sender)
 	instance.userprofile.save()
 
 
