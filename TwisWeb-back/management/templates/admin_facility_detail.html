@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}manager - Facility detail{% endblock %}
+
+{% load static %}
+{% block extrastyle %}{% static 'css/management_facility_detail.css' %}{% endblock %}
+
+{% block content %}
+	<div class="container">
+		<div class="outer">
+			<div class="inner">
+				<br/>
+				<h4>{{ object.Facility_name }}</h4>
+				<div class="contents">
+					<div class="row cards">
+						<div class="card">
+							<table class="table table-striped scroll">
+								<thead>
+									<tr>
+										<th class="snapshot">Video snapshot</th>
+										<th class="id">NO.</th>
+										<th class="uploaddate">Occured period</th>
+										<th class="facility">Facility Name</th>
+										<th class="check">Checked</th>
+										<th class="url">View</th>
+									</tr>
+								</thead>
+								<tbody id="search-prescription-results">	
+									{% for video in object.video_set.all|dictsort:"upload_date" reversed %}
+									<tr>
+										<td class="snapshot"><img src="{{ video.Video_snapshot.thumb_url }}"/></td>
+										<td class="id">{{ video.id }}</td>
+										<td class="uploaddate">{{ video.upload_date }}</td>
+										<td class="facility">{{ video.Video_facility }}</td>
+										<td class="check">{{ video.Video_checked }}</td>
+										<td class="url"><a href="{{ video.get_absolute_url }}"><img src="{% static 'img/play.png'%}" height=30px width=30px/></a></td>
+									</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% load staticfiles %}
+{% block extrastyle %}{% static "css/change_password.css" %}{% endblock %}
+
+
+{% block content %}
+	<div class="container">
+		<form class="form-set" action="." method="post">
+			{% csrf_token %}
+			
+			<h2>Profile</h2>
+			{% for field in form %}
+				{{ field.error }}
+			{% endfor %}
+			{% load widget_tweaks %}
+			<form action="/accounts/profile/" method="post">{% csrf_token %}
+				{{ form.as_ul }}
+				<div class="submit-row">
+					<button class="btn" type="submit" value="Update"/>Update</button>
+					<input type="hidden" name="next" value="" />
+				</div>
+
+				<!--<input type="submit" value="Update" />-->
+			
+			</form>
+		</form>
+	</div>
+
+{% endblock %}

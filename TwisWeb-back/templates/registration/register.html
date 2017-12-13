@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}register{% endblock %}
+
+{% load staticfiles %}
+{% block extrastyle %}{% static 'css/login_register.css' %}{% endblock %}
+
+{% block content %}
+	<div class="container">
+		<form class="form-set" action="." method="post">
+			{% csrf_token %}
+			<h2 class="form-login-register-heading">New user register</h2>
+			{% if form.errors %}
+			<p class="errornote">Wrong!! Please correct the error(s) below</p>
+			{% endif %}
+			
+			{% load widget_tweaks %}
+			<fieldset class="aligned">
+				<div class="form-control">
+					{{ form.username.label_tag }}
+					{{ form.username|add_class:"input_ID" }}
+				</div>
+				<div class="form-control">
+					{{ form.password1.label_tag }}
+					{{ form.password1|add_class:"input_password" }}
+				</div>
+				<div class="form-control">
+					{{ form.password2.label_tag }} 
+					{{ form.password2|add_class:"input_password" }}
+				</div>
+				<div class="form-control">
+					{{ form.phone_num.label_tag }}
+					{{ form.phone_num|add_class:"input_password" }}
+				</div>
+
+			</fieldset>
+
+			<div class="submit-row">
+				<button class="btn btn-lg btn-primary btn-block" type="submit" value="Register"/>Register</button>
+				<input type="hidden" name="next" value="" />
+			</div>
+			
+			<script type="text/javascript">
+				document.getElementById('id_username').focus();
+			</script>
+
+		</form>
+	</div>
+
+{% endblock %}
