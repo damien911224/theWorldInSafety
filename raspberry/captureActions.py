@@ -51,12 +51,13 @@ class Raspberry():
             self.raspberry = raspberry
 
             self.in_progress = True
-            self.web_cam_device_id = 0
+            self.web_cam_device_id = 1
             self.use_webcam = True
-            self.test_video = '/home/parallels/theWorldInSafety/raspberry/test_videos/demo_1.mp4'
+            self.test_video = '/home/parallels/motion_detection.mp4'
             self.want_to_resize = False
             self.resize_size = ( 60.0, 60.0 )
             self.original_size = ( 640, 480 )
+            self.show_size = ( 1100, int(1100.0 * 0.80)  )
 
             self.camera_socket = None
             self.server_ip_address = '13.125.69.226'
@@ -66,7 +67,11 @@ class Raspberry():
             self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
             self.jpg_boundary = b'!TWIS_END!'
-            self.session_name = None
+            if not self.use_webcam:
+                self.session_name = None
+                self.initialized = False
+            else:
+                self.session_name = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
             self.session_is_open = False
             self.session_index = 1
             self.window_name = 'Raspberry'
@@ -134,18 +139,44 @@ class Raspberry():
                             self.send(frame)
                             self.session_index += 1
 
-                        
                         if self.visualization:
                             visualized_frame = self.visualize(frame, is_moving)
-                            cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
-                            cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
+                            cv2.imshow(self.window_name + '|' + self.session_name, visualized_frame)
+                            cv2.moveWindow(self.window_name + '|' + self.session_name, self.window_position[0],
+                                           self.window_position[1])
                             cv2.waitKey(1)
+
+                        # if self.use_webcam:
+                        #     if self.visualization:
+                        #         visualized_frame = self.visualize(frame, is_moving)
+                        #         cv2.imshow(self.window_name + '|'+ self.session_name, visualized_frame)
+                        #         cv2.moveWindow(self.window_name + '|'+ self.session_name, self.window_position[0], self.window_position[1])
+                        #         cv2.waitKey(1)
+                        # else:
+                        #     visualized_frame = self.visualize(frame, is_moving)
+                        #     cv2.imshow(self.window_name + '|' + self.session_name, visualized_frame)
+                        #     cv2.moveWindow(self.window_name + '|' + self.session_name, self.window_position[0],
+                        #                    self.window_position[1])
+                        #     cv2.waitKey(1)
+                        #
+                        #     if not self.initailized:
+                        #         video_fps = 24.0
+                        #         video_fourcc = 0x00000021
+                        #         video_size = (int(visualized_frame.shape[1]), int(visualized_frame.shape[0]))
+                        #         video_writer = cv2.VideoWriter('/home/parallels/output_01.mp4', video_fourcc, video_fps,
+                        #                                        video_size)
+                        #         self.initailized = True
+                        #
+                        #     video_writer.write(visualized_frame)
 
                         if self.session_index % self.display_term == 0:
                             with self.raspberry.print_lock:
                                 print '{:10s}|{:12s}|{}'.format('Camera', 'Sending Frames', 'Until {:07d}'.format(self.session_index))
 
                     video_cap.release()
+                    # if not self.use_webcam:
+                    #     video_writer.release()
+                    #     print 'SAVE DONE'
 
                 if not self.use_webcam:
                     break
@@ -164,6 +195,8 @@ class Raspberry():
 
 
         def visualize(self, frame, is_moving):
+            frame = cv2.resize(frame, self.show_size, interpolation=cv2.INTER_AREA)
+
             font = cv2.FONT_HERSHEY_SIMPLEX
             top_left = (0, 0)
             text_margin = (15, 10)
@@ -222,7 +255,7 @@ class Raspberry():
                 self.camera = camera
 
                 self.frame_diff_threshold = 0.45
-                self.minimum_capture_count = 1000000000
+                self.minimum_capture_count = 100
 
                 self.countdown_to_stop = self.minimum_capture_count
                 self.no_moving = False

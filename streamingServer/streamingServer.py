@@ -18,6 +18,8 @@ class StreamingServer():
 
         self.home_folder = os.path.abspath('../..')
         self.save_folder = os.path.join(self.home_folder, 'streaming_data')
+        rmtree(self.save_folder, ignore_errors=True)
+
         if not os.path.exists(self.save_folder):
             try:
                 os.makedirs(self.save_folder)
