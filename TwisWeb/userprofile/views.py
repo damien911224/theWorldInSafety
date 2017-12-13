@@ -16,7 +16,7 @@ def user_profile(request):
 
 	else:
 		user = request.user
-		profile = user.profile
+		profile = user.userprofile
 		form = UserProfileForm(instance=profile)
 
 	context = {}
@@ -24,4 +24,4 @@ def user_profile(request):
 
 	context['form'] = form
 
-	return render_to_response('profile.html', context)
+	return render(request, 'profile.html', context)

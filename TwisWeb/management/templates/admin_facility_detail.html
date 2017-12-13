@@ -9,27 +9,31 @@
 	<div class="container">
 		<div class="outer">
 			<div class="inner">
+				<br/>
 				<h4>{{ object.Facility_name }}</h4>
 				<div class="contents">
 					<div class="row cards">
-						<div class="col-3 card">
-							<img src="{% static 'img/camera.jpg'%}" alt="Smiley face" height="100" width="150">	
-						</div>
-						<div class="col-9 card">
-							<table class="table table-fixed table-striped scroll">
+						<div class="card">
+							<table class="table table-striped scroll">
 								<thead>
 									<tr>
-										<th>Video ID</th>
-										<th>Video snapshot</th>
-										<th>Checked</th>
+										<th class="snapshot">Video snapshot</th>
+										<th class="id">NO.</th>
+										<th class="uploaddate">Occured period</th>
+										<th class="facility">Facility Name</th>
+										<th class="check">Checked</th>
+										<th class="url">View</th>
 									</tr>
 								</thead>
 								<tbody id="search-prescription-results">	
 									{% for video in object.video_set.all %}
 									<tr>
-										<td>{{ video.id }}</td>
-										<td><a href="{{ video.get_absolute_url }}">{{ video.get_absolute_url }}</a></td>
-										<td>{{ video.Video_checked }}</td>
+										<td class="snapshot"><img src="{{ video.Video_snapshot.thumb_url }}"/></td>
+										<td class="id">{{ video.id }}</td>
+										<td class="uploaddate">{{ video.upload_date }}</td>
+										<td class="facility">{{ video.Video_facility }}</td>
+										<td class="check">{{ video.Video_checked }}</td>
+										<td class="url"><a href="{{ video.get_absolute_url }}"><img src="{% static 'img/camera.jpg'%}" height=24px width=30px/></a></td>
 									</tr>
 									{% endfor %}
 								</tbody>

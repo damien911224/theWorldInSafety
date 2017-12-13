@@ -2,43 +2,12 @@ body{
 	background-color: #fff;
 }
 
-.container{
-	width: 80%;
-	height: 50%;
-	background: skyblue;
-	margin: 40px auto;
-	text-align: center;
-}
-
-.outer{
-	display: table;
-	width: 100%;
-	height: 100%;
-}
-
-.inner{
-	display: table-cell;
-	vertical-align: middle;
-	text-align: center;
-}
-
-#cards_title{
-	/*width: 100%;*/
-	margin: auto;
-	text-align: center;
-}
-
-.contents{
-	height: 100%;
-	width: 100%;
+.con {
 	position: relative;
-	display: inline-block;
+	top: 50px;
+	width: 100%;
 }
 
-.cards{
-	margin: auto;
-	height: 80%;
-}
 .card{
 	margin: auto;
 	height: 60%;

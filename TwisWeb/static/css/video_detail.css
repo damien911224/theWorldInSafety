@@ -41,10 +41,11 @@ h2{
 .card{
 	margin: auto;
 	height: 60%;
-	border-style: none; 
+//	border-style: none;
+	border-width: 5px;
 }
 
-form{
+.but {
 	margin: 20px 20px 20px 20px;
 	float: right;
 }

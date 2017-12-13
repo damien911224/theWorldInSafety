@@ -9,21 +9,49 @@
 	<div class="container">
 		<div class="outer">
 			<div class="inner">
-				<h2>{{ object.Video_name }}</h2>
+				<br/>
+				<h3>{{ object.Video_name }}</h3>
+
 				<div class="contents">
 					<div class="cards">
-						<div class="card">
+						<div class="row info">
+							<div class="col-4"><h5>Facility name: {{ object.Video_facility }}</h5></div>
+							<div class="col-3"></div>
+							<div class="col-5" style="top:10px"><h6>Occured period: {{ object.upload_date }}<h6></div>
+						</div>
+						<br/>
+						<div class="card" style="padding-top: 30px">
 							<video height="300" controls>
 								<source src="{{ object.Video_record_path }}">
 							</video>
 						</div>
-						<form action="{% url 'management:violence' object.id %}" method="post">{% csrf_token %}
-							<button class="btn btn-primary" type="submit">It is Violence</button>
-						</form>
+					
+						<div class="but">
+							<button class="btn btn-primary" onclick="goBack()">Go Back</button>
+						</div>
+
+						<div class="but">
+							<form action="{% url 'management:Video_detail' object.id %}" method="post">{% csrf_token %}
+								<button class="btn btn-primary" type="submit" onclick="alert('SMS sended')">Alarm with SMS</button>
+							</form>
+						</div>
+						
+						<div class="but">
+							<form action="{% url 'management:Video_detail' object.id %}" method="post">{% csrf_token %}
+								<button class="btn btn-primary" type="submit">It is Violence</button>
+							</form>
+						</div>
+
 					</div>
 				</div>
+
 			</div>
 		</div>
 	</div>
-</div>
+
+	<script>
+		function goBack() {
+			window.history.back()
+		}
+	</script>
 {% endblock %}

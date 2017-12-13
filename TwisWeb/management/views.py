@@ -2,11 +2,13 @@ from django.shortcuts import render, redirect
 from django.views.generic import ListView, DetailView
 from django.views.generic.edit import CreateView, UpdateView, FormView
 from django.http import HttpResponse, HttpResponseRedirect
+from django.core.urlresolvers import reverse
 
 from django.core.files.base import ContentFile
 from django.core.files import File
 from django.core.urlresolvers import reverse_lazy
 from django import forms
+from django.contrib import messages
 
 import cv2
 import os
@@ -57,10 +59,10 @@ class VideoDV(DetailView):
 
 		return obj
 
-def violence(request, video_id):
-	if request.method == 'POST':
-		v = Video.objects.get(id=video_id)
-		
+	def post(self, request, pk):
+		#if request.method == 'POST':
+		v = Video.objects.get(id=pk)
+	
 		uv = Uservideo(id=None,
 				Video_name=v.Video_name,
 				Video_facility=v.Video_facility,
@@ -68,10 +70,10 @@ def violence(request, video_id):
 				Video_record_path=v.Video_record_path,
 		)
 		uv.save()
-		
+	
 		send_to_registed_users(uv)
-
-	return render(request, 'ajax/sended_sms.html')
+		t = reverse('management:Video_detail', args=(pk,))
+		return HttpResponseRedirect(t)
 
 def send_to_registed_users(uv):
 	appid = 'twis'

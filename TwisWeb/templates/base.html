@@ -22,42 +22,45 @@
 	<script src="{% static 'js/ajax.js' %}"></script>
 </head>
 <body>
-	<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-		<div class="navbar-header">
-			<a class="navbar-brand" href="{% url 'home' %}">TWIS</a>
-		</div>
-		<div class="collapse navbar-collapse" id="navbarsExampleDefault">
-			<ul class="navbar-nav mr-auto">
-				{% if user.is_superuser %}
-				<li class="nav-item"><a class="nav-link" href="{%url 'management:overall' %}">Overall</a></li>
-				<li class="nav-item"><a class="nav-link" href="{%url 'management:Facility_list' %}">Facility</a></li>
-				<li class="nav-item"><a class="nav-link" href=#>Users</a></li>
-				{% elif user.is_active %}
-				<li class="nav-item"><a class="nav-link" href="{%url 'usersite:Facility_list' %}">My registered Facilities</a></li>
+	<div class="whole">
+		<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="{% url 'home' %}">TWIS</a>
+			</div>
+			<div class="collapse navbar-collapse" id="navbarsExampleDefault">
+				<ul class="navbar-nav mr-auto">
+					{% if user.is_superuser %}
+					<li class="nav-item"><a class="nav-link" href="{%url 'management:overall' %}">Overall</a></li>
+					<li class="nav-item"><a class="nav-link" href="{%url 'management:Facility_list' %}">Facility</a></li>
+					<li class="nav-item"><a class="nav-link" href=#>Users</a></li>
+					{% elif user.is_active %}
+					<li class="nav-item"><a class="nav-link" href="{%url 'usersite:Facility_list' %}">My registered Facilities</a></li>
 
-				{% endif %}
-			</ul>
-			<h6 id="header" class="nav navbar-nav navbar-right">
-				Welcome
-				{% if user.is_active %}
-				&nbsp<strong>{% firstof user.get_short_name user.get_username %}</strong> /
-				<a href="{% url 'password_change' %}">Change Password</a> /
-				<a href="{% url 'profile' %}">Profile</a> /
-				<a href="{% url 'logout'%}">Logout</a>
-				{% else %}
-				&nbsp/<a href="{% url 'login'%}">Login</a>
-				&nbsp/<a href="{% url 'register'%}">Register</a>
-				{% endif %}
-			</h6>
-		</div>
-	</nav>
+					{% endif %}
+				</ul>
+				<h6 id="header" class="nav navbar-nav navbar-right">
+					Welcome
+					{% if user.is_active %}
+					&nbsp<strong>{% firstof user.get_short_name user.get_username %}</strong> /
+					<a href="{% url 'password_change' %}">Change Password</a> /
+					<a href="{% url 'profile' %}">Profile</a> /
+					<a href="{% url 'logout'%}">Logout</a>
+					{% else %}
+					&nbsp/<a href="{% url 'login'%}">Login</a>
+					&nbsp/<a href="{% url 'register'%}">Register</a>
+					{% endif %}
+				</h6>
+			</div>
+		</nav>
 
-	{% block content%}
-	{% endblock %}
-	
+		{% block content %}
+		{% endblock %}
+		
+	</div>
 	<div id="footer">
 		&copy; 2017 Team Bomb presents... 
 	</div>
+
 	<!-- Bootstrap core JavaScript
 	================================================== -->
 	<!-- Placed at the end of the document so the pages load faster -->

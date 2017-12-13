@@ -6,11 +6,11 @@
 {% block extrastyle %}{% static 'css/login_register.css' %}{% endblock %}
 
 {% block content %}
-	<div id= "form-div" class="container">
+	<div class="container">
 
 		<form class="form-set" action="." method="post">
 			{% csrf_token %}
-			<h2 class="form-login-register-heading">Please sign in</h2>
+			<h2 class="form-login-register-heading">Please log in</h2>
 			{% if form.errors %}
 			<p class="errornote">Wrong!! Please correct the error(s) below</p>
 			{% endif %}

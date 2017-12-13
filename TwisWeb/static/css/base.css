@@ -6,18 +6,33 @@ html, body{
 
 body{
 	font-family: "Lucida Grande", Verdana, Arial, sans-serif;
-//	font-size: 12px;
+	margin: 0;
+	padding: 0;
+  	padding-top: 100px;
+	height: 100%;
+}
+
+.whole{
+	min-height: calc(100% - 84px);
+	position: relative;
+	margin-bottom: -30px;
 }
 
 #header{
 	 color: white;
 }
 
-div#footer{
-	position: absolute;
-	bottom: 20px;
+#push #footer{
+}
+
+#footer{
+	margin: 30px;
+	margin-top: -30px;
 	left: 50px;
 	right: 50px;
+	bottom: 20px;
 	height: 30px;
+
 	border-top: 1px solid #ccc;
+	padding: 1rem;
 }

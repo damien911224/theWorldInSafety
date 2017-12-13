@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 	'widget_tweaks',
+	'django_popup_view_field',
 	'management.apps.ManagementConfig',
 	'usersite.apps.UsersiteConfig',
 	'userprofile.apps.UserprofileConfig'

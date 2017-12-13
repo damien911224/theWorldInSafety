@@ -5,7 +5,7 @@
 {% block content %}
 	<div class="main">
 		<link rel="stylesheet" href="{% static 'css/home.css' %}">
-		<div>
+		<div style="margin-top:50px;">
 			<img src="../static/img/twis.jpg" class="img-circle mx-auto d-block" alt="TWIS">
 		</div>
 		
@@ -18,14 +18,14 @@
 				Child Detection with Yolo will filter false alarms and make our system perfect.
 				</p>
 				{% if user.is_active %}
-				<div style="float: right;">
+				<!--<div style="float: right;">
 					Hello
-				</div>
+				</div>-->
 				{% else %}
-				<div class="login-set">
+				<!--<div class="login-set">
 					<a class="btn btn-primary" href="{% url 'login' %}">Login</a>
 					<a class="btn btn-primary" href="{% url 'register'%}">Register</a>
-				</div>
+				</div>-->
 				{% endif %}
 			</div>
 		</div>

@@ -1,5 +1,5 @@
 .container{
-	width: 80%;
+	width: 100%;
 	height: 50%;
 	margin: 20px auto;
 	text-align: center;
@@ -46,7 +46,7 @@
 table.scroll {
 	margin-top: 20px;
 	margin-left: 20px;
-	width: 97%;
+	width: 100%;
 	border-spacing: 1;
 }
 
@@ -80,9 +80,10 @@ table.scroll tbody {
 
 table.scroll tbody td,
 table.scroll thead th {
-	width: 33%;
+	width: 33.33%;
 	float: left;
 }
+
 
 thead tr th { 
 	height: 50px;
@@ -93,6 +94,6 @@ thead tr th {
 tbody { border-top: 2px solid black; }
 
 tbody td:last-child, thead th:last-child {
-border-right: none !important;
+	border-right: none !important;
 }
 

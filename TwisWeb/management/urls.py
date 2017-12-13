@@ -7,5 +7,5 @@ urlpatterns = [
 	url(r'^facility/(?P<pk>\d+)/$', views.FacilityDV.as_view(), name='Facility_detail'),
 	url(r'^video/(?P<pk>\d+)/$', views.VideoDV.as_view(), name='Video_detail'),
 	url(r'^receive/$', views.receive, name='receive'),
-	url(r'^video/(?P<video_id>\d+)/violencecheck/$', views.violence, name='violence')
+	#	url(r'^video/(?P<video_id>\d+)/violencecheck/$', views.violence, name='violence')
 ]
