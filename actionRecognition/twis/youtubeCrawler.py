@@ -25,7 +25,7 @@ from random import shuffle
 # tab of
 #   https://cloud.google.com/console
 # Please ensure that you have enabled the YouTube Data API for your project.
-DEVELOPER_KEY = "AIzaSyDSodYpZo2uf6NLxrdIc-bcmsSR7BQp9pI"
+DEVELOPER_KEY = ""
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
