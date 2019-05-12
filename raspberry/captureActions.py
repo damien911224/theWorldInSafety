@@ -60,7 +60,7 @@ class Raspberry():
             self.show_size = ( 1100, int(1100.0 * 0.80)  )
 
             self.camera_socket = None
-            self.server_ip_address = '13.125.69.226'
+            self.server_ip_address = ''
             self.server_port_number = 7777
 
             self.client_name = self.raspberry.client_name
