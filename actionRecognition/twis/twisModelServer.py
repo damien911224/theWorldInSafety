@@ -464,13 +464,13 @@ class Session():
 
     class StreamingClient():
         def __init__(self):
-            self.server_ip_address = '10.211.55.10'
+            self.server_ip_address = ''
             self.server_port = 10000
 
-            self.client_host_name = '192.168.1.101'
+            self.client_host_name = ''
             self.client_port = 10001
 
-            self.save_folder = os.path.join('/home/damien/temp/streaming')
+            self.save_folder = os.path.join('')
             if not os.path.exists(self.save_folder):
                 try:
                     os.makedirs(self.save_folder)
