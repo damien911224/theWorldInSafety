@@ -181,10 +181,10 @@ class Session():
         self.print_lock = Lock()
         self.average_delay = 0.0
 
-        self.server_ip_address = '13.124.183.55'
+        self.server_ip_address = ''
         self.server_port_number = 8888
 
-        self.client_host_name = '192.168.1.101'
+        self.client_host_name = ''
         self.client_port_number = random.sample(range(10000, 20000, 1), 1)[0]
 
         self.extractor = Extractor(self)
