@@ -8,7 +8,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server_address = ( socket.gethostname(), 10000 )
 print server_address[0]
-server_ip = '115.145.178.237'
+server_ip = ''
 sock.bind(server_address)
 
 sock.listen(1)
