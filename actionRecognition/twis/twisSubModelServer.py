@@ -465,7 +465,7 @@ class Evaluator():
         self.closer = Closer(self.session, self.extractor, self, self.analyzer, self.secretary)
         self.closer_thread = threading.Thread(target=self.closer.run, name='Closer')
 
-        self.main_model_server_ip_address = '115.145.173.160'
+        self.main_model_server_ip_address = ''
         self.main_model_server_port_number = 7777
 
         self.element_boundary = b'!element_boundary!'
